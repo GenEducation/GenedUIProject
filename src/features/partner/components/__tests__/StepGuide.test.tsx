@@ -50,7 +50,7 @@ function todo(step: StepActions) {
 describe("StepTodo", () => {
   it("says what a blocked step needs, with the buttons that fix it", () => {
     const props = todo(STEPS[1]);
-    expect(screen.getByText(/GenEd put “Antonyms” on hold/)).toBeTruthy();
+    expect(screen.getByText(/Zoovi put “Antonyms” on hold/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /keep this concept/i }));
     expect(props.onKeep).toHaveBeenCalledWith("p5:c1");
     fireEvent.click(screen.getByRole("button", { name: /write a question/i }));
@@ -63,7 +63,7 @@ describe("StepTodo", () => {
       }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /ask genEd to propose/i }),
+      screen.getByRole("button", { name: /ask zoovi to propose/i }),
     );
     expect(props.onAsk).toHaveBeenCalledWith("p5");
   });
@@ -86,7 +86,7 @@ describe("needLabel", () => {
     expect(needLabel(undefined)).toBeNull();
   });
 
-  it("never asks to accept questions when there is nothing to decide: the step waits on GenEd's plan", () => {
+  it("never asks to accept questions when there is nothing to decide: the step waits on Zoovi's plan", () => {
     const planless: StepActions = {
       section_key: "p4",
       title: "SYNTHETIC: II",
@@ -94,7 +94,7 @@ describe("needLabel", () => {
     };
     expect(waitsOnPlan(planless)).toBe(true);
     expect(waitsOnPlan(STEPS[0])).toBe(false);
-    expect(needLabel(planless)).toBe("Waiting on GenEd's plan");
+    expect(needLabel(planless)).toBe("Waiting on Zoovi's plan");
   });
 });
 

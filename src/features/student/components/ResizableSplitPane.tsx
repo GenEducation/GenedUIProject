@@ -114,7 +114,7 @@ export function ResizableSplitPane({
         onMouseDown={onDividerMouseDown}
         onTouchStart={onDividerTouchStart}
         className="flex-shrink-0 group relative flex items-center justify-center touch-none"
-        style={{ width: 12, cursor: "col-resize", background: "#E3E8E2", zIndex: 10 }}
+        style={{ width: 12, cursor: "col-resize", background: "#E7E2D2", zIndex: 10 }}
       >
         <div
           className="absolute inset-y-0 flex items-center justify-center transition-colors"
@@ -122,7 +122,7 @@ export function ResizableSplitPane({
         >
           <div
             className="group-hover:bg-[var(--tutor)] transition-colors rounded-full"
-            style={{ width: 2, height: 32, background: "#C5D1CF" }}
+            style={{ width: 2, height: 32, background: "#CDD3BF" }}
           />
         </div>
       </div>

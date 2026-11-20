@@ -45,9 +45,9 @@ function Segment({ phase, queued }: { phase: Phase; queued: boolean }) {
       ? "bg-red-400"
       : phase.status === "waiting" || queued
         ? "bg-amber-400"
-        : "bg-[#075E63]";
+        : "bg-[#287624]";
   return (
-    <div className="h-1.5 lg:h-2 flex-1 overflow-hidden rounded-full bg-[#122D30]/10">
+    <div className="h-1.5 lg:h-2 flex-1 overflow-hidden rounded-full bg-[#1D6315]/10">
       <div
         className={`h-full rounded-full transition-[width] duration-[1200ms] ease-out ${color} ${phase.status === "current" && phase.fill === 0 ? "w-1.5 motion-safe:animate-pulse" : ""}`}
         style={
@@ -78,22 +78,22 @@ export function RunProgress({ subject }: { subject: Subject }) {
       <div className="flex min-w-0 items-baseline justify-between gap-3">
         <p
           role="status"
-          className="flex min-w-0 items-center gap-2 text-[13px] lg:text-[14.5px] font-semibold text-[#122D30]"
+          className="flex min-w-0 items-center gap-2 text-[13px] lg:text-[14.5px] font-semibold text-[#1D6315]"
         >
           <span
             aria-hidden
-            className={`h-2 w-2 shrink-0 rounded-full motion-safe:animate-pulse ${queued ? "bg-amber-500" : "bg-[#075E63]"}`}
+            className={`h-2 w-2 shrink-0 rounded-full motion-safe:animate-pulse ${queued ? "bg-amber-500" : "bg-[#287624]"}`}
           />
           <span className="truncate">
             {nowLine(subject.state, subject.progress)}
           </span>
         </p>
         <p
-          className="shrink-0 text-[11.5px] lg:text-[12.5px] font-semibold tabular-nums text-[#122D30]/50"
+          className="shrink-0 text-[11.5px] lg:text-[12.5px] font-semibold tabular-nums text-[#1D6315]/50"
           title={ran ? `Running for ${ran}` : undefined}
         >
           {percent !== null && (
-            <span className="text-[#075E63]">{percent}%</span>
+            <span className="text-[#287624]">{percent}%</span>
           )}
         </p>
       </div>
@@ -117,7 +117,7 @@ export function RunProgress({ subject }: { subject: Subject }) {
       {(stale || stepStarted) && (
         <p className="flex flex-wrap gap-x-3 text-[11px] lg:text-[12px] font-semibold">
           {stepStarted && (
-            <span className="text-[#122D30]/50">{stepStarted}</span>
+            <span className="text-[#1D6315]/50">{stepStarted}</span>
           )}
           {stale && <span className="text-amber-700">{stale}</span>}
         </p>
@@ -129,7 +129,7 @@ export function RunProgress({ subject }: { subject: Subject }) {
         {phases.map((p) => (
           <span
             key={p.key}
-            className={`min-w-0 flex-1 truncate ${p.status === "current" ? "text-[#075E63]" : p.status === "done" ? "text-[#122D30]/50" : "text-[#122D30]/25"}`}
+            className={`min-w-0 flex-1 truncate ${p.status === "current" ? "text-[#287624]" : p.status === "done" ? "text-[#1D6315]/50" : "text-[#1D6315]/25"}`}
           >
             {p.label}
           </span>
@@ -141,14 +141,14 @@ export function RunProgress({ subject }: { subject: Subject }) {
 
 /** The middle's sentence: a title with its state's dot, and a line under it; both a step larger on wide screens. */
 const titleClass =
-  "flex min-w-0 items-center gap-2 text-[13px] lg:text-[14.5px] font-semibold text-[#122D30]";
+  "flex min-w-0 items-center gap-2 text-[13px] lg:text-[14.5px] font-semibold text-[#1D6315]";
 const bodyClass =
-  "line-clamp-2 pl-4 text-[11.5px] lg:text-[12.5px] text-[#122D30]/60";
+  "line-clamp-2 pl-4 text-[11.5px] lg:text-[12.5px] text-[#1D6315]/60";
 
 const TONE_DOT = {
-  action: "bg-[#075E63]",
+  action: "bg-[#287624]",
   problem: "bg-red-500",
-  info: "bg-[#122D30]/40",
+  info: "bg-[#1D6315]/40",
   done: "bg-emerald-500",
 } as const;
 
@@ -174,7 +174,7 @@ export function RunOutcome({ subject }: { subject: Subject }) {
         <p className={titleClass}>
           <span
             aria-hidden
-            className="h-2 w-2 shrink-0 rounded-full bg-[#122D30]/30"
+            className="h-2 w-2 shrink-0 rounded-full bg-[#1D6315]/30"
           />
           <span className="truncate">Not started</span>
         </p>

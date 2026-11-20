@@ -1,0 +1,41 @@
+/* Hand-written changes on top of the generated prototype styles (tokens.css etc. come from
+   scripts/zoovi-scope-css.mjs and are never edited by hand). Imported last by SiteShell. */
+
+/* Footer: three columns (the brand, then Explore and Company links), the GenEd note across the bottom. */
+.zv-site .foot {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); align-items: start;
+  gap: 40px clamp(24px, 5vw, 80px); padding-block: 56px 40px; font-size: 16px;
+}
+.zv-site .foot-brand { flex-direction: column; align-items: flex-start; gap: 14px; }
+.zv-site .foot img { height: clamp(52px, 6vw, 72px); width: auto; }
+.zv-site .foot nav.foot-col { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-start; gap: 12px; }
+/* Column headings are the brand's display face with a short lime bar under them; the links are lighter and
+   quieter, so the two never read as one list. */
+.zv-site .foot-h {
+  font: 600 20px/1.1 var(--display); letter-spacing: 0; color: var(--ink);
+  padding-bottom: 10px; margin-bottom: 8px;
+  background: linear-gradient(var(--lime), var(--lime)) 0 100% / 28px 3px no-repeat;
+}
+.zv-site .foot-col a { font-weight: 400; color: color-mix(in srgb, var(--ink) 72%, var(--paper)); transition: color .2s; }
+.zv-site .foot-col a:hover { color: var(--ink); }
+.zv-site .foot-note {
+  grid-column: 1 / -1; font-size: 14px; padding-top: 24px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+@media (max-width: 600px) {
+  .zv-site .foot { grid-template-columns: 1fr 1fr; }
+  .zv-site .foot-brand { grid-column: 1 / -1; }
+}
+
+/* Phones: the nav holds a fourth link (Home) since the prototypes, so it tightens up to keep Log in on one line. */
+@media (max-width: 480px) {
+  .zv-site .nav-pages { gap: 10px; }
+  .zv-site .nav-page { font-size: 13px; }
+  .zv-site .nav .nav-login { white-space: nowrap; padding: 0 12px; min-height: 38px; font-size: 13px; }
+}
+
+/* Home without the intro (data-intro="skip", set by components/HomeIntro.tsx before the first paint): the logo and its
+   dot are never drawn, and the hero copy and the nav are there from the start. The story engine takes over from here
+   with inline styles, which win over these. */
+.zv-site[data-intro="skip"] :is(.intro, .intro-dot, .q) { display: none; }
+.zv-site[data-intro="skip"] [data-b="hero"] { opacity: 1; visibility: visible; }

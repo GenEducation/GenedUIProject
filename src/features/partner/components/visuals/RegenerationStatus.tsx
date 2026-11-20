@@ -123,18 +123,18 @@ export function RegenerationStatus({
     return (
       <div
         role="status"
-        className="rounded-2xl border border-[#122D30]/10 bg-[#DCEBE7]/40 p-4 flex items-start gap-3"
+        className="rounded-2xl border border-[#1D6315]/10 bg-[#E8F0CC]/40 p-4 flex items-start gap-3"
       >
         <Loader2
           size={18}
-          className="animate-spin text-[#122D30] mt-0.5 shrink-0"
+          className="animate-spin text-[#1D6315] mt-0.5 shrink-0"
           aria-hidden
         />
         <div>
-          <p className="text-sm font-bold text-[#122D30]">
+          <p className="text-sm font-bold text-[#1D6315]">
             Making a new version…
           </p>
-          <p className="text-xs text-[#122D30]/60 mt-0.5">
+          <p className="text-xs text-[#1D6315]/60 mt-0.5">
             This usually takes a minute or two. You can close this window; it
             keeps going.
           </p>
@@ -146,8 +146,8 @@ export function RegenerationStatus({
   if (regen?.state === "done" && regen.result_candidate_id) {
     const resultId = regen.result_candidate_id;
     return (
-      <div className="rounded-2xl border border-[#122D30]/10 bg-[#DCEBE7]/40 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-        <p className="flex-1 text-sm font-bold text-[#122D30]">
+      <div className="rounded-2xl border border-[#1D6315]/10 bg-[#E8F0CC]/40 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <p className="flex-1 text-sm font-bold text-[#1D6315]">
           A new version is ready.
         </p>
         <Button
@@ -168,7 +168,7 @@ export function RegenerationStatus({
   return (
     <div
       className={`rounded-2xl border p-4 flex flex-col gap-3 ${
-        failed ? "border-red-200 bg-red-50/60" : "border-[#122D30]/10 bg-white"
+        failed ? "border-red-200 bg-red-50/60" : "border-[#1D6315]/10 bg-white"
       }`}
     >
       {failed ? (
@@ -179,13 +179,13 @@ export function RegenerationStatus({
             aria-hidden
           />
           <div>
-            <p className="text-sm font-bold text-[#122D30]">
+            <p className="text-sm font-bold text-[#1D6315]">
               The new version couldn&apos;t be made.
             </p>
             {regen?.error && (
               // The provider's own wording stays on hover, for anyone reporting it.
               <p
-                className="text-xs text-[#122D30]/60 mt-0.5"
+                className="text-xs text-[#1D6315]/60 mt-0.5"
                 title={regen.error}
               >
                 {regenerationErrorText(regen.error)}
@@ -194,7 +194,7 @@ export function RegenerationStatus({
           </div>
         </div>
       ) : (
-        <p className="text-sm font-bold text-[#122D30]">
+        <p className="text-sm font-bold text-[#1D6315]">
           No new version was asked for.
         </p>
       )}

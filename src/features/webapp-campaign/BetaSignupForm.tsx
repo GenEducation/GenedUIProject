@@ -63,7 +63,7 @@ export function BetaSignupForm() {
     const url = window.location.origin + window.location.pathname;
     const text = `A free AI tutor for Class 6–9 — free pilot, only ${PILOT_SEATS} families, starts ${PILOT_START}.`;
     try {
-      if (navigator.share) await navigator.share({ title: "GenEd free pilot", text, url });
+      if (navigator.share) await navigator.share({ title: "Zoovi free pilot", text, url });
       else {
         await navigator.clipboard.writeText(url);
         setCopied(true);

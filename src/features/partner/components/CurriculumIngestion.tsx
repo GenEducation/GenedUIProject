@@ -25,19 +25,19 @@ interface CurriculumIngestionProps {
 }
 
 const fieldLabel =
-  "text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1";
+  "text-[10px] font-black text-[#1D6315] uppercase tracking-widest px-1";
 const textInputBase =
-  "w-full px-5 py-3.5 border rounded-2xl text-xs font-bold text-[#122D30] outline-none placeholder:text-[#122D30]/30 transition-all";
-const textInput = `${textInputBase} bg-[#F6F7F2] border-[#122D30]/10 focus:border-[#122D30]/40`;
+  "w-full px-5 py-3.5 border rounded-2xl text-xs font-bold text-[#1D6315] outline-none placeholder:text-[#1D6315]/30 transition-all";
+const textInput = `${textInputBase} bg-[#F7F4EA] border-[#1D6315]/10 focus:border-[#1D6315]/40`;
 const textInputMissing = `${textInputBase} bg-red-50/60 border-red-400 focus:border-red-500`;
 const selectButton: React.CSSProperties = {
-  background: "#F6F7F2",
-  border: "1px solid rgba(18,45,48,0.10)",
+  background: "#F7F4EA",
+  border: "1px solid rgba(29,99,21,0.10)",
   borderRadius: 16,
   padding: "14px 20px",
   fontSize: 12,
   fontWeight: 700,
-  color: "#122D30",
+  color: "#1D6315",
 };
 const selectButtonMissing: React.CSSProperties = {
   ...selectButton,
@@ -209,13 +209,13 @@ export function CurriculumIngestion({
   const hasFile = !!file;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-[#075E63]/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-[#287624]/20 backdrop-blur-sm">
       <motion.div
         layout
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`relative w-full ${hasFile ? "max-w-7xl h-[90vh]" : "max-w-2xl max-h-[90vh]"} bg-white rounded-[2.5rem] shadow-[0_20px_70px_rgba(18,45,48,0.15)] overflow-hidden flex flex-col transition-all duration-500`}
+        className={`relative w-full ${hasFile ? "max-w-7xl h-[90vh]" : "max-w-2xl max-h-[90vh]"} bg-white rounded-[2.5rem] shadow-[0_20px_70px_rgba(29,99,21,0.15)] overflow-hidden flex flex-col transition-all duration-500`}
       >
         {/* Close Button */}
         <Button
@@ -243,14 +243,14 @@ export function CurriculumIngestion({
             <div className="p-6 md:p-10 space-y-6 md:space-y-8">
               {/* Header */}
               <div>
-                <h3 className="text-xl md:text-2xl font-black text-[#122D30] tracking-tight">
+                <h3 className="text-xl md:text-2xl font-black text-[#1D6315] tracking-tight">
                   Curriculum Upload
                 </h3>
-                <p className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest mt-1">
+                <p className="text-[10px] font-black text-[#1D6315]/40 uppercase tracking-widest mt-1">
                   Registry Ingestion
                 </p>
                 {prefill && (
-                  <p className="mt-2 text-[11px] font-semibold text-[#075E63]">
+                  <p className="mt-2 text-[11px] font-semibold text-[#287624]">
                     Uploading &ldquo;{prefill.title}&rdquo; again: its details
                     are filled in. Choose the new PDF or pages.
                   </p>
@@ -278,20 +278,20 @@ export function CurriculumIngestion({
                         validateFile(e.dataTransfer.files[0]);
                       }
                     }}
-                    className={`outline-none border-2 border-dashed ${fileError || isMissing("src-file") ? "border-rose-400 bg-rose-50/30" : "border-[#DCEBE7] bg-[#F8FBF9]"} rounded-[2rem] p-8 md:p-12 flex flex-col items-center justify-center text-center space-y-4 group-hover:bg-[#F0F7F2] group-hover:border-[#122D30]/20 transition-all cursor-pointer`}
+                    className={`outline-none border-2 border-dashed ${fileError || isMissing("src-file") ? "border-rose-400 bg-rose-50/30" : "border-[#E8F0CC] bg-[#F8FBF9]"} rounded-[2rem] p-8 md:p-12 flex flex-col items-center justify-center text-center space-y-4 group-hover:bg-[#F0F7F2] group-hover:border-[#1D6315]/20 transition-all cursor-pointer`}
                   >
                     <div
-                      className={`w-16 h-16 ${fileError ? "bg-rose-100 text-rose-500" : "bg-[#DCEBE7] text-[#122D30]"} rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}
+                      className={`w-16 h-16 ${fileError ? "bg-rose-100 text-rose-500" : "bg-[#E8F0CC] text-[#1D6315]"} rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform`}
                     >
                       <Upload size={24} />
                     </div>
                     <div className="space-y-1">
                       <p
-                        className={`text-lg font-bold ${fileError ? "text-rose-600" : "text-[#122D30]"}`}
+                        className={`text-lg font-bold ${fileError ? "text-rose-600" : "text-[#1D6315]"}`}
                       >
                         Drag and Drop Curriculum
                       </p>
-                      <p className="text-[11px] font-black text-[#122D30]/30 uppercase tracking-widest leading-relaxed">
+                      <p className="text-[11px] font-black text-[#1D6315]/30 uppercase tracking-widest leading-relaxed">
                         Supported formats: PDF only.
                       </p>
                       {fileError && (
@@ -304,16 +304,16 @@ export function CurriculumIngestion({
                 </div>
               ) : (
                 /* Compact File Summary (Visible when file selected) */
-                <div className="p-4 bg-[#F8FBF9] rounded-2xl border border-[#122D30]/5 flex items-center justify-between group">
+                <div className="p-4 bg-[#F8FBF9] rounded-2xl border border-[#1D6315]/5 flex items-center justify-between group">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#075E63] text-white rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-[#287624] text-white rounded-xl flex items-center justify-center">
                       <FileText size={18} />
                     </div>
                     <div className="overflow-hidden">
-                      <p className="text-xs font-bold text-[#122D30] truncate max-w-[200px]">
+                      <p className="text-xs font-bold text-[#1D6315] truncate max-w-[200px]">
                         {file.name}
                       </p>
-                      <p className="text-[9px] font-black text-[#122D30]/40 uppercase tracking-widest">
+                      <p className="text-[9px] font-black text-[#1D6315]/40 uppercase tracking-widest">
                         Ready to process
                       </p>
                     </div>
@@ -337,14 +337,14 @@ export function CurriculumIngestion({
               <div className="space-y-4 md:space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1">
+                    <label className="text-[10px] font-black text-[#1D6315] uppercase tracking-widest px-1">
                       Grade
                     </label>
                     <Select
                       id="src-grade"
                       aria-label="Grade"
                       placeholder="Grade"
-                      accentColor="#122D30"
+                      accentColor="#1D6315"
                       value={grade}
                       onChange={(next) => {
                         setGrade(next);
@@ -366,12 +366,12 @@ export function CurriculumIngestion({
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1">
+                    <label className="text-[10px] font-black text-[#1D6315] uppercase tracking-widest px-1">
                       Board
                     </label>
                     <Select
                       aria-label="Education board"
-                      accentColor="#122D30"
+                      accentColor="#1D6315"
                       disabled
                       value={board}
                       onChange={() => {}}
@@ -381,14 +381,14 @@ export function CurriculumIngestion({
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#122D30] uppercase tracking-widest px-1">
+                  <label className="text-[10px] font-black text-[#1D6315] uppercase tracking-widest px-1">
                     Subject
                   </label>
                   <Select
                     id="src-subject"
                     aria-label="Subject"
                     placeholder="Select Subject"
-                    accentColor="#122D30"
+                    accentColor="#1D6315"
                     value={subjectName}
                     onChange={(next) => {
                       setSubjectName(next);
@@ -505,7 +505,7 @@ export function CurriculumIngestion({
                     </div>
                   </div>
                   <p
-                    className={`text-[10px] px-1 ${pageRangeError ? "font-bold text-red-600" : "text-[#122D30]/45"}`}
+                    className={`text-[10px] px-1 ${pageRangeError ? "font-bold text-red-600" : "text-[#1D6315]/45"}`}
                   >
                     {pageRangeError ??
                       (pageCount
@@ -560,14 +560,14 @@ export function CurriculumIngestion({
                 type="button"
                 disabled={isProcessing}
                 onClick={onClose}
-                className="flex-1 py-4 text-xs font-black text-[#122D30]/60 hover:bg-gray-50 rounded-2xl transition-all uppercase tracking-widest"
+                className="flex-1 py-4 text-xs font-black text-[#1D6315]/60 hover:bg-gray-50 rounded-2xl transition-all uppercase tracking-widest"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isProcessing}
-                className="flex-[2] py-4 bg-[#075E63] text-white text-xs font-black rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] uppercase tracking-widest disabled:opacity-30"
+                className="flex-[2] py-4 bg-[#287624] text-white text-xs font-black rounded-2xl hover:bg-[#287624]/90 transition-all shadow-[0_8px_30px_rgba(29,99,21,0.2)] uppercase tracking-widest disabled:opacity-30"
               >
                 {isProcessing ? "Uploading..." : "Upload & Start"}
               </button>
@@ -582,7 +582,7 @@ export function CurriculumIngestion({
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 25, stiffness: 120 }}
-                className="hidden md:flex flex-1 flex-col p-6 md:p-8 lg:p-10 bg-[#F6F7F2]"
+                className="hidden md:flex flex-1 flex-col p-6 md:p-8 lg:p-10 bg-[#F7F4EA]"
               >
                 <PageWisePreview file={file} onPageCount={handlePageCount} />
               </motion.div>

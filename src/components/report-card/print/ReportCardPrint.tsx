@@ -35,7 +35,7 @@ export function ReportCardPrint({ data }: { data: ReportCardData }) {
     <div className="rcp">
       <header className="rcp-head">
         <div>
-          <p className="rcp-eyebrow">GenEd report card</p>
+          <p className="rcp-eyebrow">Zoovi report card</p>
           <h1 className="rcp-name">{data.displayName}</h1>
           {meta.length > 0 && <p className="rcp-meta">{meta.join("  •  ")}</p>}
         </div>
@@ -77,7 +77,7 @@ export function ReportCardPrint({ data }: { data: ReportCardData }) {
         {study?.partial ? " Time was not measured for the whole period." : ""}
         {note ? " The written note is made by AI from these figures and checked against them; it describes what was measured, not the child." : ""}
       </p>
-      <div className="rc-print-footer">{data.displayName} · GenEd report card · {data.generatedAt}</div>
+      <div className="rc-print-footer">{data.displayName} · Zoovi report card · {data.generatedAt}</div>
     </div>
   );
 }

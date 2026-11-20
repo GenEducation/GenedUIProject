@@ -15,12 +15,12 @@ export function HelpCard({ tips, childName }: { tips: HelpTip[]; childName: stri
   return (
     <section
       aria-labelledby={titleId}
-      className="relative overflow-hidden rounded-[24px] border border-[#DDEAB4] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_32px_-24px_rgba(19,41,61,0.35)]"
+      className="relative overflow-hidden rounded-[24px] border border-[#DDEAB4] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_14px_32px_-24px_rgba(29,72,21,0.35)]"
       style={{ background: "linear-gradient(160deg, #F1F9D4 0%, #FBFDF2 70%)" }}
     >
-      <span aria-hidden className="pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-[#D9F279]/40 blur-[2px]" />
+      <span aria-hidden className="pointer-events-none absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-[#A6CF08]/40 blur-[2px]" />
       <div className="relative flex items-center gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#D9F279] text-[var(--pp-green)]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#A6CF08] text-[var(--pp-green)]">
           <HandHeart size={20} strokeWidth={2.3} />
         </span>
         <div>

@@ -16,9 +16,9 @@ export function PendingRequestsSidebar() {
   );
 
   return (
-    <div className="flex-1 bg-[#F6F7F2] rounded-[1.5rem] p-5 md:p-6 border border-gray-100/50 shadow-xl flex flex-col lg:min-h-0 overflow-hidden">
+    <div className="flex-1 bg-[#F7F4EA] rounded-[1.5rem] p-5 md:p-6 border border-gray-100/50 shadow-xl flex flex-col lg:min-h-0 overflow-hidden">
       <div className="flex justify-between items-center mb-4 md:mb-5">
-        <h4 className="text-[9px] md:text-[10px] font-black text-[#122D30] uppercase tracking-widest">
+        <h4 className="text-[9px] md:text-[10px] font-black text-[#1D6315] uppercase tracking-widest">
           Pending Requests
         </h4>
         {isLoading && pendingRequests.length === 0 ? (
@@ -46,20 +46,20 @@ export function PendingRequestsSidebar() {
           <button
             key={request.id}
             onClick={() => setSelectedStudent(request)}
-            className="w-full flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#122D30]/5 transition-all text-left shadow-sm hover:shadow-md group"
+            className="w-full flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-transparent hover:border-[#1D6315]/5 transition-all text-left shadow-sm hover:shadow-md group"
           >
-            <span className="min-w-0 truncate text-[11px] md:text-xs font-bold text-[#122D30]/80 group-hover:text-[#122D30] transition-colors">
+            <span className="min-w-0 truncate text-[11px] md:text-xs font-bold text-[#1D6315]/80 group-hover:text-[#1D6315] transition-colors">
               {request.name}
             </span>
             <ChevronRight
               size={12}
-              className="text-gray-300 group-hover:text-[#122D30] transition-all group-hover:translate-x-1"
+              className="text-gray-300 group-hover:text-[#1D6315] transition-all group-hover:translate-x-1"
             />
           </button>
         ))}
         {pendingRequests.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
-            <p className="text-xs font-bold text-[#122D30]/20 uppercase tracking-widest">
+            <p className="text-xs font-bold text-[#1D6315]/20 uppercase tracking-widest">
               No pending requests
             </p>
           </div>

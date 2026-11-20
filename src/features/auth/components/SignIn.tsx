@@ -36,7 +36,7 @@ export function SignIn({
     <form onSubmit={onSubmit} className="space-y-5">
       {/* Username field */}
       <div>
-        <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2 pl-0.5">
+        <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#1D6315]/45 mb-2 pl-0.5">
           Username
         </label>
         <input
@@ -48,8 +48,8 @@ export function SignIn({
           className={`w-full rounded-xl border ${
             errors.username
               ? "border-rose-400 bg-rose-50/30"
-              : "border-[#122D30]/15 bg-white/70"
-          } px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15`}
+              : "border-[#1D6315]/15 bg-white/70"
+          } px-5 py-3.5 text-sm text-[#1D6315] transition-all duration-200 placeholder:text-[#1D6315]/25 hover:border-[#287624]/40 focus:border-[#287624] focus:outline-none focus:ring-2 focus:ring-[#287624]/15`}
         />
         {errors.username && (
           <p className="text-rose-500 text-[10px] font-semibold mt-1.5 ml-0.5 italic animate-in fade-in slide-in-from-top-1">
@@ -60,7 +60,7 @@ export function SignIn({
 
       {/* Password field */}
       <div>
-        <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2 pl-0.5">
+        <label className="block text-[9px] font-bold uppercase tracking-[0.28em] text-[#1D6315]/45 mb-2 pl-0.5">
           Password
         </label>
         <div className="relative">
@@ -73,13 +73,13 @@ export function SignIn({
             className={`w-full rounded-xl border ${
               errors.password
                 ? "border-rose-400 bg-rose-50/30"
-                : "border-[#122D30]/15 bg-white/70"
-            } px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15`}
+                : "border-[#1D6315]/15 bg-white/70"
+            } px-5 py-3.5 text-sm text-[#1D6315] transition-all duration-200 placeholder:text-[#1D6315]/25 hover:border-[#287624]/40 focus:border-[#287624] focus:outline-none focus:ring-2 focus:ring-[#287624]/15`}
           />
           <button aria-label={showPassword ? "Hide password" : "Show password"}
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#122D30]/30 hover:text-[#075E63] transition-colors"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#1D6315]/30 hover:text-[#287624] transition-colors"
           >
             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
@@ -92,7 +92,7 @@ export function SignIn({
         <div className="mt-2 flex justify-end pr-1">
           <Link
             href="/forgot-password"
-            className="text-[10px] font-semibold text-[#075E63] hover:text-[#064C50] hover:underline transition-colors tracking-wide"
+            className="text-[10px] font-semibold text-[#287624] hover:text-[#22661F] hover:underline transition-colors tracking-wide"
           >
             Forgot password?
           </Link>
@@ -104,11 +104,11 @@ export function SignIn({
         <input
           id="remember"
           type="checkbox"
-          className="h-4 w-4 rounded border-[#122D30]/20 accent-[#075E63] focus:ring-[#075E63]/60 cursor-pointer transition-all"
+          className="h-4 w-4 rounded border-[#1D6315]/20 accent-[#287624] focus:ring-[#287624]/60 cursor-pointer transition-all"
         />
         <label
           htmlFor="remember"
-          className="text-sm font-medium text-[#3E5558]/60 cursor-pointer select-none"
+          className="text-sm font-medium text-[#3B5533]/60 cursor-pointer select-none"
         >
           Remember this session
         </label>
@@ -123,27 +123,27 @@ export function SignIn({
 
       {/* Liquid Emerald CTA button */}
       <Button type="submit" size="lg" fullWidth loading={isSigningIn}>
-        Continue to GenEd
+        Continue to Zoovi
       </Button>
 
       {/* Divider — no opaque fill, the card surface is translucent */}
       <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-[#122D30]/10" />
-        <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/35">
+        <span className="h-px flex-1 bg-[#1D6315]/10" />
+        <span className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#1D6315]/35">
           or
         </span>
-        <span className="h-px flex-1 bg-[#122D30]/10" />
+        <span className="h-px flex-1 bg-[#1D6315]/10" />
       </div>
 
       <GoogleAuthButton onSuccess={onGoogleSuccess} />
 
       {onSwitchToSignup ? (
-        <div className="text-center text-sm font-medium text-[#3E5558]/60">
+        <div className="text-center text-sm font-medium text-[#3B5533]/60">
           Don&apos;t have an account?{" "}
           <button
             type="button"
             onClick={onSwitchToSignup}
-            className="font-bold text-[#075E63] hover:text-[#064C50] hover:underline transition-colors"
+            className="font-bold text-[#287624] hover:text-[#22661F] hover:underline transition-colors"
           >
             Sign up
           </button>

@@ -78,7 +78,7 @@ export function MobileNavDrawer({
             role="dialog"
             aria-modal="true"
             aria-label="Navigation"
-            className="absolute inset-y-0 left-0 w-[min(300px,86vw)] bg-paper shadow-[0_30px_80px_rgba(18,45,48,.28)]"
+            className="absolute inset-y-0 left-0 w-[min(300px,86vw)] bg-paper shadow-[0_30px_80px_rgba(29,99,21,.28)]"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}

@@ -16,7 +16,7 @@ import { useAnimate, useReducedMotion } from "framer-motion";
  */
 
 const GROUND = 176;
-const INK = "#042E5C";
+const INK = "#1D6315";
 const LIT = "#FFD66B";
 const DIM = "rgba(255,255,255,0.16)";
 
@@ -24,7 +24,7 @@ type Roof = "antenna" | "flag" | "tank" | "sign" | null;
 const BUILDINGS: { x: number; w: number; h: number; c: string; cols: number; roof: Roof; door?: boolean }[] = [
   { x: 34, w: 46, h: 74, c: "#0B4A86", cols: 2, roof: "tank", door: true },
   { x: 84, w: 52, h: 124, c: INK, cols: 3, roof: "antenna" },
-  { x: 140, w: 46, h: 94, c: "#059F6D", cols: 2, roof: "sign", door: true },
+  { x: 140, w: 46, h: 94, c: "#3A8A2E", cols: 2, roof: "sign", door: true },
   { x: 190, w: 42, h: 140, c: "#2C6CB0", cols: 2, roof: "flag" },
   { x: 236, w: 50, h: 82, c: "#0DB37D", cols: 3, roof: null, door: true },
 ];

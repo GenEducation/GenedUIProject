@@ -232,7 +232,7 @@ export function ReportCardScreen({ data, ui }: { data: ReportCardData; ui: Repor
 function CompactSubjectBar({ summary: s, onBack }: { summary: SubjectSummary; onBack: () => void }) {
   return (
     <div
-      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-white/95 px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(18,45,48,0.5)] backdrop-blur-md"
+      className="sticky top-2 z-10 flex items-center gap-3 rounded-2xl border border-[var(--rs-line)] bg-white/95 px-3 py-2.5 shadow-[0_10px_24px_-18px_rgba(29,99,21,0.5)] backdrop-blur-md"
     >
       <Button variant="tertiary" size="sm" pill iconOnly onClick={onBack} aria-label="Back to subject preview">
         <TintIcon name="actions/right-arrow" color="var(--rs-ink)" size={12} className="rotate-180" />

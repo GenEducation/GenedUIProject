@@ -55,15 +55,15 @@ export function MarkList({
           <li
             key={m.id}
             onFocusCapture={() => onSelect(m.id)}
-            className={`rounded-xl border px-3 py-3 transition-colors ${active ? "border-[#075E63]/40 bg-white" : "border-[#122D30]/10 bg-[#FBFAF5]"}`}
+            className={`rounded-xl border px-3 py-3 transition-colors ${active ? "border-[#287624]/40 bg-white" : "border-[#1D6315]/10 bg-[#FBFAF5]"}`}
           >
             <div className="flex items-center gap-2.5">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#075E63] text-[11px] font-black text-white">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#287624] text-[11px] font-black text-white">
                 {m.kind === "crop" ? <Crop size={12} aria-hidden /> : i + 1}
               </span>
-              <p className="min-w-0 flex-1 text-xs font-black text-[#122D30]">
+              <p className="min-w-0 flex-1 text-xs font-black text-[#1D6315]">
                 {m.kind === "crop" ? "Crop to this area" : `Change ${i + 1}`}
-                <span className="ml-1.5 font-bold text-[#122D30]/45">
+                <span className="ml-1.5 font-bold text-[#1D6315]/45">
                   {m.kind === "crop" ? cropWords(m.box) : whereOnPicture(m.box)}
                 </span>
               </p>
@@ -83,7 +83,7 @@ export function MarkList({
                 <Select
                   aria-label={`Which part, ${m.kind === "crop" ? "crop" : `change ${i + 1}`}`}
                   placeholder="Which part? (optional)"
-                  accentColor="#122D30"
+                  accentColor="#1D6315"
                   value={m.part}
                   onChange={(next) => onChange(m.id, { part: next })}
                   options={partOptions}
@@ -140,7 +140,7 @@ export function MarkList({
                     ? "Anything else? (optional)"
                     : "What should change here?"
                 }
-                className="w-full rounded-xl border border-[#122D30]/10 bg-white px-3 py-2 text-[13px] text-[#122D30] outline-none placeholder:text-[#122D30]/30 focus:border-[#122D30]/40"
+                className="w-full rounded-xl border border-[#1D6315]/10 bg-white px-3 py-2 text-[13px] text-[#1D6315] outline-none placeholder:text-[#1D6315]/30 focus:border-[#1D6315]/40"
               />
             </div>
           </li>

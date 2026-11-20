@@ -72,7 +72,7 @@ export function MaintenancePanel({ onBack }: { onBack: () => void }) {
       />
 
       <div className="flex flex-col items-start gap-4 rounded-2xl border border-warning-border bg-warning-bg/60 p-6 sm:flex-row sm:p-8">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-warning-ink shadow-[0_1px_2px_rgba(18,45,48,.06)]">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-warning-ink shadow-[0_1px_2px_rgba(29,99,21,.06)]">
           <Wrench size={22} />
         </span>
         <div>

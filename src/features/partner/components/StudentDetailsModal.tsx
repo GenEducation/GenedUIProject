@@ -136,16 +136,16 @@ export function StudentDetailsModal({
     .slice(0, 2);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-[#075E63]/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-[#287624]/20 backdrop-blur-sm">
       <motion.div
         initial={{ opacity: 0, scale: 0.92, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.92, y: 24 }}
         transition={{ type: "spring", stiffness: 300, damping: 28 }}
-        className="relative w-full max-w-sm md:max-w-md bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-[0_24px_80px_rgba(18,45,48,0.18)] overflow-hidden flex flex-col"
+        className="relative w-full max-w-sm md:max-w-md bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-[0_24px_80px_rgba(29,99,21,0.18)] overflow-hidden flex flex-col"
       >
         {/* Header strip */}
-        <div className="bg-[#075E63] px-6 md:px-10 pt-8 pb-10 flex flex-col items-center text-center">
+        <div className="bg-[#287624] px-6 md:px-10 pt-8 pb-10 flex flex-col items-center text-center">
           {/* Close */}
           <Button
             iconOnly
@@ -187,8 +187,8 @@ export function StudentDetailsModal({
         <div className="px-6 md:px-10 pt-6 pb-8 flex flex-col gap-5">
           {isFetching ? (
             <div className="flex flex-col items-center justify-center py-10 gap-3">
-              <Loader2 size={24} className="animate-spin text-[#122D30]/30" />
-              <p className="text-[11px] font-bold text-[#122D30]/30 uppercase tracking-widest">
+              <Loader2 size={24} className="animate-spin text-[#1D6315]/30" />
+              <p className="text-[11px] font-bold text-[#1D6315]/30 uppercase tracking-widest">
                 Loading profile…
               </p>
             </div>
@@ -239,13 +239,13 @@ export function StudentDetailsModal({
                 ].map(({ icon, label, value }) => (
                   <div
                     key={label}
-                    className="flex items-center gap-3 px-4 py-3 bg-[#F6F7F2] rounded-2xl"
+                    className="flex items-center gap-3 px-4 py-3 bg-[#F7F4EA] rounded-2xl"
                   >
-                    <span className="text-[#122D30]/30 shrink-0">{icon}</span>
-                    <span className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest w-20 shrink-0">
+                    <span className="text-[#1D6315]/30 shrink-0">{icon}</span>
+                    <span className="text-[10px] font-black text-[#1D6315]/40 uppercase tracking-widest w-20 shrink-0">
                       {label}
                     </span>
-                    <span className="text-xs font-bold text-[#122D30] truncate">
+                    <span className="text-xs font-bold text-[#1D6315] truncate">
                       {value}
                     </span>
                   </div>
@@ -267,7 +267,7 @@ export function StudentDetailsModal({
                   <button
                     onClick={handleAccept}
                     disabled={isBusy}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all font-bold text-sm shadow-lg shadow-[#122D30]/10 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#287624] text-white rounded-2xl hover:bg-[#287624]/90 transition-all font-bold text-sm shadow-lg shadow-[#1D6315]/10 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isApproving ? (
                       <Loader2 size={16} className="animate-spin" />

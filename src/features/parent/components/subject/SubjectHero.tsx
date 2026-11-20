@@ -41,7 +41,7 @@ export function SubjectHero({
   return (
     <section
       aria-label={`${subject} summary`}
-      className="relative overflow-hidden rounded-[28px] border p-5 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_40px_-26px_rgba(19,41,61,0.35)] sm:p-7"
+      className="relative overflow-hidden rounded-[28px] border p-5 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_18px_40px_-26px_rgba(29,72,21,0.35)] sm:p-7"
       style={{ background: `linear-gradient(135deg, ${tone.wash[0]}F2 0%, rgba(255,255,255,0.7) 55%, ${tone.wash[1]}CC 100%)`, borderColor: tone.edge }}
     >
 

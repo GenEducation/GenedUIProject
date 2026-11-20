@@ -46,9 +46,9 @@ function PointerRefCallout({ text, textEnd, label, page }: {
         alignItems: "center",
         gap: 10,
         width: "100%",
-        background: "linear-gradient(135deg, #EAF2EF 0%, #F6F7F2 100%)",
+        background: "linear-gradient(135deg, #EFF4DF 0%, #F7F4EA 100%)",
         border: "1.5px solid #CFE0DB",
-        borderLeft: "4px solid #B8D63F",
+        borderLeft: "4px solid #8DB000",
         borderRadius: 10,
         padding: "10px 14px",
         cursor: "pointer",
@@ -57,13 +57,13 @@ function PointerRefCallout({ text, textEnd, label, page }: {
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background =
-          "linear-gradient(135deg, #DCEBE7 0%, #EAF2EF 100%)";
+          "linear-gradient(135deg, #E8F0CC 0%, #EFF4DF 100%)";
         (e.currentTarget as HTMLButtonElement).style.boxShadow =
           "0 2px 8px rgba(26,107,191,0.15)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.background =
-          "linear-gradient(135deg, #EAF2EF 0%, #F6F7F2 100%)";
+          "linear-gradient(135deg, #EFF4DF 0%, #F7F4EA 100%)";
         (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
       }}
     >
@@ -77,7 +77,7 @@ function PointerRefCallout({ text, textEnd, label, page }: {
             margin: 0,
             fontSize: 11,
             fontWeight: 700,
-            color: "#075E63",
+            color: "#287624",
             textTransform: "uppercase",
             letterSpacing: "0.06em",
             marginBottom: 2,
@@ -105,7 +105,7 @@ function PointerRefCallout({ text, textEnd, label, page }: {
         flexShrink: 0,
         fontSize: 11,
         fontWeight: 600,
-        color: "#075E63",
+        color: "#287624",
         whiteSpace: "nowrap",
         fontFamily: "var(--font-body)",
       }}>

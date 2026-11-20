@@ -276,8 +276,8 @@ describe("live readiness chips", () => {
       />,
     );
     expect(screen.getByText(/Web app/)).toHaveTextContent("Web app ✓");
-    expect(screen.getByText(/GenEd device/)).toHaveTextContent(
-      "GenEd device: 7 of 11 steps",
+    expect(screen.getByText(/Zoovi device/)).toHaveTextContent(
+      "Zoovi device: 7 of 11 steps",
     );
   });
 });

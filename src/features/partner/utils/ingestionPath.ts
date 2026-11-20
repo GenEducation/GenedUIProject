@@ -8,7 +8,7 @@ import {
   type SourceState,
 } from "../types/sources";
 
-/** Who does a stage's work: the AI model (its output is a proposal you review) or fixed rules in GenEd's code. */
+/** Who does a stage's work: the AI model (its output is a proposal you review) or fixed rules in Zoovi's code. */
 export type StageKind = "ai" | "automatic";
 
 /** What each stage does, who does it, and which counts it produces. Mirrors `gened_ingestion.pipeline.run`. */
@@ -33,7 +33,7 @@ export const STAGE_DETAILS: Record<
   },
   reconcile: {
     kind: "automatic",
-    does: "Matches each concept against concepts GenEd already has, so nothing is duplicated.",
+    does: "Matches each concept against concepts Zoovi already has, so nothing is duplicated.",
     counts: ["components_new", "components_matched"],
   },
   questions: {
@@ -55,7 +55,7 @@ export const STAGE_DETAILS: Record<
   },
   lesson: {
     kind: "automatic",
-    does: "Builds the lesson plan and checks the whole chapter against GenEd's publishing rules.",
+    does: "Builds the lesson plan and checks the whole chapter against Zoovi's publishing rules.",
     counts: [
       "lesson_nodes",
       "plan_steps",
@@ -66,7 +66,7 @@ export const STAGE_DETAILS: Record<
   },
   visuals: {
     kind: "ai",
-    does: "Draws GenEd's own teaching visuals for the lesson.",
+    does: "Draws Zoovi's own teaching visuals for the lesson.",
     counts: [],
   },
   submit: {
@@ -344,7 +344,7 @@ export const NEXT_STEP_COPY: Record<
   },
   redraw_pictures: {
     title: "Run again to redraw a picture",
-    body: "Some questions are about a picture, and GenEd's redraw of it didn't pass its own checks, so there is nothing for you to accept yet. Run the chapter again to draw it again.",
+    body: "Some questions are about a picture, and Zoovi's redraw of it didn't pass its own checks, so there is nothing for you to accept yet. Run the chapter again to draw it again.",
     tone: "problem",
   },
   add_questions: {
@@ -359,12 +359,12 @@ export const NEXT_STEP_COPY: Record<
   },
   prepare_release: {
     title: "Your decisions are saved",
-    body: "Prepare the release now. GenEd will reuse the completed work and check only what your decisions changed.",
+    body: "Prepare the release now. Zoovi will reuse the completed work and check only what your decisions changed.",
     tone: "action",
   },
   upload_pages_with_questions: {
     title: "Upload pages that include the exercises",
-    body: "These pages have no questions GenEd can check, and a chapter needs them to be taught. Running the same upload again would end the same way.",
+    body: "These pages have no questions Zoovi can check, and a chapter needs them to be taught. Running the same upload again would end the same way.",
     tone: "problem",
   },
   upload_clearer_pdf: {
@@ -389,12 +389,12 @@ export const NEXT_STEP_COPY: Record<
   },
   fix_chapter_details: {
     title: "Check the chapter's number and title",
-    body: "GenEd already has this chapter of the book under another title. Correct the details to match, then it runs again.",
+    body: "Zoovi already has this chapter of the book under another title. Correct the details to match, then it runs again.",
     tone: "problem",
   },
   fix_edition_label: {
     title: "Check the book's edition",
-    body: "GenEd already has this book under another edition. Correct the edition to match, then it runs again.",
+    body: "Zoovi already has this book under another edition. Correct the edition to match, then it runs again.",
     tone: "problem",
   },
   fix_outcomes: {
@@ -404,7 +404,7 @@ export const NEXT_STEP_COPY: Record<
   },
 };
 
-/** The copy for a next step. A step this build doesn't know yet (a newer server) reads as GenEd's to look at, never a crash. */
+/** The copy for a next step. A step this build doesn't know yet (a newer server) reads as Zoovi's to look at, never a crash. */
 export function nextStepCopy(step: NextStep): (typeof NEXT_STEP_COPY)[NextStep] {
   return NEXT_STEP_COPY[step] ?? NEXT_STEP_COPY.contact_gened;
 }
@@ -417,7 +417,7 @@ export const CORRECTION_STEPS: ReadonlySet<NextStep> = new Set([
 
 /** Plain words for the checks a partner can act on; any other check reads as a generic failed check. */
 export const CHECK_LABELS: Record<string, string> = {
-  single_component_share: "Too few questions GenEd can check",
+  single_component_share: "Too few questions Zoovi can check",
   unassessed_component: "A concept has no question to check it",
   plan_lo_uncovered: "A chosen learning outcome is not covered",
   lo_coverage_scope: "The learning outcomes do not fit these pages",
@@ -432,7 +432,7 @@ export const CHECK_LABELS: Record<string, string> = {
 };
 
 export function checkLabel(check: string): string {
-  return CHECK_LABELS[check] ?? "A GenEd check did not pass";
+  return CHECK_LABELS[check] ?? "A Zoovi check did not pass";
 }
 
 export const UPLOAD_STEPS: ReadonlySet<NextStep> = new Set([
@@ -444,8 +444,8 @@ export const UPLOAD_STEPS: ReadonlySet<NextStep> = new Set([
 /** Why a printed question was removed, in plain words. */
 export function removedReason(reason: string): string {
   if (reason === "answer_check_disagreed")
-    return "GenEd's answer check couldn't confirm the answer (often a picture question)";
+    return "Zoovi's answer check couldn't confirm the answer (often a picture question)";
   if (reason === "not_machine_scorable" || reason === "needs_a_concept")
     return "An open question: give the exact answers to accept";
-  return "GenEd couldn't mark it automatically";
+  return "Zoovi couldn't mark it automatically";
 }

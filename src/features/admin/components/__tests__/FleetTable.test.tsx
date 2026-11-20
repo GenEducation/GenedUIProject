@@ -529,7 +529,7 @@ describe("the client decides nothing", () => {
 
   it("never renders UNKNOWN or STALE with the healthy colour", async () => {
     await renderFleet();
-    const healthy = "#059F6D";
+    const healthy = "#3A8A2E";
 
     for (const label of [
       "Connectivity: UNKNOWN",

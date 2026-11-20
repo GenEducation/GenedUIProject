@@ -123,14 +123,14 @@ export default function ButtonGalleryPage() {
         <Row label="fullWidth">
           <div className="w-full max-w-sm">
             <Button fullWidth size="lg">
-              Continue to GenEd
+              Continue to Zoovi
             </Button>
           </div>
         </Row>
       </Section>
 
       <Section title='tone="onDark"'>
-        <div className="rounded-2xl bg-[#122D30] p-6">
+        <div className="rounded-2xl bg-[#1D6315] p-6">
           <div className="flex flex-wrap items-center gap-3">
             {VARIANTS.map((v) => (
               <Button key={v} variant={v} tone="onDark">

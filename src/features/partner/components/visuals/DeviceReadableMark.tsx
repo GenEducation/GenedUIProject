@@ -7,7 +7,7 @@ import { asError } from "@/utils/errors";
 import { visualsService } from "../../services/visualsService";
 import type { VisualDetail } from "../../types/visuals";
 
-/** The picture box on the GenEd device (the size the worker makes device pictures at). */
+/** The picture box on the Zoovi device (the size the worker makes device pictures at). */
 export const DEVICE_PICTURE = { width: 320, height: 230 };
 
 /**
@@ -44,18 +44,18 @@ export function DeviceReadableMark({
 
   return (
     <section
-      aria-label="On the GenEd device"
-      className="flex flex-col gap-2.5 rounded-2xl bg-[#F6F7F2] p-3.5"
+      aria-label="On the Zoovi device"
+      className="flex flex-col gap-2.5 rounded-2xl bg-[#F7F4EA] p-3.5"
     >
-      <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#122D30]/55">
-        <Smartphone size={13} aria-hidden /> On the GenEd device
+      <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#1D6315]/55">
+        <Smartphone size={13} aria-hidden /> On the Zoovi device
       </p>
-      <p className="text-xs text-[#122D30]/70">
+      <p className="text-xs text-[#1D6315]/70">
         This is how big the picture is on the device. Mark it only if every
         label and number can still be read at this size.
       </p>
       <div
-        className="flex items-center justify-center rounded-lg border border-[#122D30]/15 bg-white"
+        className="flex items-center justify-center rounded-lg border border-[#1D6315]/15 bg-white"
         style={{
           width: DEVICE_PICTURE.width,
           height: DEVICE_PICTURE.height,
@@ -69,7 +69,7 @@ export function DeviceReadableMark({
             className="max-h-full max-w-full object-contain"
           />
         ) : (
-          <span className="text-xs text-[#122D30]/50">No image</span>
+          <span className="text-xs text-[#1D6315]/50">No image</span>
         )}
       </div>
       {marked ? (
@@ -94,7 +94,7 @@ export function DeviceReadableMark({
           >
             Readable on the device
           </Button>
-          <span className="text-[11px] text-[#122D30]/55">
+          <span className="text-[11px] text-[#1D6315]/55">
             Not readable? Leave it: it stays in the app only.
           </span>
         </div>

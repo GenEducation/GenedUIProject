@@ -53,7 +53,7 @@ export function ReasonFields({
     <div className="flex flex-col gap-4">
       <fieldset>
         <legend
-          className={`text-[10px] font-black uppercase tracking-widest mb-2 ${missingReason ? "text-red-600" : "text-[#122D30]/50"}`}
+          className={`text-[10px] font-black uppercase tracking-widest mb-2 ${missingReason ? "text-red-600" : "text-[#1D6315]/50"}`}
         >
           What&apos;s wrong?{" "}
           <span className="normal-case tracking-normal font-bold">
@@ -93,7 +93,7 @@ export function ReasonFields({
         <div className="flex items-baseline justify-between mb-1">
           <label
             htmlFor={noteId}
-            className="text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest"
+            className="text-[10px] font-black text-[#1D6315]/50 uppercase tracking-widest"
           >
             Note{" "}
             <span className="normal-case tracking-normal font-bold">
@@ -101,7 +101,7 @@ export function ReasonFields({
             </span>
           </label>
           <span
-            className={`text-[10px] font-bold tabular-nums ${used >= NOTE_MAX ? "text-red-500" : "text-[#122D30]/40"}`}
+            className={`text-[10px] font-bold tabular-nums ${used >= NOTE_MAX ? "text-red-500" : "text-[#1D6315]/40"}`}
             aria-live="polite"
           >
             {reserved > 0 && (
@@ -119,13 +119,13 @@ export function ReasonFields({
           onChange={(e) => onNoteChange(e.target.value.slice(0, room))}
           onKeyDown={onSubmit ? enterToSubmit(onSubmit) : undefined}
           placeholder="What should the new picture do differently?"
-          className="w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-sm text-[#122D30] outline-none placeholder:text-[#122D30]/30 resize-none"
+          className="w-full px-3 py-2 bg-[#F7F4EA] border border-[#1D6315]/10 focus:border-[#1D6315]/40 rounded-xl text-sm text-[#1D6315] outline-none placeholder:text-[#1D6315]/30 resize-none"
         />
-        <p id={hintId} className="mt-1 text-[11px] text-[#122D30]/50">
+        <p id={hintId} className="mt-1 text-[11px] text-[#1D6315]/50">
           Don&apos;t include names or personal details. This note is used to
           improve the picture.
           {onSubmit && (
-            <span className="ml-1 text-[#122D30]/40">
+            <span className="ml-1 text-[#1D6315]/40">
               Enter to send, Shift+Enter for a new line.
             </span>
           )}

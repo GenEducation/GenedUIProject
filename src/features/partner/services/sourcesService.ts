@@ -296,7 +296,7 @@ export const sourcesService = {
       })
     ).json(),
 
-  /** Keep a concept GenEd put on hold (ADR 0049); its objectives then need questions like any other. */
+  /** Keep a concept Zoovi put on hold (ADR 0049); its objectives then need questions like any other. */
   keepConcept: async (id: string, conceptKey: string): Promise<BankPackage> =>
     (
       await authFetch(

@@ -25,7 +25,7 @@ export function Disclosure({
     <section>
       <details
         open={defaultOpen}
-        className={`group rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] p-5 ${className}`}
+        className={`group rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(29,99,21,.06),0_1px_3px_rgba(29,99,21,.05)] p-5 ${className}`}
       >
         <summary className="flex cursor-pointer list-none items-start justify-between gap-3 focus:outline-none select-none">
           <div>

@@ -202,7 +202,7 @@ export function GuardianCard({ index }: { index: number }) {
           )}
           {status.state === "awaiting_parent_confirmation" && (
             <p className="text-[13px] leading-relaxed text-[var(--text-mid)]">
-              They already have a GenEd account. You&apos;ll be connected as soon as they confirm.
+              They already have a Zoovi account. You&apos;ll be connected as soon as they confirm.
             </p>
           )}
           {status.state === "email_unverified" && studentId && status.parent_email && (

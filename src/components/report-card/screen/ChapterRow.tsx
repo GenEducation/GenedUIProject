@@ -86,7 +86,7 @@ export function ChapterRow({ row, ui, index }: { row: ChapterRowModel; ui: Repor
   return (
     <motion.li
       {...enter}
-      className="@container/ch overflow-hidden rounded-2xl border border-[var(--rs-line)] bg-white transition-[box-shadow,border-color] hover:border-[var(--rs-line-strong)] hover:shadow-[0_14px_30px_-24px_rgba(18,45,48,0.5)]"
+      className="@container/ch overflow-hidden rounded-2xl border border-[var(--rs-line)] bg-white transition-[box-shadow,border-color] hover:border-[var(--rs-line-strong)] hover:shadow-[0_14px_30px_-24px_rgba(29,99,21,0.5)]"
       style={{ borderColor: open ? "var(--rs-line-strong)" : undefined }}
     >
       {/* eslint-disable-next-line no-restricted-syntax -- disclosure header for a composite chapter card */}

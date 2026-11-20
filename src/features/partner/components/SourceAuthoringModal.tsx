@@ -62,7 +62,7 @@ interface AnswerDraft {
   concept: string;
 }
 
-/** The three ways to give a chapter questions, one tab each; GenEd's prepared questions first (backend ADR 0047). */
+/** The three ways to give a chapter questions, one tab each; Zoovi's prepared questions first (backend ADR 0047). */
 type Tab = "ai" | "own" | "printed" | "pictures";
 
 /** A question open in the form. */
@@ -152,7 +152,7 @@ export function SourceAuthoringModal(props: SourceAuthoringModalProps) {
       onClose={onClose}
       size="full"
       title={subject ? `Review decisions for ${subject.title}` : "Review decisions"}
-      panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F6F7F2" }}
+      panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F7F4EA" }}
     >
       {/* Keyed so each chapter starts from its own saved questions. */}
       {subject && (
@@ -320,7 +320,7 @@ function AuthoringBody({
   }[] = [
     {
       key: "ai",
-      label: "Prepared by GenEd",
+      label: "Prepared by Zoovi",
       icon: <Sparkles size={15} />,
       count: null,
       show: true,
@@ -354,20 +354,20 @@ function AuthoringBody({
 
   return (
     <div className="flex flex-col min-h-full">
-      <header className="shrink-0 bg-white border-b border-[#122D30]/5">
+      <header className="shrink-0 bg-white border-b border-[#1D6315]/5">
         <div className="flex items-start gap-4 px-5 md:px-7 pt-6">
-          <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
+          <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#287624] text-white flex items-center justify-center">
             <PenLine size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40">
               Required decisions
             </p>
-            <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">
+            <h2 className="text-lg md:text-xl font-black text-[#1D6315] tracking-tight truncate">
               {subject.title}
             </h2>
-            <p className="text-xs text-[#122D30]/60 mt-1 max-w-xl">
-              Review each highlighted lesson step. Accept or edit GenEd&rsquo;s
+            <p className="text-xs text-[#1D6315]/60 mt-1 max-w-xl">
+              Review each highlighted lesson step. Accept or edit Zoovi&rsquo;s
               proposed questions and activities, answer a printed question, or
               add your own. Nothing reaches students until you publish.
             </p>
@@ -402,10 +402,10 @@ function AuthoringBody({
                     aria-selected={active}
                     aria-controls={`${tabsId}-${t.key}-panel`}
                     onClick={() => setTab(t.key)}
-                    className={`relative flex shrink-0 items-center gap-2 px-3.5 pt-2 pb-3 text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#075E63]/40 rounded-t-lg ${
+                    className={`relative flex shrink-0 items-center gap-2 px-3.5 pt-2 pb-3 text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#287624]/40 rounded-t-lg ${
                       active
-                        ? "text-[#075E63]"
-                        : "text-[#122D30]/50 hover:text-[#122D30]"
+                        ? "text-[#287624]"
+                        : "text-[#1D6315]/50 hover:text-[#1D6315]"
                     }`}
                   >
                     {t.icon}
@@ -414,8 +414,8 @@ function AuthoringBody({
                       <span
                         className={`min-w-5 rounded-full px-1.5 py-px text-[10.5px] font-black tabular-nums ${
                           active
-                            ? "bg-[#075E63] text-white"
-                            : "bg-[#122D30]/8 text-[#122D30]/60"
+                            ? "bg-[#287624] text-white"
+                            : "bg-[#1D6315]/8 text-[#1D6315]/60"
                         }`}
                       >
                         {t.count}
@@ -423,7 +423,7 @@ function AuthoringBody({
                     )}
                     <span
                       aria-hidden
-                      className={`absolute inset-x-2 bottom-0 h-[3px] rounded-full ${active ? "bg-[#075E63]" : "bg-transparent"}`}
+                      className={`absolute inset-x-2 bottom-0 h-[3px] rounded-full ${active ? "bg-[#287624]" : "bg-transparent"}`}
                     />
                   </button>
                 );
@@ -436,12 +436,12 @@ function AuthoringBody({
         {loadError ? (
           <p
             role="alert"
-            className="text-sm font-bold text-[#122D30]/70 py-10 text-center"
+            className="text-sm font-bold text-[#1D6315]/70 py-10 text-center"
           >
             {loadError}
           </p>
         ) : !data ? (
-          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
+          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#1D6315]/40 py-10">
             <Loader2 size={16} className="animate-spin" aria-hidden /> Loading
             the chapter…
           </p>
@@ -476,7 +476,7 @@ function AuthoringBody({
                 <EmptyState
                   icon={<PenLine size={20} />}
                   title="No questions here yet"
-                  body="Write one below. GenEd's prepared questions are in their own tab."
+                  body="Write one below. Zoovi's prepared questions are in their own tab."
                 />
               )}
               {added.map((q) =>
@@ -573,7 +573,7 @@ function AuthoringBody({
                 {removed.length > 0 && (
                   <>
                     <PanelIntro>
-                      GenEd took these out because it couldn&rsquo;t check their
+                      Zoovi took these out because it couldn&rsquo;t check their
                       answers. Give an answer to bring one back. All of them are
                       optional: skip any that can&rsquo;t have one exact answer.
                     </PanelIntro>
@@ -581,7 +581,7 @@ function AuthoringBody({
                     {groupBySection(removed, sections).map((group) => (
                       <div key={group.key} className="flex flex-col gap-3">
                         {group.title && (
-                          <h3 className="text-[11px] font-black uppercase tracking-widest text-[#122D30]/40 mt-1">
+                          <h3 className="text-[11px] font-black uppercase tracking-widest text-[#1D6315]/40 mt-1">
                             {group.title}
                           </h3>
                         )}
@@ -639,10 +639,10 @@ function AuthoringBody({
         )}
       </div>
 
-      {/* The GenEd tab's question bank brings its own approve bar; this footer only saves the other tabs' work, so there it
+      {/* The Zoovi tab's question bank brings its own approve bar; this footer only saves the other tabs' work, so there it
           appears just to keep unsaved work from those tabs (or an error) in sight, never as a second, empty set of buttons. */}
       {data && (tab !== "ai" || dirty || error) && (
-        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#122D30]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
+        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#1D6315]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
           {error && (
             <p
               role="alert"
@@ -656,7 +656,7 @@ function AuthoringBody({
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p
                 role="status"
-                className="flex-1 flex items-center gap-2 text-sm font-bold text-[#122D30]"
+                className="flex-1 flex items-center gap-2 text-sm font-bold text-[#1D6315]"
               >
                 <CheckCircle2
                   size={16}
@@ -676,7 +676,7 @@ function AuthoringBody({
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-[#122D30]">
+                <p className="text-sm font-black text-[#1D6315]">
                   {total
                     ? `${plural(total, pictureDecisions ? "change" : "question")} ready`
                     : "No questions added yet"}
@@ -686,7 +686,7 @@ function AuthoringBody({
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-[#122D30]/50">
+                <p className="text-xs text-[#1D6315]/50">
                   {total
                     ? [
                         keyed.length && `${keyed.length} printed`,
@@ -721,7 +721,7 @@ function AuthoringBody({
             </div>
           )}
           {editing && (
-            <p className="text-[11px] font-bold text-[#122D30]/50 -mt-1">
+            <p className="text-[11px] font-bold text-[#1D6315]/50 -mt-1">
               Finish or cancel the question you&rsquo;re writing to save.
             </p>
           )}
@@ -787,10 +787,10 @@ function Panel({
 
 function PanelIntro({ children }: { children: React.ReactNode }) {
   return (
-    <p className="flex items-start gap-2 text-xs text-[#122D30]/60 max-w-2xl">
+    <p className="flex items-start gap-2 text-xs text-[#1D6315]/60 max-w-2xl">
       <Info
         size={14}
-        className="mt-px shrink-0 text-[#122D30]/35"
+        className="mt-px shrink-0 text-[#1D6315]/35"
         aria-hidden
       />
       <span>{children}</span>
@@ -808,15 +808,15 @@ function EmptyState({
   body: string;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[#122D30]/15 bg-white/60 px-5 py-8 flex flex-col items-center gap-2 text-center">
+    <div className="rounded-2xl border border-dashed border-[#1D6315]/15 bg-white/60 px-5 py-8 flex flex-col items-center gap-2 text-center">
       <span
-        className="h-10 w-10 rounded-2xl bg-[#DCEBE7] text-[#075E63] flex items-center justify-center"
+        className="h-10 w-10 rounded-2xl bg-[#E8F0CC] text-[#287624] flex items-center justify-center"
         aria-hidden
       >
         {icon}
       </span>
-      <p className="text-sm font-bold text-[#122D30]">{title}</p>
-      <p className="text-xs text-[#122D30]/50 max-w-sm">{body}</p>
+      <p className="text-sm font-bold text-[#1D6315]">{title}</p>
+      <p className="text-xs text-[#1D6315]/50 max-w-sm">{body}</p>
     </div>
   );
 }
@@ -824,13 +824,13 @@ function EmptyState({
 function Progress({ done, total }: { done: number; total: number }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="h-1.5 flex-1 rounded-full bg-[#122D30]/8 overflow-hidden">
+      <div className="h-1.5 flex-1 rounded-full bg-[#1D6315]/8 overflow-hidden">
         <div
-          className="h-full rounded-full bg-[#075E63] transition-[width] duration-500"
+          className="h-full rounded-full bg-[#287624] transition-[width] duration-500"
           style={{ width: `${total ? (done / total) * 100 : 0}%` }}
         />
       </div>
-      <span className="text-[11px] font-black text-[#122D30]/60 tabular-nums">
+      <span className="text-[11px] font-black text-[#1D6315]/60 tabular-nums">
         {done} of {total} answered
       </span>
     </div>
@@ -838,11 +838,11 @@ function Progress({ done, total }: { done: number; total: number }) {
 }
 
 const field =
-  "w-full rounded-xl border border-[#122D30]/15 bg-white px-3 py-2 text-sm text-[#122D30] transition-colors focus:outline-none focus:border-[#075E63]/60 focus:ring-2 focus:ring-[#075E63]/10";
+  "w-full rounded-xl border border-[#1D6315]/15 bg-white px-3 py-2 text-sm text-[#1D6315] transition-colors focus:outline-none focus:border-[#287624]/60 focus:ring-2 focus:ring-[#287624]/10";
 /** A native select drawn like the fields around it, with its own chevron. */
 const selectField = `${field} appearance-none pr-9 bg-no-repeat bg-[length:14px] bg-[position:right_0.75rem_center] bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23122D30' stroke-opacity='.5' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")]`;
 const label =
-  "text-[10px] font-black uppercase tracking-widest text-[#122D30]/50";
+  "text-[10px] font-black uppercase tracking-widest text-[#1D6315]/50";
 
 /** Enter submits the select's form; outside one, it calls `onEnter`. */
 function ConceptSelect({
@@ -907,17 +907,17 @@ function RemovedCard({
   return (
     <article
       aria-label={question.prompt}
-      className={`rounded-2xl bg-white border p-4 flex flex-col gap-3 transition-colors ${done ? "border-emerald-300" : "border-[#122D30]/5"}`}
+      className={`rounded-2xl bg-white border p-4 flex flex-col gap-3 transition-colors ${done ? "border-emerald-300" : "border-[#1D6315]/5"}`}
     >
       <div className="flex items-start gap-3">
-        <p className="flex-1 text-sm font-bold text-[#122D30] whitespace-pre-line">
+        <p className="flex-1 text-sm font-bold text-[#1D6315] whitespace-pre-line">
           {question.prompt}
         </p>
         <span
           className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${
             done
               ? "bg-emerald-50 text-emerald-700"
-              : "bg-[#122D30]/5 text-[#122D30]/45"
+              : "bg-[#1D6315]/5 text-[#1D6315]/45"
           }`}
         >
           {done && <Check size={11} aria-hidden />}
@@ -936,9 +936,9 @@ function RemovedCard({
           </Button>
         </div>
       )}
-      <p className="text-[11px] text-[#122D30]/50">
+      <p className="text-[11px] text-[#1D6315]/50">
         {removedReason(question.reason)}
-        {question.run_key ? ` · GenEd read “${question.run_key}”` : ""}
+        {question.run_key ? ` · Zoovi read “${question.run_key}”` : ""}
       </p>
       {question.options.length > 0 ? (
         <fieldset className="flex flex-col gap-1.5">
@@ -950,13 +950,13 @@ function RemovedCard({
                 key={i}
                 className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
                   picked
-                    ? "border-[#075E63] bg-[#DCEBE7]/50 text-[#122D30] font-bold"
-                    : "border-[#122D30]/10 text-[#122D30] hover:border-[#122D30]/25"
+                    ? "border-[#287624] bg-[#E8F0CC]/50 text-[#1D6315] font-bold"
+                    : "border-[#1D6315]/10 text-[#1D6315] hover:border-[#1D6315]/25"
                 }`}
               >
                 <input
                   type="radio"
-                  className="accent-[#075E63]"
+                  className="accent-[#287624]"
                   name={`opt-${question.item_key}`}
                   checked={picked}
                   onChange={() => onChange({ ...draft, value: String(i) })}
@@ -972,7 +972,7 @@ function RemovedCard({
           <div
             role="group"
             aria-label="Answer type"
-            className="inline-flex self-start rounded-xl bg-[#122D30]/5 p-0.5"
+            className="inline-flex self-start rounded-xl bg-[#1D6315]/5 p-0.5"
           >
             {(["numeric", "words"] as const).map((k) => (
               // eslint-disable-next-line no-restricted-syntax -- one half of a segmented toggle.
@@ -983,8 +983,8 @@ function RemovedCard({
                 onClick={() => onChange({ ...draft, kind: k })}
                 className={`rounded-[10px] px-3 py-1 text-xs font-bold transition-colors ${
                   draft.kind === k
-                    ? "bg-white text-[#122D30] shadow-sm"
-                    : "text-[#122D30]/50 hover:text-[#122D30]"
+                    ? "bg-white text-[#1D6315] shadow-sm"
+                    : "text-[#1D6315]/50 hover:text-[#1D6315]"
                 }`}
               >
                 {k === "numeric" ? "A number" : "Words"}
@@ -1067,10 +1067,10 @@ function AddedRow({
   return (
     <article
       aria-label={question.prompt}
-      className="rounded-2xl bg-white border border-[#122D30]/5 p-4 flex flex-col gap-2"
+      className="rounded-2xl bg-white border border-[#1D6315]/5 p-4 flex flex-col gap-2"
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#DCEBE7]/40 text-[#122D30] border-[#122D30]/10">
+        <span className="px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border bg-[#E8F0CC]/40 text-[#1D6315] border-[#1D6315]/10">
           {concept?.title ?? question.concept_key}
         </span>
         {question.origin === "ai_assisted" && (
@@ -1089,18 +1089,18 @@ function AddedRow({
           </span>
         )}
       </div>
-      <p className="text-sm font-bold text-[#122D30] whitespace-pre-line">
+      <p className="text-sm font-bold text-[#1D6315] whitespace-pre-line">
         {question.prompt}
       </p>
       {(question.answer_kind === "mcq" ||
         question.answer_kind === "multi_select") && (
-        <p className="text-xs text-[#122D30]/60">
+        <p className="text-xs text-[#1D6315]/60">
           Choices: {question.options?.join(" · ")}
         </p>
       )}
-      <p className="text-xs text-[#122D30]/60">
+      <p className="text-xs text-[#1D6315]/60">
         {KIND_LABEL[question.answer_kind]} · Answer:{" "}
-        <span className="font-bold text-[#122D30]">{keyText(question)}</span>
+        <span className="font-bold text-[#1D6315]">{keyText(question)}</span>
       </p>
       <div className="flex flex-wrap gap-2 pt-1">
         <Button
@@ -1164,14 +1164,14 @@ function QuestionForm({
   return (
     <form
       aria-label="Write a question"
-      className="rounded-2xl bg-white border-2 border-[#075E63]/30 p-4 flex flex-col gap-3 shadow-[0_8px_24px_-12px_rgba(18,45,48,0.25)]"
+      className="rounded-2xl bg-white border-2 border-[#287624]/30 p-4 flex flex-col gap-3 shadow-[0_8px_24px_-12px_rgba(29,99,21,0.25)]"
       onSubmit={(e) => {
         e.preventDefault();
         setTried(true);
         if (!problem) onDone(built);
       }}
     >
-      <p className="text-xs font-black text-[#075E63]">
+      <p className="text-xs font-black text-[#287624]">
         {initial.replaces
           ? "Edit a printed question"
           : initial.origin === "ai_assisted"
@@ -1209,7 +1209,7 @@ function QuestionForm({
         />
       </div>
       {section?.text && (
-        <details className="text-xs text-[#122D30]/60">
+        <details className="text-xs text-[#1D6315]/60">
           <summary className="cursor-pointer font-bold">
             Read this part of the chapter
           </summary>
@@ -1308,7 +1308,7 @@ function PrintedList({
         <article
           key={p.item_key}
           aria-label={p.prompt}
-          className="rounded-2xl bg-white border border-[#122D30]/5 p-4 flex flex-col gap-2"
+          className="rounded-2xl bg-white border border-[#1D6315]/5 p-4 flex flex-col gap-2"
         >
           <div className="flex flex-wrap items-center gap-2">
             {p.needs_keyboard && (
@@ -1322,7 +1322,7 @@ function PrintedList({
               </span>
             )}
           </div>
-          <p className="text-sm font-bold text-[#122D30] whitespace-pre-line">
+          <p className="text-sm font-bold text-[#1D6315] whitespace-pre-line">
             {p.prompt}
           </p>
           <div>

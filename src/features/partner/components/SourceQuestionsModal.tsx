@@ -68,7 +68,7 @@ export function SourceQuestionsModal(props: SourceQuestionsModalProps) {
       onClose={onClose}
       size="full"
       title={subject ? `Questions about ${subject.title}` : "Questions"}
-      panelStyle={{ maxWidth: "min(880px, 100%)", background: "#F6F7F2" }}
+      panelStyle={{ maxWidth: "min(880px, 100%)", background: "#F7F4EA" }}
     >
       {/* Keyed so each chapter starts from its own recorded answers. */}
       {subject && (
@@ -168,18 +168,18 @@ function QuestionsBody({
 
   return (
     <div className="flex flex-col min-h-full">
-      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#122D30]/5">
-        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#1D6315]/5">
+        <div className="h-11 w-11 shrink-0 rounded-2xl bg-[#287624] text-white flex items-center justify-center">
           <HelpCircle size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40">
             Concepts that look alike
           </p>
-          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">
+          <h2 className="text-lg md:text-xl font-black text-[#1D6315] tracking-tight truncate">
             {subject.title}
           </h2>
-          <p className="text-xs text-[#122D30]/60 mt-1 max-w-xl">
+          <p className="text-xs text-[#1D6315]/60 mt-1 max-w-xl">
             The run found concepts that look like others. It never decides on
             its own whether two concepts are the same, so tell it: is each one
             new, or the same as another concept in this chapter?
@@ -199,12 +199,12 @@ function QuestionsBody({
         {loadError ? (
           <p
             role="alert"
-            className="text-sm font-bold text-[#122D30]/70 py-10 text-center"
+            className="text-sm font-bold text-[#1D6315]/70 py-10 text-center"
           >
             {loadError}
           </p>
         ) : !data ? (
-          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
+          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#1D6315]/40 py-10">
             <Loader2 size={16} className="animate-spin" aria-hidden /> Loading
             the questions…
           </p>
@@ -226,7 +226,7 @@ function QuestionsBody({
       </div>
 
       {data && (
-        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#122D30]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
+        <footer className="sticky bottom-0 shrink-0 bg-white border-t border-[#1D6315]/5 px-5 md:px-7 py-4 flex flex-col gap-3">
           {error && (
             <p
               role="alert"
@@ -240,7 +240,7 @@ function QuestionsBody({
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <p
                 role="status"
-                className="flex-1 flex items-center gap-2 text-sm font-bold text-[#122D30]"
+                className="flex-1 flex items-center gap-2 text-sm font-bold text-[#1D6315]"
               >
                 <CheckCircle2
                   size={16}
@@ -259,7 +259,7 @@ function QuestionsBody({
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <p className="flex-1 text-xs font-bold text-[#122D30]/50">
+              <p className="flex-1 text-xs font-bold text-[#1D6315]/50">
                 {answered} of {questions.length} answered
               </p>
               <Button
@@ -316,21 +316,21 @@ function QuestionCard({
   return (
     <section
       aria-label={`Question ${index}: ${p.title}`}
-      className="rounded-2xl bg-white border border-[#122D30]/5 p-4 md:p-5"
+      className="rounded-2xl bg-white border border-[#1D6315]/5 p-4 md:p-5"
     >
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40">
         Question {index}
       </p>
-      <h3 className="mt-1 text-base font-black text-[#122D30]">{p.title}</h3>
-      <p className="mt-1 text-sm text-[#122D30]/70 leading-relaxed">
+      <h3 className="mt-1 text-base font-black text-[#1D6315]">{p.title}</h3>
+      <p className="mt-1 text-sm text-[#1D6315]/70 leading-relaxed">
         {p.definition}
       </p>
-      <p className="mt-1.5 text-[10px] font-black uppercase tracking-widest text-[#122D30]/35">
+      <p className="mt-1.5 text-[10px] font-black uppercase tracking-widest text-[#1D6315]/35">
         {p.lo_code}
       </p>
 
       <fieldset className="mt-4">
-        <legend className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/50 mb-2">
+        <legend className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/50 mb-2">
           Is it…
         </legend>
         <div className="flex flex-col gap-1.5">
@@ -340,7 +340,7 @@ function QuestionCard({
             checked={choice === "novel"}
             onChoose={onChoose}
           >
-            <span className="text-sm font-bold text-[#122D30]">
+            <span className="text-sm font-bold text-[#1D6315]">
               It&apos;s a new concept
             </span>
           </Option>
@@ -350,18 +350,18 @@ function QuestionCard({
             const label = (
               <span className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                 {canPick && (
-                  <span className="text-sm text-[#122D30]/60">Same as</span>
+                  <span className="text-sm text-[#1D6315]/60">Same as</span>
                 )}
-                <span className="text-sm font-bold text-[#122D30]">
+                <span className="text-sm font-bold text-[#1D6315]">
                   {c.title}
                 </span>
-                <span className="text-[10px] font-black tabular-nums text-[#122D30]/50">
+                <span className="text-[10px] font-black tabular-nums text-[#1D6315]/50">
                   {percent(c.similarity)} alike
                 </span>
                 <span
                   className={`px-2 py-px rounded-full text-[9px] font-black uppercase tracking-widest border ${
                     c.where === "this_chapter"
-                      ? "bg-[#DCEBE7]/40 text-[#122D30] border-[#122D30]/10"
+                      ? "bg-[#E8F0CC]/40 text-[#1D6315] border-[#1D6315]/10"
                       : "bg-sky-50 text-sky-700 border-sky-200"
                   }`}
                 >
@@ -382,12 +382,12 @@ function QuestionCard({
             ) : (
               <div
                 key={valueOf(c)}
-                className="flex items-start gap-3 rounded-xl px-3 py-2 bg-[#F6F7F2]"
+                className="flex items-start gap-3 rounded-xl px-3 py-2 bg-[#F7F4EA]"
               >
                 <span className="mt-1 h-4 w-4 shrink-0" aria-hidden />
                 <div className="min-w-0">
                   {label}
-                  <p className="text-[11px] text-[#122D30]/50 mt-0.5">
+                  <p className="text-[11px] text-[#1D6315]/50 mt-0.5">
                     Already published. It can&apos;t be chosen here.
                   </p>
                 </div>
@@ -430,8 +430,8 @@ function Option({
     <label
       className={`relative flex items-start gap-3 rounded-xl px-3 py-2 cursor-pointer border transition-colors ${
         checked
-          ? "border-[#122D30] bg-[#DCEBE7]/30"
-          : "border-transparent hover:bg-[#F6F7F2]"
+          ? "border-[#1D6315] bg-[#E8F0CC]/30"
+          : "border-transparent hover:bg-[#F7F4EA]"
       }`}
     >
       <input
@@ -444,11 +444,11 @@ function Option({
       />
       <span
         aria-hidden
-        className={`mt-1 h-4 w-4 shrink-0 rounded-full border-[1.5px] flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#122D30]/40 ${
-          checked ? "border-[#122D30]" : "border-[#122D30]/30"
+        className={`mt-1 h-4 w-4 shrink-0 rounded-full border-[1.5px] flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#1D6315]/40 ${
+          checked ? "border-[#1D6315]" : "border-[#1D6315]/30"
         }`}
       >
-        {checked && <span className="h-2 w-2 rounded-full bg-[#075E63]" />}
+        {checked && <span className="h-2 w-2 rounded-full bg-[#287624]" />}
       </span>
       {children}
     </label>

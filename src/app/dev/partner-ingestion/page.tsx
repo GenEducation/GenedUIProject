@@ -114,5 +114,5 @@ export default function PartnerIngestionHarness() {
   }, []);
 
   if (process.env.NODE_ENV === "production") return null;
-  return <div className="min-h-screen bg-[#F6F7F2] p-4 md:p-8">{ready && <SubjectRegistry onUploadClick={() => {}} />}</div>;
+  return <div className="min-h-screen bg-[#F7F4EA] p-4 md:p-8">{ready && <SubjectRegistry onUploadClick={() => {}} />}</div>;
 }

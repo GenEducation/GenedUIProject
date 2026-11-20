@@ -70,7 +70,7 @@ export function PdfThumbnail({ pdfDoc, pageNumber, pageWidth, pageHeight, isActi
         alignItems: "center",
         gap: 5,
         padding: "6px 6px 5px",
-        background: isActive ? "#DCEBE7" : "transparent",
+        background: isActive ? "#E8F0CC" : "transparent",
         border: "none",
         borderRadius: 6,
         cursor: "pointer",
@@ -89,7 +89,7 @@ export function PdfThumbnail({ pdfDoc, pageNumber, pageWidth, pageHeight, isActi
           borderRadius: 3,
           overflow: "hidden",
           boxShadow: isActive
-            ? "0 0 0 2px var(--tutor), 0 2px 6px rgba(7,94,99,0.18)"
+            ? "0 0 0 2px var(--tutor), 0 2px 6px rgba(40,118,36,0.18)"
             : "0 1px 3px rgba(0,0,0,0.12)",
           flexShrink: 0,
         }}
@@ -102,7 +102,7 @@ export function PdfThumbnail({ pdfDoc, pageNumber, pageWidth, pageHeight, isActi
         style={{
           fontSize: 10,
           fontWeight: isActive ? 700 : 500,
-          color: isActive ? "var(--tutor)" : "#7F9295",
+          color: isActive ? "var(--tutor)" : "#7D8C73",
           fontFamily: "var(--font-body)",
           lineHeight: 1,
         }}

@@ -81,7 +81,7 @@ const EXPLAIN: Record<string, Explainer> = {
     fixedBy: "admin",
   }),
   single_component_share: () => ({
-    text: "GenEd found too few questions it can check, so students could not practise this chapter. Add questions: review the ones GenEd prepared, give the answers of printed ones, or write your own.",
+    text: "Zoovi found too few questions it can check, so students could not practise this chapter. Add questions: review the ones Zoovi prepared, give the answers of printed ones, or write your own.",
     fixedBy: "you",
   }),
   unassessed_component: (n) => ({
@@ -149,7 +149,7 @@ export function summarizeReport(
 // THE REPORT'S SECTIONS, AS STRUCTURED LISTS
 // ─────────────────────────────────────────────────────────
 
-/** A concept the run proposed: new to GenEd, or matched to one it has. */
+/** A concept the run proposed: new to Zoovi, or matched to one it has. */
 export interface ReportConcept {
   title: string;
   definition: string;

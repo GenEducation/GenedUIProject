@@ -381,7 +381,7 @@ describe("DeviceDetailView — gened-health system diagnostic", () => {
      * fine. Painting it the PASS colour would report a confident wrong answer.
      * See the device repo docs/17-gened-health-schema.md, ingestion note 5.
      */
-    const HEALTHY = "059F6D"; // the PASS green
+    const HEALTHY = "3A8A2E"; // the PASS green (Zoovi palette)
     getFleetDevice.mockResolvedValue(detail());
     getCanonicalDevice.mockResolvedValue(
       canonical({ diagnostic: diagnostic({ overall: "UNKNOWN", tally: { UNKNOWN: 4, PASS: 10 } }), }),

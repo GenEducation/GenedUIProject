@@ -43,7 +43,7 @@ import {
 } from "../utils/ingestionPhases";
 
 const sectionTitle =
-  "text-[10px] lg:text-[11px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2";
+  "text-[10px] lg:text-[11px] font-black text-[#1D6315]/50 uppercase tracking-widest mb-2";
 
 /**
  * Something running now: a teal dot with a soft pulse, not a spinner (which reads as a "C"). Drawn in SVG: an HTML
@@ -58,8 +58,8 @@ function LiveDot({ size = 8 }: { size?: number }) {
       viewBox="0 0 10 10"
       className="shrink-0 overflow-visible"
     >
-      <circle cx="5" cy="5" r="5" fill="#075E63" className="live-pulse" />
-      <circle cx="5" cy="5" r="5" fill="#075E63" />
+      <circle cx="5" cy="5" r="5" fill="#287624" className="live-pulse" />
+      <circle cx="5" cy="5" r="5" fill="#287624" />
     </svg>
   );
 }
@@ -93,7 +93,7 @@ function PhaseRing({ fill }: { fill: number }) {
         cy="12"
         r={r}
         fill="none"
-        stroke="#075E63"
+        stroke="#287624"
         strokeWidth="2"
         strokeLinecap="round"
         strokeDasharray={c}
@@ -101,8 +101,8 @@ function PhaseRing({ fill }: { fill: number }) {
         transform="rotate(-90 12 12)"
         className="transition-[stroke-dashoffset] duration-700 ease-out"
       />
-      <circle cx="12" cy="12" r="3" fill="#075E63" className="live-pulse" />
-      <circle cx="12" cy="12" r="3" fill="#075E63" />
+      <circle cx="12" cy="12" r="3" fill="#287624" className="live-pulse" />
+      <circle cx="12" cy="12" r="3" fill="#287624" />
     </svg>
   );
 }
@@ -116,20 +116,20 @@ function StatusDot({
     "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border";
   if (status === "done")
     return (
-      <span className={`${base} border-[#075E63] bg-[#075E63] text-white`}>
+      <span className={`${base} border-[#287624] bg-[#287624] text-white`}>
         <Check size={11} aria-hidden />
       </span>
     );
   if (status === "current")
     return (
-      <span className={`${base} border-[#075E63] bg-white`}>
+      <span className={`${base} border-[#287624] bg-white`}>
         <LiveDot size={6} />
       </span>
     );
   if (status === "skipped")
     return (
       <span
-        className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/30`}
+        className={`${base} border-[#1D6315]/15 bg-white text-[#1D6315]/30`}
       >
         <Minus size={11} aria-hidden />
       </span>
@@ -147,7 +147,7 @@ function StatusDot({
       </span>
     );
   return (
-    <span className={`${base} border-[#122D30]/15 bg-white text-[#122D30]/20`}>
+    <span className={`${base} border-[#1D6315]/15 bg-white text-[#1D6315]/20`}>
       <Circle size={6} aria-hidden />
     </span>
   );
@@ -170,7 +170,7 @@ function KindBadge({ kind }: { kind: PathStep["kind"] }) {
       className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[9px] font-black uppercase tracking-wider ${
         kind === "ai"
           ? "border-violet-200 bg-violet-50 text-violet-700"
-          : "border-[#122D30]/10 bg-[#F6F7F2] text-[#122D30]/60"
+          : "border-[#1D6315]/10 bg-[#F7F4EA] text-[#1D6315]/60"
       }`}
     >
       {kind === "ai" ? (
@@ -189,19 +189,19 @@ function MilestoneRow({ m }: { m: Milestone }) {
       <StatusDot status={m.status} />
       <div className="min-w-0">
         <p
-          className={`text-xs font-bold ${m.status === "pending" ? "text-[#122D30]/40" : "text-[#122D30]"}`}
+          className={`text-xs font-bold ${m.status === "pending" ? "text-[#1D6315]/40" : "text-[#1D6315]"}`}
         >
           {m.label}
           <span className="sr-only"> ({STATUS_WORDS[m.status]})</span>
           {m.at && (
-            <span className="ml-2 font-semibold text-[#122D30]/40">
+            <span className="ml-2 font-semibold text-[#1D6315]/40">
               {shortTime(m.at)}
             </span>
           )}
         </p>
         {m.note && (
           <p
-            className={`text-[11px] ${m.status === "problem" ? "text-red-600/80" : "text-[#122D30]/60"}`}
+            className={`text-[11px] ${m.status === "problem" ? "text-red-600/80" : "text-[#1D6315]/60"}`}
           >
             {m.note}
           </p>
@@ -240,14 +240,14 @@ function LogRow({
     status === "pending" || status === "not_reached" || status === "skipped";
   return (
     <li className="grid grid-cols-[3.25rem_1.25rem_minmax(0,1fr)] items-start gap-x-2.5 py-1.5">
-      <span className="pt-0.5 text-right text-[11px] font-semibold tabular-nums text-[#122D30]/40">
+      <span className="pt-0.5 text-right text-[11px] font-semibold tabular-nums text-[#1D6315]/40">
         {muted ? "" : (clock(at) ?? "")}
       </span>
       <StatusDot status={status} />
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p
-            className={`text-[12.5px] lg:text-[13px] font-bold ${muted ? "text-[#122D30]/40" : "text-[#122D30]"}`}
+            className={`text-[12.5px] lg:text-[13px] font-bold ${muted ? "text-[#1D6315]/40" : "text-[#1D6315]"}`}
           >
             {label}
             <span className="sr-only"> ({STATUS_WORDS[status]})</span>
@@ -258,10 +258,10 @@ function LogRow({
               key={c.text}
               className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
                 c.live
-                  ? "bg-[#075E63]/10 text-[#075E63]"
+                  ? "bg-[#287624]/10 text-[#287624]"
                   : c.attention
                     ? "bg-amber-50 text-amber-800"
-                    : "bg-[#DCEBE7]/50 text-[#122D30]/80"
+                    : "bg-[#E8F0CC]/50 text-[#1D6315]/80"
               }`}
             >
               {c.text}
@@ -270,7 +270,7 @@ function LogRow({
         </div>
         {does && (
           <p
-            className={`text-[11px] lg:text-[11.5px] ${muted ? "text-[#122D30]/35" : "text-[#122D30]/55"}`}
+            className={`text-[11px] lg:text-[11.5px] ${muted ? "text-[#1D6315]/35" : "text-[#1D6315]/55"}`}
           >
             {does}
           </p>
@@ -337,7 +337,7 @@ function StepLog({
     <div
       role="group"
       aria-label="Ingestion steps"
-      className="gap-x-8 rounded-xl border border-[#122D30]/5 bg-white p-3 md:p-4 lg:columns-2"
+      className="gap-x-8 rounded-xl border border-[#1D6315]/5 bg-white p-3 md:p-4 lg:columns-2"
     >
       {groups.map((g) => (
         <section
@@ -345,7 +345,7 @@ function StepLog({
           aria-label={g.label}
           className="mb-3 min-w-0 break-inside-avoid last:mb-0"
         >
-          <h5 className="mb-0.5 border-b border-[#122D30]/5 pb-1 text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#122D30]/45">
+          <h5 className="mb-0.5 border-b border-[#1D6315]/5 pb-1 text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#1D6315]/45">
             {g.label}
           </h5>
           <ol
@@ -377,17 +377,17 @@ function PhaseRow({ phase, running }: { phase: Phase; running: boolean }) {
       )}
       <div className="min-w-0 flex-1 pt-0.5">
         <p
-          className={`text-[13px] lg:text-[14px] font-black ${muted ? "text-[#122D30]/40" : "text-[#122D30]"}`}
+          className={`text-[13px] lg:text-[14px] font-black ${muted ? "text-[#1D6315]/40" : "text-[#1D6315]"}`}
         >
           {phase.label}
           <span className="sr-only"> ({STATUS_WORDS[phase.status]})</span>
           {took && (
-            <span className="ml-2 text-[11px] font-semibold text-[#122D30]/40">
+            <span className="ml-2 text-[11px] font-semibold text-[#1D6315]/40">
               {took}
             </span>
           )}
           {phase.status === "current" && running && (
-            <span className="ml-2 text-[11px] font-semibold tabular-nums text-[#075E63]">
+            <span className="ml-2 text-[11px] font-semibold tabular-nums text-[#287624]">
               {Math.round(phase.fill * 100)}% of this phase
             </span>
           )}
@@ -403,7 +403,7 @@ function PhaseRow({ phase, running }: { phase: Phase; running: boolean }) {
           )}
         </p>
         <p
-          className={`text-[11px] lg:text-[12px] ${muted ? "text-[#122D30]/35" : "text-[#122D30]/70"}`}
+          className={`text-[11px] lg:text-[12px] ${muted ? "text-[#1D6315]/35" : "text-[#1D6315]/70"}`}
         >
           {phase.summary ?? phase.does}
         </p>
@@ -422,10 +422,10 @@ function PhaseRow({ phase, running }: { phase: Phase; running: boolean }) {
               return (
                 <li
                   key={s.stage}
-                  className={`flex flex-wrap items-center gap-1.5 text-[11px] ${active ? "font-bold text-[#122D30]" : s.status === "done" ? "text-[#122D30]/60" : "text-[#122D30]/35"}`}
+                  className={`flex flex-wrap items-center gap-1.5 text-[11px] ${active ? "font-bold text-[#1D6315]" : s.status === "done" ? "text-[#1D6315]/60" : "text-[#1D6315]/35"}`}
                 >
                   {s.status === "done" ? (
-                    <Check size={11} aria-hidden className="text-[#075E63]" />
+                    <Check size={11} aria-hidden className="text-[#287624]" />
                   ) : active ? (
                     s.status === "stopped" ? (
                       <X size={11} aria-hidden className="text-red-600" />
@@ -446,7 +446,7 @@ function PhaseRow({ phase, running }: { phase: Phase; running: boolean }) {
                   {s.label}
                   {active && <KindBadge kind={s.kind} />}
                   {active && s.unitLine && (
-                    <span className="rounded-md bg-[#075E63]/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#075E63]">
+                    <span className="rounded-md bg-[#287624]/10 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-[#287624]">
                       {s.unitLine}
                     </span>
                   )}
@@ -461,10 +461,10 @@ function PhaseRow({ phase, running }: { phase: Phase; running: boolean }) {
 }
 
 const BANNER_TONE = {
-  action: "border-[#075E63]/20 bg-[#075E63]/5",
+  action: "border-[#287624]/20 bg-[#287624]/5",
   problem: "border-red-200 bg-red-50/70",
-  info: "border-[#122D30]/10 bg-white",
-  done: "border-[#122D30]/10 bg-[#DCEBE7]/40",
+  info: "border-[#1D6315]/10 bg-white",
+  done: "border-[#1D6315]/10 bg-[#E8F0CC]/40",
 } as const;
 
 /**
@@ -487,9 +487,9 @@ function NextStepBanner({
       <div
         role="note"
         aria-label="What to do next"
-        className="flex items-start gap-2 rounded-xl border border-[#075E63]/15 bg-[#075E63]/5 px-3 py-2.5 text-[12px] lg:text-[13px] text-[#122D30]"
+        className="flex items-start gap-2 rounded-xl border border-[#287624]/15 bg-[#287624]/5 px-3 py-2.5 text-[12px] lg:text-[13px] text-[#1D6315]"
       >
-        <Info size={14} aria-hidden className="mt-px shrink-0 text-[#075E63]" />
+        <Info size={14} aria-hidden className="mt-px shrink-0 text-[#287624]" />
         <p>
           <b>Nothing to do yet.</b>{" "}
           {subject.state === "queued"
@@ -514,11 +514,11 @@ function NextStepBanner({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/50">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/50">
             What to do next
           </p>
-          <p className="text-sm font-black text-[#122D30]">{copy.title}</p>
-          <p className="text-[11px] text-[#122D30]/70">{copy.body}</p>
+          <p className="text-sm font-black text-[#1D6315]">{copy.title}</p>
+          <p className="text-[11px] text-[#1D6315]/70">{copy.body}</p>
           {outcome.next_step === "none" && (
             <LiveReadiness sourceId={subject.source_id} />
           )}
@@ -588,7 +588,7 @@ function NextStepBanner({
           {ours.map((f) => (
             <li
               key={f.check}
-              className="rounded-md bg-[#122D30]/5 px-1.5 py-0.5 text-[10px] font-bold text-[#122D30]/60"
+              className="rounded-md bg-[#1D6315]/5 px-1.5 py-0.5 text-[10px] font-bold text-[#1D6315]/60"
               title={f.check}
             >
               {checkLabel(f.check)}
@@ -617,14 +617,14 @@ function FoundSoFar({ subject }: { subject: Subject }) {
     <dl className="grid grid-cols-2 gap-2">
       {tiles.map((t) => (
         <div key={t.label} className="rounded-xl bg-white px-3 py-2">
-          <dt className="text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-[#122D30]/45">
+          <dt className="text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-[#1D6315]/45">
             {t.label}
           </dt>
-          <dd className="text-lg lg:text-xl font-black tabular-nums text-[#122D30]">
+          <dd className="text-lg lg:text-xl font-black tabular-nums text-[#1D6315]">
             {typeof t.value === "number" ? (
               t.value
             ) : (
-              <span className="text-[#122D30]/25">—</span>
+              <span className="text-[#1D6315]/25">—</span>
             )}
           </dd>
         </div>
@@ -642,10 +642,10 @@ function Fact({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-[10px] font-bold uppercase tracking-wider text-[#122D30]/40">
+      <dt className="text-[10px] font-bold uppercase tracking-wider text-[#1D6315]/40">
         {label}
       </dt>
-      <dd className="break-words text-xs font-semibold text-[#122D30]">
+      <dd className="break-words text-xs font-semibold text-[#1D6315]">
         {children}
       </dd>
     </div>
@@ -702,7 +702,7 @@ export function IngestionPathPanel({
     <section
       aria-label={`${subject.title}: ingestion path`}
       onClick={(e) => e.stopPropagation()}
-      className="mx-1 mb-1 -mt-1 flex flex-col gap-4 rounded-b-2xl border border-t-0 border-[#122D30]/5 bg-[#F6F7F2]/70 p-4"
+      className="mx-1 mb-1 -mt-1 flex flex-col gap-4 rounded-b-2xl border border-t-0 border-[#1D6315]/5 bg-[#F7F4EA]/70 p-4"
     >
       <NextStepBanner
         subject={subject}
@@ -717,7 +717,7 @@ export function IngestionPathPanel({
           <h4 className={sectionTitle}>
             The run
             {ranBefore && (
-              <span className="ml-2 normal-case tracking-normal font-semibold text-[#122D30]/40">
+              <span className="ml-2 normal-case tracking-normal font-semibold text-[#1D6315]/40">
                 last run
               </span>
             )}
@@ -727,7 +727,7 @@ export function IngestionPathPanel({
               <PhaseRow key={p.key} phase={p} running={running} />
             ))}
           </ol>
-          <p className="mt-3 flex flex-wrap items-center gap-x-1 text-[10px] text-[#122D30]/50">
+          <p className="mt-3 flex flex-wrap items-center gap-x-1 text-[10px] text-[#1D6315]/50">
             <Sparkles size={9} aria-hidden className="text-violet-600" />
             AI steps only propose content; nothing reaches students until you
             review and publish it.
@@ -810,15 +810,15 @@ export function IngestionPathPanel({
           </div>
 
           {/* YOUR UPLOAD */}
-          <div className="border-t border-[#122D30]/5 pt-3">
+          <div className="border-t border-[#1D6315]/5 pt-3">
             <h4 className={sectionTitle}>Your upload</h4>
-            <p className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-[#122D30]/70">
+            <p className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-[#1D6315]/70">
               <FileText
                 size={12}
                 aria-hidden
-                className="shrink-0 text-[#122D30]/40"
+                className="shrink-0 text-[#1D6315]/40"
               />
-              <span className="font-semibold text-[#122D30]">
+              <span className="font-semibold text-[#1D6315]">
                 {subject.pdf_file_name}
               </span>
               <span>·</span>
@@ -830,7 +830,7 @@ export function IngestionPathPanel({
                   : "No learning outcomes chosen"}
               </span>
             </p>
-            <p className="mt-1 text-[10px] text-[#122D30]/45">
+            <p className="mt-1 text-[10px] text-[#1D6315]/45">
               Stored privately on GenEd&apos;s servers; only you and GenEd
               admins can open it.
             </p>
@@ -839,7 +839,7 @@ export function IngestionPathPanel({
       </div>
 
       {/* The detail behind both columns, on one footer row: the step-by-step log, and the upload as entered. */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#122D30]/5 pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1D6315]/5 pt-3">
         <Button
           size="sm"
           variant="outline"
@@ -876,7 +876,7 @@ export function IngestionPathPanel({
       {uploadDetails && (
         <dl
           aria-label="Upload details"
-          className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-[#122D30]/5 bg-white p-3 md:p-4 sm:grid-cols-3 lg:grid-cols-6"
+          className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-[#1D6315]/5 bg-white p-3 md:p-4 sm:grid-cols-3 lg:grid-cols-6"
         >
           <Fact label="Book">{subject.book_title}</Fact>
           <Fact label="Edition">{subject.edition_label}</Fact>

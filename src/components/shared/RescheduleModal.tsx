@@ -23,7 +23,7 @@ interface RescheduleModalProps {
   onConfirm: (scheduledDate: string, scheduledTime: string) => void;
   isSubmitting: boolean;
   errorMessage?: string | null;
-  themeColor?: string; // default "#122D30"
+  themeColor?: string; // default "#1D6315"
 }
 
 export function RescheduleModal({
@@ -33,7 +33,7 @@ export function RescheduleModal({
   onConfirm,
   isSubmitting,
   errorMessage,
-  themeColor = "#122D30",
+  themeColor = "#1D6315",
 }: RescheduleModalProps) {
   const [scheduledDate, setScheduledDate] = useState(tomorrowDateString());
   const [scheduledTime, setScheduledTime] = useState("");

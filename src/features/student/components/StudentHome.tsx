@@ -3,7 +3,7 @@
 import { FEATURES } from "@/constants/features";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Menu, TrendingUp, Library, type LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, PanelLeftOpen, TrendingUp, Library, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -34,7 +34,7 @@ import { GuardianInvitePopup } from "./guardian/GuardianInvitePopup";
 import { Select } from "@/components/ui/Select";
 import { subjectMascot, SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
 /* Subject-card mascot: display size, and how far it bleeds above the card.
    The bleed is mirrored as paddingTop on the horizontal scroller, which would
@@ -438,16 +438,16 @@ export function StudentHome() {
             {/* hamburger on left */}
             <button aria-label="Open sidebar"
               onClick={() => setSidebarOpen(true)}
-              className="flex items-center justify-center rounded-[10px] cursor-pointer text-base transition-all flex-shrink-0"
-              style={{ width: 38, height: 38, background: C.pageBg, border: `1px solid ${C.border}`, color: C.textMid }}
+              className="sidebar-toggle flex items-center justify-center rounded-[10px] border-none cursor-pointer flex-shrink-0"
+              style={{ width: 38, height: 38 }}
               title="Open sidebar"
             >
-              <Menu size={16} strokeWidth={1.75} />
+              <PanelLeftOpen size={18} strokeWidth={1.75} />
             </button>
 
             {/* Logo centered */}
             <div className="flex-1 flex justify-center">
-              <GenEdLogo height={38} priority />
+              <ZooviLogo height={38} priority />
             </div>
 
             {/* Notification bell on right, balancing the hamburger. The

@@ -7,7 +7,7 @@ import { WebappCampaignPage } from "@/features/webapp-campaign/WebappCampaignPag
 // serves; the other stays in the codebase, ready to switch back.
 const META: Record<typeof ACTIVE_CAMPAIGN, Metadata> = {
   webapp: {
-    title: "Free AI Tutor for Your Child — Class 6 to 9 (Limited Pilot) | GenEd",
+    title: "Free AI Tutor for Your Child — Class 6 to 9 (Limited Pilot) | Zoovi",
     description:
       `A 1-on-1 AI tutor that follows your child's NCERT textbook chapter by chapter — and shows you every step. Maths, Science & English. Free for the whole pilot, only ${PILOT_SEATS} families, starts 23 October.`,
     openGraph: {
@@ -17,7 +17,7 @@ const META: Record<typeof ACTIVE_CAMPAIGN, Metadata> = {
     },
   },
   deskbot: {
-    title: "Pre-order the GenEd Deskbot",
+    title: "Pre-order the Zoovi Deskbot",
     description:
       "A dedicated AI learning device for your child. Reserve yours with a refundable ₹500 deposit.",
   },

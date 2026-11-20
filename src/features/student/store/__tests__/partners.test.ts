@@ -39,7 +39,7 @@ describe("useStudentStore — schools", () => {
     expect(state.enrolledPartners.map((p) => p.organization)).toEqual(["SYNTHETIC School B"]);
   });
 
-  it("fetchAvailablePartners fills the same list (the GenEd placeholder is never offered)", async () => {
+  it("fetchAvailablePartners fills the same list (the Zoovi placeholder is never offered)", async () => {
     await useStudentStore.getState().fetchAvailablePartners();
     expect(useStudentStore.getState().availablePartners).toHaveLength(2);
   });

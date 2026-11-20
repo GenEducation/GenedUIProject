@@ -58,7 +58,7 @@ const kalam = localFont({
   preload: false,
 });
 
-// The lesson screen's type, matched to the rounded GenEd logo: Fredoka for
+// The lesson screen's type, matched to the rounded Zoovi logo: Fredoka for
 // headings and controls, Nunito for reading. Both chain Mukta for Devanagari.
 const fredoka = localFont({
   variable: "--font-fredoka",
@@ -73,7 +73,7 @@ const nunito = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "GenEd",
+  title: "Zoovi",
   description: "A safe, AI-powered personalized learning platform for children.",
 };
 

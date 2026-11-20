@@ -95,12 +95,12 @@ describe("SubjectRegistry — the next step after a run", () => {
     });
     expect(
       within(checks).getByText(
-        /Too few questions GenEd can check · you can fix this/,
+        /Too few questions Zoovi can check · you can fix this/,
       ),
     ).toBeInTheDocument();
     expect(
       within(checks).getByText(
-        /A GenEd check did not pass · GenEd will look at this/,
+        /A Zoovi check did not pass · GenEd will look at this/,
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Show all \d steps/ }));
@@ -290,7 +290,7 @@ describe("SubjectRegistry — the filter bar", () => {
   });
 });
 
-describe("SubjectRegistry — GenEd's prepared questions (backend ADR 0047)", () => {
+describe("SubjectRegistry — Zoovi's prepared questions (backend ADR 0047)", () => {
   it("offers one decision review only when it is the server's next step", async () => {
     sourcesFixture.reset(() => [
       {

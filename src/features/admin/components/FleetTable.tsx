@@ -131,7 +131,7 @@ function Tile({
 }) {
   const valueColor = {
     neutral: "text-ink",
-    good: "text-[#059F6D]",
+    good: "text-[#3A8A2E]",
     warn: "text-warning-ink",
     bad: "text-danger-ink",
   }[accent];
@@ -139,7 +139,7 @@ function Tile({
   return (
     <div
       data-fleet-tile={label}
-      className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] p-4"
+      className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(29,99,21,.06),0_1px_3px_rgba(29,99,21,.05)] p-4"
     >
       <div className={`text-2xl font-bold ${valueColor}`}>
         {floor ? `${value}+` : value}
@@ -503,7 +503,7 @@ export function FleetTable() {
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)]">
+      <div className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(29,99,21,.06),0_1px_3px_rgba(29,99,21,.05)]">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
           <div className="relative min-w-[220px] flex-1">
             <Search

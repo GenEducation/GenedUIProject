@@ -70,7 +70,7 @@ describe("ingestion progress, as a partner reads it", () => {
     expect(phases.every((p) => p.status === "done")).toBe(true);
     expect(phases.map((p) => p.summary)).toEqual([
       "36 pages · 1 unreadable",
-      "9 concepts · 7 new, 2 already in GenEd",
+      "9 concepts · 7 new, 2 already in Zoovi",
       "41 questions · 8 figures",
       null,
     ]);

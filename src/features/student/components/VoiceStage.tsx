@@ -88,8 +88,8 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
               : isMutedActive
                 ? "radial-gradient(circle at 30% 30%, rgba(232,99,90,0.25), rgba(232,99,90,0.08) 60%, transparent 75%)"
                 : isLive
-                  ? "radial-gradient(circle at 30% 30%, rgba(217,242,121,0.55), rgba(7,94,99,0.18) 60%, transparent 75%)"
-                  : "radial-gradient(circle at 30% 30%, rgba(7,94,99,0.35), rgba(7,94,99,0.10) 60%, transparent 75%)",
+                  ? "radial-gradient(circle at 30% 30%, rgba(217,242,121,0.55), rgba(40,118,36,0.18) 60%, transparent 75%)"
+                  : "radial-gradient(circle at 30% 30%, rgba(40,118,36,0.35), rgba(40,118,36,0.10) 60%, transparent 75%)",
             filter: "blur(20px)",
           }}
           animate={
@@ -123,8 +123,8 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
                 ? "conic-gradient(from 220deg at 50% 50%, #E8635A, #c0392b, #e57373, #E8635A)"
                 : "conic-gradient(from 220deg at 50% 50%, var(--tutor), var(--tutor-soft), var(--tutor-light), var(--tutor))",
             boxShadow: pttHeld
-              ? "inset -20px -30px 60px rgba(18,45,48,0.3), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 48px rgba(184,214,63,0.6)"
-              : "inset -20px -30px 60px rgba(18,45,48,0.3), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 40px rgba(7,94,99,0.35)",
+              ? "inset -20px -30px 60px rgba(29,99,21,0.3), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 48px rgba(184,214,63,0.6)"
+              : "inset -20px -30px 60px rgba(29,99,21,0.3), inset 12px 16px 40px rgba(255,255,255,0.25), 0 12px 40px rgba(40,118,36,0.35)",
           }}
         >
           {/* Animated overlay sheen */}
@@ -159,7 +159,7 @@ export function VoiceStage({ caption, reactive, onTap, onPressStart, onPressEnd,
               cursor: "pointer",
               letterSpacing: "0.12em",
               // A soft teal halo hints the orb above will light up once started.
-              boxShadow: "0 0 0 3px rgba(95,168,163,0.45), 0 4px 20px rgba(7,94,99,0.35)",
+              boxShadow: "0 0 0 3px rgba(95,168,163,0.45), 0 4px 20px rgba(40,118,36,0.35)",
             }}
           >
             Tap to start

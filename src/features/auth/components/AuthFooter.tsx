@@ -1,11 +1,11 @@
 "use client";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
 export function AuthFooter() {
   return (
-    <footer className="bg-[#122D30] text-white py-14 px-8 lg:px-16">
+    <footer className="bg-[#1D6315] text-white py-14 px-8 lg:px-16">
       {/* Emerald top accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-[#075E63]/40 to-transparent mb-14" />
+      <div className="h-px bg-gradient-to-r from-transparent via-[#287624]/40 to-transparent mb-14" />
 
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 lg:gap-16">
@@ -16,7 +16,7 @@ export function AuthFooter() {
               className="focus:outline-none group"
               aria-label="Scroll to top"
             >
-              <GenEdLogo
+              <ZooviLogo
                 height={44}
                 onDark
                 className="opacity-80 group-hover:opacity-100 transition-opacity"
@@ -38,13 +38,13 @@ export function AuthFooter() {
             <nav className="flex flex-col items-center md:items-start gap-4">
               <a
                 href="#"
-                className="text-sm font-medium text-white/40 hover:text-[#075E63] transition-colors duration-200"
+                className="text-sm font-medium text-white/40 hover:text-[#287624] transition-colors duration-200"
               >
                 Privacy Policy
               </a>
               <a
                 href="#"
-                className="text-sm font-medium text-white/40 hover:text-[#075E63] transition-colors duration-200"
+                className="text-sm font-medium text-white/40 hover:text-[#287624] transition-colors duration-200"
               >
                 Terms of Service
               </a>
@@ -61,7 +61,7 @@ export function AuthFooter() {
                 href="https://www.linkedin.com/company/111097970/admin/dashboard/"
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm font-medium text-white/40 hover:text-[#075E63] transition-colors duration-200"
+                className="text-sm font-medium text-white/40 hover:text-[#287624] transition-colors duration-200"
               >
                 LinkedIn
               </a>
@@ -69,7 +69,7 @@ export function AuthFooter() {
                 href="#"
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm font-medium text-white/40 hover:text-[#075E63] transition-colors duration-200"
+                className="text-sm font-medium text-white/40 hover:text-[#287624] transition-colors duration-200"
               >
                 Instagram
               </a>
@@ -77,7 +77,7 @@ export function AuthFooter() {
                 href="#"
                 target="_blank"
                 rel="noreferrer"
-                className="text-sm font-medium text-white/40 hover:text-[#075E63] transition-colors duration-200"
+                className="text-sm font-medium text-white/40 hover:text-[#287624] transition-colors duration-200"
               >
                 Facebook
               </a>

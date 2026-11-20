@@ -19,7 +19,7 @@ export function SkillAreaRow({ area }: { area: SkillArea }) {
   const checks = area.assessments;
 
   return (
-    <li className="overflow-hidden rounded-2xl border border-white/90 bg-white/60 transition-shadow hover:shadow-[0_12px_28px_-20px_rgba(19,41,61,0.35)]">
+    <li className="overflow-hidden rounded-2xl border border-white/90 bg-white/60 transition-shadow hover:shadow-[0_12px_28px_-20px_rgba(29,72,21,0.35)]">
       <button // eslint-disable-line no-restricted-syntax -- disclosure row with a grid layout, not an action button
         type="button"
         onClick={() => canOpen && setOpen((o) => !o)}

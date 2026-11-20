@@ -37,11 +37,11 @@ const CHIP: Record<RedrawState, { cls: string; icon: React.ReactNode }> = {
     icon: <Sparkles size={10} aria-hidden />,
   },
   drawing: {
-    cls: "bg-[#DCEBE7] text-[#075E63] border-[#075E63]/15",
+    cls: "bg-[#E8F0CC] text-[#287624] border-[#287624]/15",
     icon: <Loader2 size={10} className="animate-spin" aria-hidden />,
   },
   queued: {
-    cls: "bg-[#122D30]/[0.04] text-[#122D30]/60 border-[#122D30]/10",
+    cls: "bg-[#1D6315]/[0.04] text-[#1D6315]/60 border-[#1D6315]/10",
     icon: <Clock size={10} aria-hidden />,
   },
   failed: {
@@ -49,7 +49,7 @@ const CHIP: Record<RedrawState, { cls: string; icon: React.ReactNode }> = {
     icon: <AlertCircle size={10} aria-hidden />,
   },
   reviewed: {
-    cls: "bg-white text-[#122D30]/50 border-[#122D30]/10",
+    cls: "bg-white text-[#1D6315]/50 border-[#1D6315]/10",
     icon: <CheckCircle2 size={10} aria-hidden />,
   },
 };
@@ -90,10 +90,10 @@ export function RedrawList({ items, onOpen, onImageExpired }: RedrawListProps) {
             className={`flex items-center gap-3 sm:gap-4 rounded-2xl bg-white border px-3 py-2.5 ${
               item.state === "ready"
                 ? "border-emerald-200 shadow-[0_6px_20px_rgba(16,185,129,0.08)]"
-                : "border-[#122D30]/5"
+                : "border-[#1D6315]/5"
             }`}
           >
-            <div className="w-16 sm:w-20 shrink-0 rounded-xl overflow-hidden border border-[#122D30]/5 opacity-80">
+            <div className="w-16 sm:w-20 shrink-0 rounded-xl overflow-hidden border border-[#1D6315]/5 opacity-80">
               <VisualImage
                 imageUrl={item.image_url}
                 alt={`Rejected: ${item.title}`}
@@ -108,7 +108,7 @@ export function RedrawList({ items, onOpen, onImageExpired }: RedrawListProps) {
                   {chip.icon}
                   {REDRAW_STATE_LABEL[item.state]}
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#122D30]/35">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#1D6315]/35">
                   {item.kind === "figure"
                     ? "Figure"
                     : item.kind === "card"
@@ -116,10 +116,10 @@ export function RedrawList({ items, onOpen, onImageExpired }: RedrawListProps) {
                       : "Lesson step"}
                 </span>
               </div>
-              <p className="mt-1 text-sm font-bold text-[#122D30] leading-snug truncate">
+              <p className="mt-1 text-sm font-bold text-[#1D6315] leading-snug truncate">
                 {item.title}
               </p>
-              <p className="text-[11px] font-bold text-[#122D30]/45 tabular-nums">
+              <p className="text-[11px] font-bold text-[#1D6315]/45 tabular-nums">
                 Sent {since(item.requested_at)}
                 {item.attempts > 1 ? ` · attempt ${item.attempts}` : ""}
                 {item.finished_at && item.state !== "failed"

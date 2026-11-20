@@ -146,7 +146,7 @@ function Callout({
     <button
       type="button"
       onClick={() => onOpen(subject.subject)}
-      className={`group flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-[transform,box-shadow] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-20px_rgba(18,45,48,0.4)] ${FOCUS_RING}`}
+      className={`group flex w-full items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-[transform,box-shadow] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_14px_28px_-20px_rgba(29,99,21,0.4)] ${FOCUS_RING}`}
       style={{ background: "var(--rs-surface-2)", borderColor: "var(--rs-line)" }}
     >
       {/* Strongest subject: a trophy in a mint well; needs attention: a flag on its band colour. */}

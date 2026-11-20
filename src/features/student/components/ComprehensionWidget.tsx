@@ -61,8 +61,8 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
       style={{
         padding: "12px 18px",
         borderRadius: 18,
-        background: "#DCEBE7",
-        border: "1px solid rgba(7,94,99,0.14)",
+        background: "#E8F0CC",
+        border: "1px solid rgba(40,118,36,0.14)",
       }}
     >
       <div className="flex items-center gap-6 justify-between">
@@ -111,7 +111,7 @@ function DifficultWordChip({ directiveId, word, syllables, phonetic, slowAvailab
             </span>
           )}
           {phonetic && (
-            <span style={{ fontSize: 12, color: "#7F9295", fontStyle: "italic" }}>{phonetic}</span>
+            <span style={{ fontSize: 12, color: "#7D8C73", fontStyle: "italic" }}>{phonetic}</span>
           )}
         </div>
       )}
@@ -159,9 +159,9 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
         : { background: "var(--danger-bg)", border: "1px solid var(--danger)", color: "var(--danger-ink)" };
     }
     if (isSelected) {
-      return { background: "var(--tutor)", border: "1px solid var(--tutor)", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(7,94,99,0.2)" };
+      return { background: "var(--tutor)", border: "1px solid var(--tutor)", color: "#FFFFFF", boxShadow: "0 2px 8px rgba(40,118,36,0.2)" };
     }
-    return { background: "#FFFFFF", border: "1px solid #E3E8E2", color: "#122D30" };
+    return { background: "#FFFFFF", border: "1px solid #E7E2D2", color: "#1D6315" };
   };
 
   return (
@@ -170,11 +170,11 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
       animate={{ opacity: 1, y: 0 }}
       style={{
         marginTop: 12, padding: 16, borderRadius: 20,
-        background: "#EAF2EF", border: "1px solid rgba(7,94,99,0.12)",
+        background: "#EFF4DF", border: "1px solid rgba(40,118,36,0.12)",
       }}
     >
       {question && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#122D30", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#1D6315", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
           {question}
         </p>
       )}
@@ -206,11 +206,11 @@ function MCQWidget({ directiveId, question, choices, allowRetry, disabled }: Com
             onClick={handleRetry}
             style={{
               display: "flex", alignItems: "center", gap: 5, marginTop: 10,
-              fontSize: 12, fontWeight: 700, color: "#7F9295", background: "none",
+              fontSize: 12, fontWeight: 700, color: "#7D8C73", background: "none",
               border: "none", cursor: "pointer", transition: "color 0.15s",
             }}
             onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = "var(--tutor)"}
-            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "#7F9295"}
+            onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = "#7D8C73"}
           >
             <RefreshCw size={11} />
             Want to try once more?
@@ -260,9 +260,9 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
 
   const inputStyle = effectiveSubmitted && result !== undefined
     ? isCorrect
-      ? { background: "rgba(217,242,121,0.3)", color: "#122D30", border: "1px solid var(--accent-deep)" }
-      : { background: "var(--danger-bg)", color: "#122D30", border: "1px solid rgba(225,96,75,0.35)" }
-    : { background: "#FFFFFF", color: "#122D30", border: "1px solid #E3E8E2" };
+      ? { background: "rgba(217,242,121,0.3)", color: "#1D6315", border: "1px solid var(--accent-deep)" }
+      : { background: "var(--danger-bg)", color: "#1D6315", border: "1px solid rgba(225,96,75,0.35)" }
+    : { background: "#FFFFFF", color: "#1D6315", border: "1px solid #E7E2D2" };
 
   const btnStyle = effectiveSubmitted && result !== undefined
     ? isCorrect
@@ -276,11 +276,11 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
       animate={{ opacity: 1, y: 0 }}
       style={{
         marginTop: 12, padding: 16, borderRadius: 20,
-        background: "#EAF2EF", border: "1px solid rgba(7,94,99,0.12)",
+        background: "#EFF4DF", border: "1px solid rgba(40,118,36,0.12)",
       }}
     >
       {question && (
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#122D30", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#1D6315", lineHeight: 1.5, marginBottom: 12, fontFamily: "var(--font-body)" }}>
           {question}
         </p>
       )}
@@ -301,7 +301,7 @@ function FillBlankWidget({ directiveId, question, disabled }: ComprehensionWidge
           onFocus={e => {
             if (!effectiveSubmitted) {
               (e.target as HTMLInputElement).style.borderColor = "#075E6350";
-              (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(7,94,99,0.08)";
+              (e.target as HTMLInputElement).style.boxShadow = "0 0 0 3px rgba(40,118,36,0.08)";
             }
           }}
           onBlur={e => {

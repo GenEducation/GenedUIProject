@@ -130,12 +130,12 @@ function KeyInsights({ data }: { data: ReportCardData }) {
           )}
           {(insights.headline || insights.assessment) && (
             <InsightBlock
-              icon={<TintIcon name="insights/ai-insight" color="#A9CCC7" size={15} />}
+              icon={<TintIcon name="insights/ai-insight" color="#C2DA94" size={15} />}
               title="AI Learning Insight"
               bg="var(--rs-surface-2)"
               edge="var(--rs-line-strong)"
               accent="var(--rs-ink)"
-              badge="Powered by GenEd AI"
+              badge="Powered by Zoovi AI"
             >
               {insights.headline && <p className="text-[13px] font-semibold leading-snug text-[var(--rs-ink)]">{insights.headline}</p>}
               {insights.assessment && (

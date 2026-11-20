@@ -44,7 +44,7 @@ const FAMILIES: Record<string, TilePalette[]> = {
   social_science: [
     p("#FBF0E8", "#F2D7C4", "#C8603A", "#3E8FB0", "#3E2316"),
     p("#FBF4E4", "#F1E0B9", "#C9952E", "#3F7FA8", "#3D2E12"),
-    p("#EEF4F1", "#D3E3DA", "#4E8B6F", "#C77B3A", "#1F3529"),
+    p("#F2F5E5", "#D3E3DA", "#4E8B6F", "#C77B3A", "#1F3529"),
     p("#EAF3F7", "#CDE2EC", "#2F7FA0", "#B9783A", "#183140"),
     p("#FCEFE6", "#F4D3BE", "#B8503A", "#7A9A3A", "#3A1D14"),
     p("#EDF2F8", "#D2DDEB", "#4A6FA5", "#C98A3A", "#1E2B40"),

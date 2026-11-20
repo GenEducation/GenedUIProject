@@ -17,10 +17,10 @@ const C = {
 };
 
 /** Pale lavender ground and the lighter blob that bleeds off the corner. */
-const BANNER_BG = "#E8F2EF";
-const BANNER_BLOB = "#DCEBE7";
+const BANNER_BG = "#EEF4DD";
+const BANNER_BLOB = "#E8F0CC";
 const TRACK = "#FFFFFF";
-const FILL = "#B8D63F";
+const FILL = "#8DB000";
 
 /** Banner mascot poses; one is picked at random per mount. */
 const POSES = [
@@ -256,16 +256,16 @@ export function ContinueLearningCard({
             padding: "clamp(11px, 1.3vw, 14px) clamp(20px, 2.2vw, 26px)",
             fontSize: "clamp(13px, 1.3vw, 15px)",
             fontFamily: "var(--font-body)",
-            boxShadow: "0 6px 18px rgba(7,94,99,0.28)",
+            boxShadow: "0 6px 18px rgba(40,118,36,0.28)",
             transition: "transform 0.15s, box-shadow 0.2s",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 10px 24px rgba(7,94,99,0.34)";
+            e.currentTarget.style.boxShadow = "0 10px 24px rgba(40,118,36,0.34)";
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = "none";
-            e.currentTarget.style.boxShadow = "0 6px 18px rgba(7,94,99,0.28)";
+            e.currentTarget.style.boxShadow = "0 6px 18px rgba(40,118,36,0.28)";
           }}
         >
           <span>Continue Learning</span>

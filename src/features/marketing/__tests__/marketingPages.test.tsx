@@ -1,87 +1,129 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
-
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+import { describe, it, expect, afterEach } from "vitest";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 
 import { HomePage } from "../HomePage";
-import { HowZooviWorksPage } from "../HowZooviWorksPage";
-import { home } from "../content/home";
-import { howItWorks } from "../content/howItWorks";
+import { ParentsPage } from "../ParentsPage";
+import { EducatorsPage } from "../EducatorsPage";
+import { CONTACT_HREF, ROUTES, SKIP_INTRO_KEY } from "../routes";
 
 const MAILTO = "mailto:info@gened.ai";
 
-describe("Zoovi homepage", () => {
-  it("shows every section's heading from the content doc", () => {
-    render(<HomePage />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/Meet Zoovi.*Companion for curious minds/i);
-    for (const title of [home.ways.items[0].name, home.ways.items[1].name, home.does.title, home.approach.title, home.faqs.title, home.closing.title]) {
-      expect(screen.getAllByRole("heading", { name: title }).length).toBeGreaterThan(0);
-    }
-    for (const it of home.educators.items) expect(screen.getByRole("heading", { name: it.title })).toBeInTheDocument();
+afterEach(() => window.history.pushState({}, "", "/"));
+
+const nav = () => screen.getByRole("banner");
+
+describe("Zoovi marketing nav", () => {
+  it.each([
+    ["home", HomePage, null],
+    ["parents", ParentsPage, "Parents"],
+    ["educators", EducatorsPage, "Educators"],
+  ] as const)("on the %s page links home, both audiences, log in and invite", (_, Page, current) => {
+    render(<Page />);
+    const header = nav();
+    expect(within(header).getByRole("link", { name: "Zoovi home" })).toHaveAttribute("href", "/");
+    expect(within(header).getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+    const parents = within(header).getByRole("link", { name: /Parents/ });
+    const educators = within(header).getByRole("link", { name: /Educators/ });
+    expect(parents).toHaveAttribute("href", ROUTES.parents);
+    expect(educators).toHaveAttribute("href", ROUTES.educators);
+    expect(within(header).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
+    expect(within(header).getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", CONTACT_HREF);
+    // the current page is marked
+    const marked = within(header)
+      .getAllByRole("link")
+      .filter((a) => a.getAttribute("aria-current") === "page")
+      .map((a) => a.getAttribute("aria-label") ?? a.textContent);
+    expect(marked).toEqual([current ? `For ${current}` : "Home"]);
   });
 
-  it("links CTAs that have a page, and leaves the rest as buttons", () => {
+  it("leaves the home page a one-time flag to skip its loader from the Home link, not from the logo", () => {
+    render(<ParentsPage />);
+    sessionStorage.clear();
+    const header = nav();
+    within(header).getByRole("link", { name: "Zoovi home" }).addEventListener("click", (e) => e.preventDefault());
+    within(header).getByRole("link", { name: "Home" }).addEventListener("click", (e) => e.preventDefault());
+    fireEvent.click(within(header).getByRole("link", { name: "Zoovi home" }));
+    expect(sessionStorage.getItem(SKIP_INTRO_KEY)).toBeNull();
+    fireEvent.click(within(header).getByRole("link", { name: "Home" }));
+    expect(sessionStorage.getItem(SKIP_INTRO_KEY)).toBe("1");
+  });
+
+  it("carries a safe ?redirect on to Log in", async () => {
+    const to = "/parent?token=t1";
+    window.history.pushState({}, "", `/?redirect=${encodeURIComponent(to)}`);
+    render(<HomePage />);
+    expect(await within(nav()).findByRole("link", { name: "Log in" })).toHaveAttribute("href", `/login?redirect=${encodeURIComponent(to)}`);
+  });
+});
+
+describe("Zoovi home (take B)", () => {
+  it("tells the whole story in the server markup", () => {
+    render(<HomePage />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Companion for curious minds");
+    for (const name of [
+      "A new way to ask. A better way to learn.",
+      "You see the marks. But do you see the learning?",
+      "One learning companion. A seamless learning experience.",
+      "Learning that builds understanding",
+      "Give every student more opportunities to learn",
+      "Give every question room to grow.",
+    ]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
+    // the FAQs are left out of the home page
+    expect(screen.queryByRole("heading", { name: "Frequently asked questions" })).toBeNull();
+    expect(screen.getByText("Companion for curious minds")).toBeInTheDocument();
+    for (const verb of ["Ask questions", "Understand concepts", "Revise and practise", "Discover more"]) {
+      expect(screen.getByRole("heading", { name: verb })).toBeInTheDocument();
+    }
+  });
+
+  it("links the audience pages and email CTAs", () => {
     render(<HomePage />);
     const main = screen.getByRole("main");
-    expect(within(main).getAllByRole("link", { name: /See How Zoovi Works/ })[0]).toHaveAttribute("href", "/how-zoovi-works");
-    expect(within(main).getAllByRole("button", { name: "Get an Invite" }).length).toBeGreaterThan(0);
+    expect(within(main).getByRole("link", { name: "Explore Zoovi for Parents" })).toHaveAttribute("href", ROUTES.parents);
+    expect(within(main).getByRole("link", { name: "Explore Zoovi for Educators" })).toHaveAttribute("href", ROUTES.educators);
     expect(within(main).getByRole("link", { name: "Talk to Us" })).toHaveAttribute("href", MAILTO);
-    expect(within(main).getByRole("link", { name: /Have More Questions\? Talk to Us/ })).toHaveAttribute("href", MAILTO);
-    const footer = screen.getByRole("contentinfo");
-    // Contact reveals the address, as an email link, right below it
-    const contact = within(footer).getByRole("button", { name: "Contact" });
-    expect(within(footer).queryByRole("link", { name: "info@gened.ai" })).toBeNull();
-    fireEvent.click(contact);
-    expect(contact).toHaveAttribute("aria-expanded", "true");
-    expect(within(footer).getByRole("link", { name: "info@gened.ai" })).toHaveAttribute("href", MAILTO);
-    expect(within(main).queryByRole("link", { name: "Get an Invite" })).toBeNull();
-  });
-
-  it("opens one FAQ at a time", () => {
-    render(<HomePage />);
-    const first = screen.getByRole("button", { name: new RegExp(home.faqs.items[0].q.replace("?", "\\?")) });
-    const second = screen.getByRole("button", { name: new RegExp(home.faqs.items[1].q.replace("?", "\\?")) });
-    expect(first).toHaveAttribute("aria-expanded", "true");
-    expect(second).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(second);
-    expect(first).toHaveAttribute("aria-expanded", "false");
-    expect(second).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText(home.faqs.items[1].a)).toBeVisible();
-  });
-
-  it("uses the Zoovi logo, not GenEd's", () => {
-    render(<HomePage />);
-    expect(screen.getAllByAltText("Zoovi").length).toBeGreaterThan(0);
-    expect(screen.queryByAltText("GenEd")).toBeNull();
-  });
-});
-
-describe("Zoovi logo", () => {
-  it("glides back to the top when you're already on the homepage", () => {
-    const scrollTo = vi.fn();
-    vi.stubGlobal("scrollTo", scrollTo);
-    render(<HomePage />);
-    for (const logo of screen.getAllByRole("link", { name: "Zoovi home" })) {
-      scrollTo.mockClear();
-      fireEvent.click(logo);
-      expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    // targets that don't exist yet stay inert and are marked for follow-up
+    for (const a of within(main).getAllByRole("link", { name: "See How Zoovi Works" })) {
+      expect(a).toHaveAttribute("href", "#");
+      expect(a).toHaveAttribute("data-todo");
     }
-    vi.unstubAllGlobals();
+  });
+
+  it("asks only for the renders the chosen designs use", () => {
+    const { container } = render(<HomePage />);
+    const srcs = [...container.querySelectorAll("img")].map((i) => i.getAttribute("src"));
+    expect(srcs.every((s) => s?.startsWith("/zoovi/"))).toBe(true);
   });
 });
 
-describe("How Zoovi Works page", () => {
-  it("walks through the four steps and all eight FAQs", () => {
-    render(<HowZooviWorksPage />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(howItWorks.hero.title);
-    for (const s of howItWorks.demo.steps) expect(screen.getByRole("heading", { name: s.title })).toBeInTheDocument();
-    for (const f of howItWorks.faqs.items) expect(screen.getByRole("button", { name: new RegExp(f.q.replace(/[?]/g, "\\?")) })).toBeInTheDocument();
+describe("Zoovi for Parents (take A)", () => {
+  it("shows the hero, the six concerns, the reveal and the dashboard tail", () => {
+    const { container } = render(<ParentsPage />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Know more about your child’s learning. Every day.");
+    expect(container.querySelectorAll(".orbit li")).toHaveLength(6);
+    expect(screen.getByRole("heading", { name: "A grade, a remark, and a long wait" })).toBeInTheDocument();
+    // the reveal's title, and again (for screen readers) over the dashboard features
+    expect(screen.getAllByRole("heading", { name: "Daily insights into your child’s learning" })).toHaveLength(2);
+    for (const f of ["Daily learning updates", "Shareable reports"]) expect(screen.getByRole("heading", { name: f })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Be closer to every step of your child’s learning journey" })).toBeInTheDocument();
+    // take A leaves the FAQs out
+    expect(screen.queryByRole("heading", { name: "Frequently asked questions" })).toBeNull();
+    expect(container.querySelector('img[src="/zoovi/parents/office.webp"]')).not.toBeNull();
   });
+});
 
-  it("sends 'See How Zoovi Works' to the demo and parents to the homepage section", () => {
-    render(<HowZooviWorksPage />);
-    const main = screen.getByRole("main");
-    expect(within(main).getByRole("link", { name: /See How Zoovi Works/ })).toHaveAttribute("href", "#demo");
-    expect(within(main).getByRole("link", { name: /Explore Zoovi for Parents/ })).toHaveAttribute("href", "/#parents");
+describe("Zoovi for Educators (take A)", () => {
+  it("shows the hero, the philosophy folder, Zoovi at work and the school steps", () => {
+    const { container } = render(<EducatorsPage />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("More support for students. More insight for educators.");
+    for (const p of ["Curiosity matters", "Understanding takes time", "Every child has a different learning journey"]) {
+      expect(screen.getByRole("heading", { name: new RegExp(p) })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("heading", { name: "Your teaching assistant. Your extra pair of hands." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bring Zoovi into your school" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Register for the Educator Programme" })[0]).toHaveAttribute("href", MAILTO);
+    expect(container.querySelector("#lab-seq")).not.toBeNull();
   });
 });

@@ -3,7 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import { ADMIN_INPUT, ADMIN_LABEL } from "@/features/admin/components/ui/fields";
 import { ErrorNote } from "@/features/admin/components/ui/EmptyState";
 
@@ -63,8 +63,8 @@ export default function AdminLoginPage() {
     <div className="auth-canvas flex min-h-dvh w-full items-center justify-center px-4 py-10">
       <div className="w-full max-w-[420px]">
         <div className="mb-7 flex flex-col items-center text-center">
-          <GenEdLogo height={48} priority />
-          <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald shadow-[0_1px_2px_rgba(18,45,48,.06)]">
+          <ZooviLogo height={48} priority />
+          <span className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald shadow-[0_1px_2px_rgba(29,99,21,.06)]">
             <ShieldCheck size={13} /> Admin console
           </span>
           <h1 className="mt-3 font-serif text-[28px] font-bold leading-tight text-ink">Sign in to continue</h1>
@@ -73,7 +73,7 @@ export default function AdminLoginPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-5 rounded-[24px] border border-border bg-white p-6 shadow-[0_30px_80px_rgba(18,45,48,.12)] sm:p-8"
+          className="space-y-5 rounded-[24px] border border-border bg-white p-6 shadow-[0_30px_80px_rgba(29,99,21,.12)] sm:p-8"
         >
           <div>
             <label htmlFor="admin-username" className={ADMIN_LABEL}>

@@ -47,7 +47,7 @@ export function SegmentedTabs({
               onClick={() => onChange(t.value)}
               className={`inline-flex min-h-9 items-center gap-2 rounded-[9px] px-3 text-[12.5px] font-bold transition-all ${
                 active
-                  ? "bg-white text-ink shadow-[0_1px_3px_rgba(18,45,48,.10)]"
+                  ? "bg-white text-ink shadow-[0_1px_3px_rgba(29,99,21,.10)]"
                   : "text-muted hover:text-ink"
               }`}
             >

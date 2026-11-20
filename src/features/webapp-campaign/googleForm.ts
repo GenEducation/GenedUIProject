@@ -1,5 +1,5 @@
 // The pilot sign-up is captured on our page and stored in the Google Form
-// "GenEd Free AI Tutor Pilot — Grades 6-9", so responses show up in the form
+// "Zoovi Free AI Tutor Pilot — Grades 6-9", so responses show up in the form
 // (and its sheet) exactly as if filled in there.
 //
 // Google doesn't send CORS headers, so the POST is `no-cors`: the response is

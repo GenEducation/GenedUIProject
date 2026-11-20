@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>GenEd Quick Tour</title>
+<title>Zoovi Quick Tour</title>
 <!--
   The student's first-run tour, shown in TutorialVideoModal's iframe. A scripted "video" of the real student app:
   Home → pick a chapter → a lesson with the tutor → asking for help (chips, dictation, voice) → Profile.
-  It is personalised from the query: ?tutor= (the tutor's name, "Nia" by default), ?name= (the student's name)
+  It is personalised from the query: ?tutor= (the tutor's name, "Zoovi" by default), ?name= (the student's name)
   and ?avatar= (their avatar id).
   Each chapter of the tour sets up its own screen, so the chapter buttons can jump anywhere.
   Posts "tutorial:close" to the parent when the student taps "Start learning" on the last screen.
@@ -17,9 +17,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Kalam:wght@400;700&family=Mukta:wght@500;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
-    --primary: #075E63; --primary-hover: #064C50; --ink: #122D30; --mid: #3E5558; --muted: #5E7477; --faint: #C5D1CF;
-    --citron: #D9F279; --citron-deep: #B8D63F; --canvas: #F6F7F2; --soft: #DCEBE7; --em50: #E8F2EF;
-    --card: #FFFFFF; --border: #E3E8E2; --paper: #FBFBF8; --sage: #EEF3EB; --strong: #CFD9D3; --tutor-bubble: #EAF2EF;
+    --primary: #287624; --primary-hover: #22661F; --ink: #1D6315; --mid: #3B5533; --muted: #5A6E52; --faint: #CDD3BF;
+    --citron: #A6CF08; --citron-deep: #8DB000; --canvas: #F7F4EA; --soft: #E8F0CC; --em50: #EEF4DD;
+    --card: #FFFFFF; --border: #E7E2D2; --paper: #FBF9F2; --sage: #EEF3EB; --strong: #DAD5C2; --tutor-bubble: #EFF4DF;
     --ls-shadow: 0 1px 2px rgb(18 45 48 / .04), 0 10px 30px -18px rgb(18 45 48 / .18);
     --app: 'Nunito Sans', 'Mukta', sans-serif; --lesson: 'Nunito', 'Mukta', sans-serif;
     --display: 'Fredoka', 'Mukta', sans-serif; --hand: 'Kalam', 'Mukta', cursive;
@@ -53,14 +53,14 @@
   .side { position: absolute; left: 0; top: 0; bottom: 0; width: 200px; background: var(--paper); border-right: 1px solid #E7ECE6; padding: 16px 12px; display: flex; flex-direction: column; }
   .side-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-left: 4px; }
   .side-head img { height: 38px; }
-  .side-burger { width: 28px; height: 28px; border-radius: 8px; background: #EEF4F1; color: #4C6366; display: grid; place-items: center; }
+  .side-burger { width: 28px; height: 28px; border-radius: 8px; background: #F2F5E5; color: #4C6366; display: grid; place-items: center; }
   .nav { display: flex; align-items: center; gap: 11px; padding: 10px 13px; border-radius: 16px; font-size: 13.5px; font-weight: 600; color: #4C6366; margin-bottom: 3px; transition: background .25s, color .25s; }
   .nav.active { background: var(--soft); color: var(--primary); font-weight: 700; }
   .nav.active::after { content: ''; margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }
   .gopro { margin-top: auto; border-radius: 16px; padding: 14px; color: #fff; position: relative; overflow: hidden;
-    background: radial-gradient(70% 60% at 100% 0%, rgb(217 242 121 / .35), transparent 70%), linear-gradient(160deg, #075E63, #0B474B); box-shadow: 0 12px 26px -16px rgb(7 94 99 / .7); }
+    background: radial-gradient(70% 60% at 100% 0%, rgb(217 242 121 / .35), transparent 70%), linear-gradient(160deg, #287624, #22661F); box-shadow: 0 12px 26px -16px rgb(7 94 99 / .7); }
   .gopro b { font-size: 13.5px; font-weight: 800; display: block; }
-  .gopro p { font-size: 11px; color: #A9CCC7; margin: 3px 0 10px; line-height: 1.35; }
+  .gopro p { font-size: 11px; color: #C2DA94; margin: 3px 0 10px; line-height: 1.35; }
   .gopro > span { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--citron); color: var(--ink); border-radius: 11px; padding: 7px; font-size: 11.5px; font-weight: 800; }
 
   /* ── Home ──────────────────────────────────────────────────────────────── */
@@ -138,14 +138,14 @@
   .l-head > .logo { height: 34px; width: 188px; object-fit: contain; object-position: left; }
   .crumb { font-size: 13px; color: rgb(18 45 48 / .66); }
   .crumb b { color: var(--ink); }
-  .l-chip { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #E4E9E3; border-radius: 16px; padding: 5px 12px 5px 8px; }
+  .l-chip { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #E8E3D3; border-radius: 16px; padding: 5px 12px 5px 8px; }
   .l-chip b { display: block; font-family: var(--display); font-size: 14px; line-height: 1.1; }
   .l-chip small { font-size: 9.5px; color: rgb(18 45 48 / .66); }
   .l-chip .disc { width: 24px; height: 24px; border-radius: 50%; background: var(--citron); display: grid; place-items: center; color: var(--ink); }
-  .l-x { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 1px solid #E4E9E3; display: grid; place-items: center; }
+  .l-x { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 1px solid #E8E3D3; display: grid; place-items: center; }
   .l-grid { display: grid; grid-template-columns: 188px 1fr 268px; gap: 12px; height: calc(100% - 58px); }
-  .panel { background: #fff; border: 1px solid #E4E9E3; border-radius: 22px; box-shadow: var(--ls-shadow); position: relative; overflow: hidden; }
-  .l-rail { background: linear-gradient(180deg, #F3F7EF, #EEF3EB); border: 1px solid #E4E9E3; border-radius: 22px; padding: 10px; display: flex; flex-direction: column; }
+  .panel { background: #fff; border: 1px solid #E8E3D3; border-radius: 22px; box-shadow: var(--ls-shadow); position: relative; overflow: hidden; }
+  .l-rail { background: linear-gradient(180deg, #F3F7EF, #EEF3EB); border: 1px solid #E8E3D3; border-radius: 22px; padding: 10px; display: flex; flex-direction: column; }
   .rail-card { aspect-ratio: 16 / 10; border-radius: 16px; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; background: radial-gradient(60% 70% at 85% 10%, #21B3A433, transparent 70%), linear-gradient(160deg, #EEF0FF, #D6DBFF); color: #272A5C; }
   .rail-card small { font-size: 8.5px; font-weight: 800; letter-spacing: .1em; color: #5B5BD6; }
   .rail-card b { font-family: var(--display); font-size: 16px; font-weight: 600; }
@@ -163,7 +163,7 @@
   .step .ty { display: none; font-size: 8.5px; letter-spacing: .1em; color: var(--muted); font-weight: 800; margin-top: 2px; }
   .step.cur .ty { display: block; }
   .rail-bar { height: 7px; border-radius: 8px; background: var(--soft); overflow: hidden; margin: 6px 4px 4px; }
-  .rail-bar div { height: 100%; width: 0; background: linear-gradient(90deg, #075E63, #B8D63F); border-radius: 8px; transition: width .6s ease; }
+  .rail-bar div { height: 100%; width: 0; background: linear-gradient(90deg, #287624, #8DB000); border-radius: 8px; transition: width .6s ease; }
   .rail-cap { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); padding: 0 4px; font-weight: 700; }
 
   .b-top { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 8px; }
@@ -173,8 +173,8 @@
   .seg span.on { background: var(--primary); color: #fff; }
   .seg span.on i { background: var(--citron); color: var(--ink); }
   .type-pill { background: var(--citron); font-family: var(--display); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; border-radius: 999px; padding: 4px 11px; }
-  .paper { position: absolute; left: 12px; right: 12px; top: 50px; bottom: 50px; border: 1px solid #E4E9E3; border-radius: 18px; overflow: hidden;
-    background: linear-gradient(rgb(7 94 99 / .04) 1px, transparent 1px) 0 0 / 30px 30px, linear-gradient(90deg, rgb(7 94 99 / .04) 1px, transparent 1px) 0 0 / 30px 30px, #FBFBF8; }
+  .paper { position: absolute; left: 12px; right: 12px; top: 50px; bottom: 50px; border: 1px solid #E8E3D3; border-radius: 18px; overflow: hidden;
+    background: linear-gradient(rgb(7 94 99 / .04) 1px, transparent 1px) 0 0 / 30px 30px, linear-gradient(90deg, rgb(7 94 99 / .04) 1px, transparent 1px) 0 0 / 30px 30px, #FBF9F2; }
   .b-title { position: absolute; left: 18px; top: 10px; font-family: var(--hand); font-size: 23px; font-weight: 700; color: var(--primary); }
   .b-title svg { position: absolute; left: 0; bottom: -4px; width: 100%; height: 10px; }
   .reveal { clip-path: inset(0 100% 0 0); transition: clip-path 1.1s steps(18, end); }
@@ -187,7 +187,7 @@
   .sketch .sum em { font-style: normal; color: var(--primary); font-weight: 700; }
   .board-empty { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--hand); font-size: 18px; color: rgb(18 45 48 / .45); transition: opacity .4s; }
   .chips { position: absolute; left: 12px; right: 12px; bottom: 11px; display: flex; gap: 7px; }
-  .qchip { display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #E4E9E3; border-radius: 999px; padding: 5px 10px; font-family: var(--display); font-size: 11.5px; font-weight: 500; transition: background .2s, transform .2s; }
+  .qchip { display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #E8E3D3; border-radius: 999px; padding: 5px 10px; font-family: var(--display); font-size: 11.5px; font-weight: 500; transition: background .2s, transform .2s; }
   .qchip svg { color: var(--primary); }
   .qchip.press { background: var(--soft); transform: scale(.96); }
 
@@ -242,7 +242,7 @@
   .c-row { display: flex; align-items: center; gap: 6px; }
   .c-mic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--primary); background: var(--sage); transition: background .2s; }
   .c-mic.press { background: var(--citron); }
-  .lang { display: flex; align-items: center; gap: 4px; height: 26px; border: 1px solid #E4E9E3; border-radius: 999px; padding: 0 8px; font-size: 11px; font-weight: 700; color: var(--ink); transition: border-color .2s; }
+  .lang { display: flex; align-items: center; gap: 4px; height: 26px; border: 1px solid #E8E3D3; border-radius: 999px; padding: 0 8px; font-size: 11px; font-weight: 700; color: var(--ink); transition: border-color .2s; }
   .lang.press { border-color: var(--primary); background: var(--sage); }
   .c-send { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; transition: transform .2s; }
   .c-send.press { transform: scale(.9); }
@@ -253,10 +253,10 @@
   .composer.dictating .wave, .composer.dictating .c-timer { display: flex; }
   .composer.dictating .c-mic, .composer.dictating .c-send { display: none; }
   .c-cancel, .c-done { display: none; width: 28px; height: 28px; border-radius: 50%; place-items: center; }
-  .c-cancel { border: 1px solid #E4E9E3; }
+  .c-cancel { border: 1px solid #E8E3D3; }
   .c-done { background: var(--primary); color: #fff; }
   .composer.dictating .c-cancel, .composer.dictating .c-done { display: grid; }
-  .langmenu { position: absolute; left: 34px; bottom: 40px; width: 128px; background: #fff; border: 1px solid #E4E9E3; border-radius: 14px; box-shadow: 0 14px 30px -12px rgb(18 45 48 / .3); padding: 4px; font-size: 12px; font-weight: 600; opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .25s, transform .25s; z-index: 6; }
+  .langmenu { position: absolute; left: 34px; bottom: 40px; width: 128px; background: #fff; border: 1px solid #E8E3D3; border-radius: 14px; box-shadow: 0 14px 30px -12px rgb(18 45 48 / .3); padding: 4px; font-size: 12px; font-weight: 600; opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .25s, transform .25s; z-index: 6; }
   .langmenu.on { opacity: 1; transform: none; }
   .langmenu div { padding: 5px 9px; border-radius: 9px; font-family: 'Mukta', var(--lesson); }
   .langmenu div.sel { background: var(--soft); color: var(--primary); }
@@ -322,11 +322,11 @@
 
   /* ── Title cards (intro, outro) ───────────────────────────────────────── */
   .card-screen { position: absolute; inset: 0; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-    background: radial-gradient(60% 60% at 15% 10%, rgb(217 242 121 / .22), transparent 70%), radial-gradient(60% 60% at 90% 100%, rgb(60 138 142 / .5), transparent 70%), linear-gradient(160deg, #0B474B, #075E63 55%, #0B3A3E); }
+    background: radial-gradient(60% 60% at 15% 10%, rgb(217 242 121 / .22), transparent 70%), radial-gradient(60% 60% at 90% 100%, rgb(60 138 142 / .5), transparent 70%), linear-gradient(160deg, #22661F, #287624 55%, #0B3A3E); }
   .card-screen::before { content: ''; position: absolute; inset: 0; background: url(/patterns/auth-doodles-v2.webp) center / 520px; opacity: .07; }
   .nia-big { position: relative; width: 132px; height: 132px; border-radius: 40px; background: #fff; display: grid; place-items: center; box-shadow: 0 0 0 10px rgb(217 242 121 / .25), 0 30px 60px -20px rgb(0 0 0 / .5); }
   .nia-big img { width: 92px; }
-  /* The wordmark knocked out to white on the dark ocean, as GenEdLogo onDark does in the app. */
+  /* The wordmark knocked out to white on the dark ocean, as ZooviLogo onDark does in the app. */
   .intro-logo { position: relative; }
   .intro-logo img { display: block; height: 120px; filter: brightness(0) invert(1) drop-shadow(0 12px 28px rgb(0 0 0 / .35)); }
   .outro-logo img { height: 104px; }
@@ -406,21 +406,21 @@
       <!-- ════ INTRO ════ -->
       <section class="screen" id="scrIntro">
         <div class="card-screen">
-          <div class="intro-logo"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /></div>
-          <h1>Hi! I'm <span class="mk2 tn">Nia</span></h1>
-          <p>Your learning buddy on GenEd. Let me show you around. It only takes a minute!</p>
-          <div class="route"><span><b>1</b>Pick a chapter</span><span><b>2</b>Learn with <span class="tn">Nia</span></span><span><b>3</b>Ask for help</span></div>
+          <div class="intro-logo"><img src="/brand/zoovi-logo.png" alt="Zoovi" /></div>
+          <h1>Hi! I'm <span class="mk2 tn">Zoovi</span></h1>
+          <p>Your learning buddy on Zoovi. Let me show you around. It only takes a minute!</p>
+          <div class="route"><span><b>1</b>Pick a chapter</span><span><b>2</b>Learn with <span class="tn">Zoovi</span></span><span><b>3</b>Ask for help</span></div>
         </div>
       </section>
 
       <!-- ════ HOME ════ -->
       <section class="screen" id="scrHome">
         <aside class="side">
-          <div class="side-head"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
+          <div class="side-head"><img src="/brand/zoovi-logo.png" alt="Zoovi" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
           <div class="nav active" id="navHome"><i data-i="home" data-s="17"></i>Home</div>
           <div class="nav" id="navReport"><i data-i="chart" data-s="17"></i>Report Card</div>
           <div class="nav" id="navProfile"><i data-i="user" data-s="17"></i>Profile</div>
-          <div class="gopro"><b>Go Pro</b><p>Keep learning with <span class="tn">Nia</span>, no daily limits.</p><span><i data-i="sparkles" data-s="13"></i>Upgrade to Pro</span></div>
+          <div class="gopro"><b>Go Pro</b><p>Keep learning with <span class="tn">Zoovi</span>, no daily limits.</p><span><i data-i="sparkles" data-s="13"></i>Upgrade to Pro</span></div>
         </aside>
         <main class="home">
           <div class="greet" id="greet">
@@ -474,7 +474,7 @@
       <!-- ════ CHAPTERS ════ -->
       <section class="screen" id="scrChapters">
         <aside class="side">
-          <div class="side-head"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
+          <div class="side-head"><img src="/brand/zoovi-logo.png" alt="Zoovi" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
           <div class="nav active"><i data-i="home" data-s="17"></i>Home</div>
           <div class="nav"><i data-i="chart" data-s="17"></i>Report Card</div>
           <div class="nav"><i data-i="user" data-s="17"></i>Profile</div>
@@ -493,10 +493,10 @@
       <section class="screen" id="scrLesson">
         <div class="lesson">
           <div class="l-head">
-            <img class="logo" src="/brand/gened-logo.png" alt="GenEd" />
+            <img class="logo" src="/brand/zoovi-logo.png" alt="Zoovi" />
             <div class="crumb">Mathematics › <b>Number Play</b></div>
             <div style="flex:1"></div>
-            <div class="l-chip"><i data-i="timer" data-s="22" style="color:#3C8A8E"></i><div><b id="lTimer">00:12</b><small>Session time</small></div></div>
+            <div class="l-chip"><i data-i="timer" data-s="22" style="color:#4E9A2A"></i><div><b id="lTimer">00:12</b><small>Session time</small></div></div>
             <div class="l-chip" id="stepsChip"><span class="disc"><i data-i="flag" data-s="13"></i></span><div><b id="lSteps">0/6</b><small>Steps done</small></div></div>
             <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" width="36" height="36" alt="" />
             <span class="l-x" id="leaveBtn"><i data-i="x" data-s="16"></i></span>
@@ -518,14 +518,14 @@
               <div class="paper" id="paper">
                 <div class="board-empty" id="boardEmpty">Your tutor will draw here.</div>
                 <div class="b-title" id="bTitle"><span class="reveal" id="bTitleText">Adding up digits</span>
-                  <svg viewBox="0 0 200 10" preserveAspectRatio="none"><path class="draw" id="bUnder" pathLength="1" d="M2 6 C 50 2, 120 9, 198 4" stroke="#D9F279" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
+                  <svg viewBox="0 0 200 10" preserveAspectRatio="none"><path class="draw" id="bUnder" pathLength="1" d="M2 6 C 50 2, 120 9, 198 4" stroke="#A6CF08" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
                 <div class="sketch" id="sketch">
                   <div class="big reveal" id="skNum">1400</div>
                   <svg width="190" height="34" viewBox="0 0 190 34" style="display:block;margin:2px 0 0 4px">
-                    <path class="draw" id="skA1" pathLength="1" d="M10 2 C 8 14, 12 22, 16 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
-                    <path class="draw" id="skA2" pathLength="1" d="M40 2 C 40 14, 42 22, 44 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
-                    <path class="draw" id="skA3" pathLength="1" d="M70 2 C 72 14, 72 22, 72 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
-                    <path class="draw" id="skA4" pathLength="1" d="M98 2 C 100 14, 100 22, 100 30" stroke="#3C8A8E" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path class="draw" id="skA1" pathLength="1" d="M10 2 C 8 14, 12 22, 16 30" stroke="#4E9A2A" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path class="draw" id="skA2" pathLength="1" d="M40 2 C 40 14, 42 22, 44 30" stroke="#4E9A2A" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path class="draw" id="skA3" pathLength="1" d="M70 2 C 72 14, 72 22, 72 30" stroke="#4E9A2A" stroke-width="2" fill="none" stroke-linecap="round"/>
+                    <path class="draw" id="skA4" pathLength="1" d="M98 2 C 100 14, 100 22, 100 30" stroke="#4E9A2A" stroke-width="2" fill="none" stroke-linecap="round"/>
                   </svg>
                   <div class="sum reveal" id="skSum">1 + 4 + 0 + 0 = <em>?</em></div>
                 </div>
@@ -570,7 +570,7 @@
       <!-- ════ PROFILE ════ -->
       <section class="screen" id="scrProfile">
         <aside class="side">
-          <div class="side-head"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
+          <div class="side-head"><img src="/brand/zoovi-logo.png" alt="Zoovi" /><span class="side-burger"><i data-i="menu" data-s="15"></i></span></div>
           <div class="nav"><i data-i="home" data-s="17"></i>Home</div>
           <div class="nav"><i data-i="chart" data-s="17"></i>Report Card</div>
           <div class="nav active"><i data-i="user" data-s="17"></i>Profile</div>
@@ -579,7 +579,7 @@
           <div class="prof-head"><span class="back"><i data-i="arrowL" data-s="18"></i></span><div><h1>My Profile</h1><p>Your learning space</p></div></div>
           <div class="pcard hero">
             <img class="avatar me" src="/avatars/students/boy_01_green_hoodie.png" alt="" />
-            <div><h2 class="full-name">Aarav Mehta</h2><div class="gr">Grade 6 · CBSE</div><span class="ai-pill"><i data-i="sparkles" data-s="12"></i>AI Tutor: <span class="tn">Nia</span></span></div>
+            <div><h2 class="full-name">Aarav Mehta</h2><div class="gr">Grade 6 · CBSE</div><span class="ai-pill"><i data-i="sparkles" data-s="12"></i>AI Tutor: <span class="tn">Zoovi</span></span></div>
             <div class="hero-stats">
               <div class="hs"><span><i data-i="flame" data-s="17"></i></span><div><b>3</b><small>Day streak</small></div></div>
               <div class="hs"><span><i data-i="book" data-s="17"></i></span><div><b>12</b><small>Sessions completed</small></div></div>
@@ -587,7 +587,7 @@
           </div>
           <div class="pgrid">
             <div class="pcard" id="prefCard">
-              <div class="ph"><span class="ci"><i data-i="settings" data-s="18"></i></span><div><b>Learning preferences</b><small>Make <span class="tn">Nia</span> sound and listen the way you like.</small></div></div>
+              <div class="ph"><span class="ci"><i data-i="settings" data-s="18"></i></span><div><b>Learning preferences</b><small>Make <span class="tn">Zoovi</span> sound and listen the way you like.</small></div></div>
               <div class="pref"><span class="pi"><i data-i="mic" data-s="15"></i></span><div><b>Tutor voice</b><small>Choose the voice for your AI tutor.</small></div>
                 <div class="ctl"><span class="select" id="voiceSel">Default voice<i data-i="chevD" data-s="12"></i></span><span class="play" id="playBtn"><i data-i="play" data-s="13"></i></span></div></div>
               <div class="pref"><span class="pi"><i data-i="radio" data-s="15"></i></span><div><b>Voice activation</b><small>Talk freely, or hold a key while you speak.</small></div>
@@ -610,10 +610,10 @@
         <div class="card-screen">
           <div class="confetti" id="confetti"></div>
           <div class="outro-row">
-            <div class="intro-logo outro-logo"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /></div>
+            <div class="intro-logo outro-logo"><img src="/brand/zoovi-logo.png" alt="Zoovi" /></div>
           </div>
           <h1>You're <span class="mk2">all set!</span></h1>
-          <p>Pick a subject, open a chapter, and <span class="tn">Nia</span> will be right there with you.</p>
+          <p>Pick a subject, open a chapter, and <span class="tn">Zoovi</span> will be right there with you.</p>
           <div class="end-btns">
             <button class="go" id="startBtn" type="button">Start learning <svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
             <button class="again" id="againBtn" type="button"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Watch again</button>
@@ -628,7 +628,7 @@
 
 <div class="dock">
   <div class="say" aria-live="polite">
-    <div class="say-av" id="sayAv"><img src="/brand/gened-logo-deep-ocean-transparent.png" alt="GenEd" /></div>
+    <div class="say-av" id="sayAv"><img src="/brand/zoovi-tutor.png" alt="Zoovi" /></div>
     <div class="say-text" id="sayText"></div>
   </div>
   <div class="ctrl">
@@ -690,7 +690,7 @@ const $ = id => document.getElementById(id);
 /* The student's own tutor name (?tutor=), as plain text and escaped for the captions' HTML. */
 const TUTOR_TEXT = (() => {
   const raw = (new URLSearchParams(location.search).get('tutor') || '').trim().slice(0, 24);
-  return raw || 'Nia';
+  return raw || 'Zoovi';
 })();
 const TUTOR = TUTOR_TEXT.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 document.querySelectorAll('.tn').forEach(el => { el.textContent = TUTOR_TEXT; });
@@ -888,7 +888,7 @@ const SCENES = [
     setup() { show('scrIntro'); cursor.classList.remove('on'); },
     async play() {
       await say(`Hi there! I'm <b>${TUTOR}</b>, your learning buddy.`, 3200);
-      await say("Let's take a quick tour of GenEd together!", 3000);
+      await say("Let's take a quick tour of Zoovi together!", 3000);
     },
   },
   {
@@ -1058,7 +1058,7 @@ const SCENES = [
       placeCursor(560, 300); cursor.classList.add('on');
     },
     async play() {
-      await say('Your <b>Profile</b> is where you make GenEd yours.', 2600);
+      await say('Your <b>Profile</b> is where you make Zoovi yours.', 2600);
       spot($('prefCard'));
       await say(`Pick <b>${TUTOR}'s voice</b> and hear how it sounds.`);
       await clickOn($('playBtn'));
@@ -1087,7 +1087,7 @@ const SCENES = [
     setup() {
       show('scrOutro'); cursor.classList.remove('on'); spot(null);
       const c = $('confetti'); c.innerHTML = '';
-      const colors = ['#D9F279', '#B8D63F', '#FFFFFF', '#5FA8A3', '#F0AD4E'];
+      const colors = ['#A6CF08', '#8DB000', '#FFFFFF', '#86B83A', '#F0AD4E'];
       for (let i = 0; i < 46; i++) {
         const p = document.createElement('i');
         p.style.left = (i * 37 % 100) + '%';

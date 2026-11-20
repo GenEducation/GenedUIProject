@@ -81,7 +81,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { paylo
   if (!active || !p) return null;
   const band = bandOf(p.score);
   return (
-    <div className="rounded-xl border border-[var(--pp-line)] bg-white px-3 py-2 shadow-[0_8px_24px_-12px_rgba(19,41,61,0.35)]">
+    <div className="rounded-xl border border-[var(--pp-line)] bg-white px-3 py-2 shadow-[0_8px_24px_-12px_rgba(29,72,21,0.35)]">
       <p className="text-[12px] font-semibold text-[var(--pp-ink-soft)]">
         {new Date(p.t).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
       </p>
@@ -123,7 +123,7 @@ function TrendChart({ points }: { points: TrendPoint[] }) {
               scale="time"
               domain={domain}
               tickFormatter={(t: number) => shortDate(t)}
-              tick={{ fill: "#5E7477", fontSize: 11 }}
+              tick={{ fill: "#5A6E52", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -132,20 +132,20 @@ function TrendChart({ points }: { points: TrendPoint[] }) {
             <YAxis
               domain={[0, 100]}
               ticks={[0, 40, 60, 80, 100]}
-              tick={{ fill: "#5E7477", fontSize: 11 }}
+              tick={{ fill: "#5A6E52", fontSize: 11 }}
               tickLine={false}
               axisLine={false}
               width={44}
             />
-            <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#075E63", strokeDasharray: "4 4", strokeWidth: 1 }} />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: "#287624", strokeDasharray: "4 4", strokeWidth: 1 }} />
             <Area
               type="monotone"
               dataKey="score"
-              stroke="#075E63"
+              stroke="#287624"
               strokeWidth={3}
               fill="none"
-              dot={{ r: single ? 6 : 3, fill: "#075E63", stroke: "#fff", strokeWidth: 2 }}
-              activeDot={{ r: 6, fill: "#075E63", stroke: "#fff", strokeWidth: 2 }}
+              dot={{ r: single ? 6 : 3, fill: "#287624", stroke: "#fff", strokeWidth: 2 }}
+              activeDot={{ r: 6, fill: "#287624", stroke: "#fff", strokeWidth: 2 }}
               animationDuration={900}
             />
           </AreaChart>

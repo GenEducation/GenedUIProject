@@ -75,7 +75,11 @@ vi.mock("@/features/learning/math/MathField", async () => {
 });
 
 // next/font is a Next compiler transform; outside a Next build the loader isn't callable. Any component that
-// loads a font module (the Zoovi marketing pages, say) gets inert class names under test.
+// loads a font module gets inert class names under test.
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "", variable: "", style: { fontFamily: "" } }),
 }));
+
+// The Zoovi marketing pages' engines (three.js, GSAP ScrollTrigger, Lenis) need WebGL and real layout, which jsdom
+// doesn't have. Under test the pages render their server markup only.
+vi.mock("@/features/marketing/components/PageRunner", () => ({ PageRunner: () => null }));

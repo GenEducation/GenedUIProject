@@ -2,7 +2,10 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    // The Zoovi homepage now tells the whole story; the old explainer page is gone.
+    return [{ source: "/how-zoovi-works", destination: "/", permanent: true }];
+  },
 };
 
 // No-op (returns nextConfig unchanged) when SENTRY_ORG/SENTRY_PROJECT aren't

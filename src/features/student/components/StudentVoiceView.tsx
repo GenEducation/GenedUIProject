@@ -186,7 +186,7 @@ export function StudentVoiceView() {
       ? ""
       : STATUS_CAPTION[voiceSessionStatus] || "—";
 
-  const aiName = titleCase(studentProfile?.ai_name || "Nia");
+  const aiName = titleCase(studentProfile?.ai_name || "Zoovi");
   const agentName = aiName;
   const subjectLabel = activeChat?.subject ? activeChat.subject : "Voice Session";
   const gradeLabel = activeChat?.grade ? ` · ${activeChat.grade}` : "";
@@ -202,9 +202,9 @@ export function StudentVoiceView() {
       // A faint soft-surface wash behind the orb, a deep-ocean wash in the far
       // corner (citron stays reserved for the orb's live ring).
       "radial-gradient(circle at 50% 8%, rgba(220,235,231,0.55), transparent 42%)",
-      "radial-gradient(circle at 15% 0%, rgba(7,94,99,0.08), transparent 40%)",
-      "radial-gradient(circle at 85% 100%, rgba(7,94,99,0.08), transparent 40%)",
-      "#F6F7F2",
+      "radial-gradient(circle at 15% 0%, rgba(40,118,36,0.08), transparent 40%)",
+      "radial-gradient(circle at 85% 100%, rgba(40,118,36,0.08), transparent 40%)",
+      "#F7F4EA",
     ].join(", "),
   };
 
@@ -217,8 +217,8 @@ export function StudentVoiceView() {
         style={{
           padding: "5px 14px",
           borderRadius: 20,
-          border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid rgba(7,94,99,0.18)",
-          background: isPdfViewerOpen ? "var(--tutor)" : "#DCEBE7",
+          border: isPdfViewerOpen ? "1.5px solid var(--tutor)" : "1.5px solid rgba(40,118,36,0.18)",
+          background: isPdfViewerOpen ? "var(--tutor)" : "#E8F0CC",
           color: isPdfViewerOpen ? "#FFFFFF" : "var(--tutor)",
           fontSize: 12,
           fontWeight: 700,
@@ -232,7 +232,7 @@ export function StudentVoiceView() {
             display: "inline-block",
             width: 11,
             height: 11,
-            border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "rgba(7,94,99,0.25)"}`,
+            border: `2px solid ${isPdfViewerOpen ? "rgba(255,255,255,0.4)" : "rgba(40,118,36,0.25)"}`,
             borderTopColor: isPdfViewerOpen ? "#fff" : "var(--tutor)",
             borderRadius: "50%",
             animation: "spin 0.7s linear infinite",
@@ -265,7 +265,7 @@ export function StudentVoiceView() {
       {/* Header — solid background + boxed 32px buttons, matching the chat
           header (StudentChatMain.tsx) instead of its own translucent style
           with a hamburger floating outside the header. */}
-      <header style={{ background: "#FFFFFF", borderBottom: "1px solid #E3E8E2", flexShrink: 0 }}>
+      <header style={{ background: "#FFFFFF", borderBottom: "1px solid #E7E2D2", flexShrink: 0 }}>
         <div className="flex items-center justify-between" style={{ padding: "10px 12px" }}>
           <div className="flex items-center gap-2">
             {/* Always rendered, and a real toggle — it used to be open-only
@@ -275,7 +275,7 @@ export function StudentVoiceView() {
               onClick={() => setSidebarOpen(!sidebarOpen)}
               title={sidebarOpen ? "Collapse sidebar" : "Open sidebar"}
               className="transition-all flex-shrink-0"
-              style={{ width: 32, height: 32, borderRadius: 10, background: "#F6F7F2", border: "1px solid #E3E8E2", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--tutor)", cursor: "pointer" }}
+              style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F4EA", border: "1px solid #E7E2D2", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--tutor)", cursor: "pointer" }}
             >
               <Menu size={15} strokeWidth={1.75} />
             </button>
@@ -283,7 +283,7 @@ export function StudentVoiceView() {
               onClick={handleEnd}
               title="Back to subjects"
               className="transition-all flex-shrink-0"
-              style={{ width: 32, height: 32, borderRadius: 10, background: "#F6F7F2", border: "1px solid #E3E8E2", display: "flex", alignItems: "center", justifyContent: "center", color: "#3E5558", cursor: "pointer" }}
+              style={{ width: 32, height: 32, borderRadius: 10, background: "#F7F4EA", border: "1px solid #E7E2D2", display: "flex", alignItems: "center", justifyContent: "center", color: "#3B5533", cursor: "pointer" }}
             >
               <ArrowLeft size={15} />
             </button>
@@ -322,7 +322,7 @@ export function StudentVoiceView() {
             <Loader2 className="w-7 h-7 animate-spin" style={{ color: "var(--tutor)" }} />
             <p
               className="text-[12px] font-bold uppercase"
-              style={{ color: "rgba(18,45,48,0.4)", letterSpacing: "0.15em" }}
+              style={{ color: "rgba(29,99,21,0.4)", letterSpacing: "0.15em" }}
             >
               Loading transcript…
             </p>
@@ -355,7 +355,7 @@ export function StudentVoiceView() {
               style={{ background: "linear-gradient(135deg, var(--primary), var(--primary-hover))" }}
             >
               {/* Teal-light on deep ocean: a quiet sparkle. */}
-              <Sparkles size={16} style={{ color: "#A9CCC7" }} />
+              <Sparkles size={16} style={{ color: "#C2DA94" }} />
               Start New Session
             </button>
           </div>
@@ -376,7 +376,7 @@ export function StudentVoiceView() {
               className="flex items-center gap-2.5 px-7 h-13 sm:h-14 rounded-full font-bold text-[15px] text-white transition-all select-none"
               style={{
                 background: "linear-gradient(135deg, var(--primary), var(--primary-hover))",
-                boxShadow: "0 0 0 3px rgba(95,168,163,0.45), 0 8px 24px rgba(7,94,99,0.40)",
+                boxShadow: "0 0 0 3px rgba(95,168,163,0.45), 0 8px 24px rgba(40,118,36,0.40)",
                 paddingTop: 14,
                 paddingBottom: 14,
               }}
@@ -415,7 +415,7 @@ export function StudentVoiceView() {
           <>
             {voiceContent}
             {/* Full-screen textbook overlay on mobile */}
-            <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#F6F7F2" }} onClick={(e) => e.stopPropagation()}>
+            <div className="absolute inset-0 z-30 flex flex-col" style={{ background: "#F7F4EA" }} onClick={(e) => e.stopPropagation()}>
               <ChapterPdfViewer
                 pdfUrl={chapterPdfUrl}
                 chapterName={activeChat?.chapter_name || ""}

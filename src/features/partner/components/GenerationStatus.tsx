@@ -19,7 +19,7 @@ const TONE: Record<BankRun["state"], string> = {
   failed: "bg-red-50 text-red-800",
 };
 
-/** The steps with a request still waiting or running, so each step can say GenEd is working on it. */
+/** The steps with a request still waiting or running, so each step can say Zoovi is working on it. */
 export function pendingSteps(runs: BankRun[]): Set<string> {
   return new Set(
     runs
@@ -28,7 +28,7 @@ export function pendingSteps(runs: BankRun[]): Set<string> {
   );
 }
 
-/** GenEd's question writing for this chapter: each request, which step it is for, and where it stands. */
+/** Zoovi's question writing for this chapter: each request, which step it is for, and where it stands. */
 export function GenerationStatus({
   runs,
   titles,
@@ -50,7 +50,7 @@ export function GenerationStatus({
   );
   return (
     <section
-      aria-label="GenEd's question writing"
+      aria-label="Zoovi's question writing"
       className="rounded-xl border border-violet-200 bg-white p-3 flex flex-col gap-2"
     >
       <p
@@ -59,14 +59,14 @@ export function GenerationStatus({
       >
         <Sparkles size={14} aria-hidden />
         {active
-          ? "GenEd is writing questions. This page updates by itself; you can keep working meanwhile."
-          : "GenEd's question requests"}
+          ? "Zoovi is writing questions. This page updates by itself; you can keep working meanwhile."
+          : "Zoovi's question requests"}
       </p>
       <ul className="flex flex-col gap-1.5">
         {recent.map((r) => (
           <li
             key={r.run_id}
-            className="flex flex-wrap items-center gap-2 text-xs text-[#122D30]/80"
+            className="flex flex-wrap items-center gap-2 text-xs text-[#1D6315]/80"
           >
             <span
               className={`rounded-full px-2 py-0.5 font-bold ${TONE[r.state]}`}
@@ -78,7 +78,7 @@ export function GenerationStatus({
                 ? (titles[r.section_key] ?? r.section_key)
                 : "Whole chapter"}
             </span>
-            <span className="text-[#122D30]/50">
+            <span className="text-[#1D6315]/50">
               asked {new Date(r.created_at).toLocaleString()}
             </span>
             {r.state === "ready" &&
@@ -91,19 +91,19 @@ export function GenerationStatus({
                 return target ? (
                   <button
                     type="button" // eslint-disable-line no-restricted-syntax -- an inline text link inside a status row
-                    className="font-bold text-[#075E63] underline"
+                    className="font-bold text-[#287624] underline"
                     onClick={() => onShow(target)}
                   >
                     Show the proposals waiting for you
                   </button>
                 ) : (
-                  <span className="text-[#122D30]/50">
+                  <span className="text-[#1D6315]/50">
                     nothing left waiting for your decision
                   </span>
                 );
               })()}
             {(r.state === "failed" || r.state === "stopped") && r.detail && (
-              <span className="basis-full text-[#122D30]/60">{r.detail}</span>
+              <span className="basis-full text-[#1D6315]/60">{r.detail}</span>
             )}
           </li>
         ))}

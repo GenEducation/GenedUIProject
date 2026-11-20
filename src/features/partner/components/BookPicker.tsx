@@ -40,7 +40,7 @@ interface BookPickerProps {
 
 /** Most options shown at once; typing narrows them. */
 const MAX_SHOWN = 8;
-const ACCENT = "#122D30";
+const ACCENT = "#1D6315";
 // Measured row and header heights, so the list flips above the box only when it truly does not fit below.
 const ROW_HEIGHT = 54;
 const HEADER_HEIGHT = 38;
@@ -87,7 +87,7 @@ function Highlighted({ text, words }: { text: string; words: string[] }) {
         p.on ? (
           <mark
             key={i}
-            className="bg-transparent text-[#075E63] underline decoration-[#075E63]/35 underline-offset-2"
+            className="bg-transparent text-[#287624] underline decoration-[#287624]/35 underline-offset-2"
           >
             {p.text}
           </mark>
@@ -208,7 +208,7 @@ export function BookPicker({
 
   const rowClass = (i: number) =>
     `flex items-center gap-3 mx-1.5 px-2.5 py-2 rounded-xl cursor-pointer transition-colors ${
-      i === active ? "bg-[#122D30]/[0.06]" : ""
+      i === active ? "bg-[#1D6315]/[0.06]" : ""
     }`;
 
   const panel = expanded && position && (
@@ -228,7 +228,7 @@ export function BookPicker({
       className={`z-[200] flex flex-col ${PANEL_CLASSNAME}`}
     >
       {shown.length > 0 ? (
-        <div className="flex shrink-0 items-center gap-2 px-4 pt-3 pb-1.5 text-[10px] font-black uppercase tracking-widest text-[#122D30]/45">
+        <div className="flex shrink-0 items-center gap-2 px-4 pt-3 pb-1.5 text-[10px] font-black uppercase tracking-widest text-[#1D6315]/45">
           <Library size={12} aria-hidden />
           <span className="flex-1">
             {typed ? "Similar books you filed" : "Books you filed before"}
@@ -236,7 +236,7 @@ export function BookPicker({
           <span className="tabular-nums">{shown.length}</span>
         </div>
       ) : (
-        <p className="shrink-0 px-4 pt-3 pb-1.5 text-[11px] font-medium text-[#122D30]/45">
+        <p className="shrink-0 px-4 pt-3 pb-1.5 text-[11px] font-medium text-[#1D6315]/45">
           No book you filed matches this title.
         </p>
       )}
@@ -262,22 +262,22 @@ export function BookPicker({
               <span
                 className={`grid size-8 shrink-0 place-items-center rounded-lg ${
                   marked
-                    ? "bg-[#075E63] text-white"
-                    : "bg-[#DCEBE7]/70 text-[#075E63]"
+                    ? "bg-[#287624] text-white"
+                    : "bg-[#E8F0CC]/70 text-[#287624]"
                 }`}
               >
                 <BookOpen size={14} aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-semibold text-[#122D30]">
+                <span className="block truncate text-[13px] font-semibold text-[#1D6315]">
                   <Highlighted text={book.book_title} words={words} />
                 </span>
-                <span className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-[#122D30]/55">
-                  <span className="truncate rounded-md bg-[#122D30]/[0.05] px-1.5 py-px font-semibold text-[#122D30]/70">
+                <span className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-[#1D6315]/55">
+                  <span className="truncate rounded-md bg-[#1D6315]/[0.05] px-1.5 py-px font-semibold text-[#1D6315]/70">
                     {book.edition_label}
                   </span>
                   <span className="shrink-0">Grade {book.grade}</span>
-                  <span aria-hidden className="shrink-0 text-[#122D30]/25">
+                  <span aria-hidden className="shrink-0 text-[#1D6315]/25">
                     ·
                   </span>
                   <span className="shrink-0">
@@ -288,7 +288,7 @@ export function BookPicker({
               {marked && (
                 <Check
                   size={15}
-                  className="shrink-0 text-[#075E63]"
+                  className="shrink-0 text-[#287624]"
                   aria-hidden
                 />
               )}
@@ -303,14 +303,14 @@ export function BookPicker({
             aria-selected={false}
             onClick={close}
             onMouseEnter={() => setActive(shown.length)}
-            className={`${rowClass(shown.length)} ${shown.length ? "mt-1 border-t border-[#122D30]/[0.06] pt-2.5" : ""}`}
+            className={`${rowClass(shown.length)} ${shown.length ? "mt-1 border-t border-[#1D6315]/[0.06] pt-2.5" : ""}`}
           >
-            <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-dashed border-[#122D30]/25 text-[#122D30]/60">
+            <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-dashed border-[#1D6315]/25 text-[#1D6315]/60">
               <CirclePlus size={14} aria-hidden />
             </span>
-            <span className="min-w-0 flex-1 text-[13px] text-[#122D30]/70">
+            <span className="min-w-0 flex-1 text-[13px] text-[#1D6315]/70">
               File as a new book:{" "}
-              <span className="font-semibold text-[#122D30]">
+              <span className="font-semibold text-[#1D6315]">
                 “{value.trim()}”
               </span>
             </span>
@@ -383,7 +383,7 @@ export function BookPicker({
               if (expanded) close();
               else setOpen(true);
             }}
-            className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-2xl text-[#122D30]/40 hover:text-[#122D30]"
+            className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-2xl text-[#1D6315]/40 hover:text-[#1D6315]"
           >
             <ChevronDown
               size={16}
@@ -400,7 +400,7 @@ export function BookPicker({
         <p
           id={`${listId}-status`}
           className={`mt-1.5 flex items-center gap-1.5 px-1 text-[10px] font-semibold ${
-            status.tone === "known" ? "text-[#075E63]" : "text-[#122D30]/45"
+            status.tone === "known" ? "text-[#287624]" : "text-[#1D6315]/45"
           }`}
         >
           {status.tone === "known" && (

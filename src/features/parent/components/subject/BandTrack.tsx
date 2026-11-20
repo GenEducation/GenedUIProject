@@ -64,7 +64,7 @@ export function BandTrack({
         {has && marker && (
           <motion.span
             aria-hidden
-            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] bg-white shadow-[0_2px_6px_rgba(19,41,61,0.25)]"
+            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] bg-white shadow-[0_2px_6px_rgba(29,72,21,0.25)]"
             style={{ width: dot, height: dot, borderColor: tone.accent }}
             initial={reduce ? false : { left: "0%" }}
             animate={{ left: `${value}%` }}

@@ -103,10 +103,10 @@ const STATE_OPTIONS = [
 ];
 
 const inputClass =
-  "w-full px-3 py-2 bg-[#F6F7F2] border border-[#122D30]/10 focus:border-[#122D30]/40 rounded-xl text-xs font-bold text-[#122D30] outline-none placeholder:text-[#122D30]/30";
+  "w-full px-3 py-2 bg-[#F7F4EA] border border-[#1D6315]/10 focus:border-[#1D6315]/40 rounded-xl text-xs font-bold text-[#1D6315] outline-none placeholder:text-[#1D6315]/30";
 
 const labelClass =
-  "text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-1 block";
+  "text-[10px] font-black text-[#1D6315]/50 uppercase tracking-widest mb-1 block";
 
 export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   const subjects = usePartnerStore((state) => state.subjects);
@@ -199,7 +199,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
   // going, faster while one is processing so its progress bar moves.
   const hasActiveRun = subjects.some((s) => ACTIVE_STATES.has(s.state));
   const hasRunningRun = subjects.some((s) => s.state === "running");
-  // While reads fail, keep retrying even with no run going, so the banner clears once GenEd answers again.
+  // While reads fail, keep retrying even with no run going, so the banner clears once Zoovi answers again.
   const retrying = subjectsError !== null;
   useEffect(() => {
     if (!hasActiveRun && !retrying) return;
@@ -296,8 +296,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
           onClick={() => setShowFilters((v) => !v)}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-bold transition-all ${
             showFilters || hasFilters
-              ? "bg-[#075E63] text-white border-[#122D30]"
-              : "bg-white text-[#122D30]/60 border-[#122D30]/10 hover:border-[#122D30]/30"
+              ? "bg-[#287624] text-white border-[#1D6315]"
+              : "bg-white text-[#1D6315]/60 border-[#1D6315]/10 hover:border-[#1D6315]/30"
           }`}
         >
           <SlidersHorizontal size={14} />
@@ -311,7 +311,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
         <button
           onClick={() => onUploadClick()}
-          className="flex shrink-0 items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap bg-[#075E63] text-white rounded-2xl hover:bg-[#075E63]/90 transition-all shadow-[0_8px_30px_rgba(18,45,48,0.2)] group"
+          className="flex shrink-0 items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2.5 sm:py-3 whitespace-nowrap bg-[#287624] text-white rounded-2xl hover:bg-[#287624]/90 transition-all shadow-[0_8px_30px_rgba(29,99,21,0.2)] group"
         >
           <div className="bg-white/10 p-1 rounded-lg">
             <Plus size={18} />
@@ -335,7 +335,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
             {/* A form, so Enter in any field (a dropdown included) applies the filters. */}
             <form
               aria-label="Filters"
-              className="bg-[#FBFCFB] border border-[#122D30]/5 rounded-[1.5rem] p-5"
+              className="bg-[#FCFBF6] border border-[#1D6315]/5 rounded-[1.5rem] p-5"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleApply();
@@ -348,7 +348,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                   <div className="relative">
                     <Search
                       size={12}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#122D30]/30"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-[#1D6315]/30"
                     />
                     <input
                       type="text"
@@ -425,14 +425,14 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="flex items-center gap-1.5 px-4 py-2 text-[#122D30]/50 hover:text-[#122D30] text-xs font-bold transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 text-[#1D6315]/50 hover:text-[#1D6315] text-xs font-bold transition-colors"
                 >
                   <X size={12} />
                   Clear
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#075E63] text-white text-xs font-bold rounded-xl hover:bg-[#075E63]/90 transition-all"
+                  className="px-5 py-2 bg-[#287624] text-white text-xs font-bold rounded-xl hover:bg-[#287624]/90 transition-all"
                 >
                   Apply Filters
                 </button>
@@ -449,7 +449,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
         >
           <AlertCircle size={14} className="shrink-0" aria-hidden />
           <span className="flex-1">
-            Can&apos;t reach GenEd, retrying
+            Can&apos;t reach Zoovi, retrying
             {subjectsFailures > 1 ? ` (${subjectsFailures} tries)` : ""}
           </span>
         </div>
@@ -526,7 +526,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
       )}
 
       {/* Registry List */}
-      <div className="flex-1 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-4 border border-gray-100/50 shadow-[0_8px_40px_rgba(0,0,0,0.02)] min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col bg-[#FCFBF6] rounded-[2rem] md:rounded-[2.5rem] p-3 md:p-4 border border-gray-100/50 shadow-[0_8px_40px_rgba(0,0,0,0.02)] min-h-0 overflow-hidden">
         <div className="flex-1 overflow-y-auto scrollbar-hide pr-1 md:pr-2">
           <div className="space-y-2 md:space-y-3">
             {isSubjectsLoading &&
@@ -574,7 +574,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
               const canRunAgain = canRunFromRow(subject);
               // A chapter the partner can complete with questions of their own offers that first; uploading stays in its path.
               const addQuestions = next === "add_questions";
-              // GenEd prepares a question bank after every run (backend ADR 0047): reviewable whenever the last run left its context.
+              // Zoovi prepares a question bank after every run (backend ADR 0047): reviewable whenever the last run left its context.
               const reviewQuestions = next === "review_questions";
               const prepareRelease = next === "prepare_release";
               const needsCorrection =
@@ -596,11 +596,11 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                     transition={{ delay: i * 0.05 }}
                     onClick={() => openIngestedPdf(subject)}
                     data-source-row={subject.id}
-                    className={`@container/row group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border ${freshId === subject.id ? "border-[#075E63]/40 ring-4 ring-[#075E63]/10" : "border-transparent"} hover:border-[#122D30]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer`}
+                    className={`@container/row group relative flex items-center justify-between p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border ${freshId === subject.id ? "border-[#287624]/40 ring-4 ring-[#287624]/10" : "border-transparent"} hover:border-[#1D6315]/5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] transition-all overflow-hidden cursor-pointer`}
                   >
                     <div className="flex-1 flex items-center gap-3 md:gap-4 min-w-0">
                       {/* Left Side Highlight bar */}
-                      <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#075E63] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
+                      <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-[#287624] opacity-0 group-hover:opacity-100 transition-opacity rounded-r-full" />
 
                       {/* Chapter Details */}
                       <div className="flex-1 flex flex-col min-w-0">
@@ -609,10 +609,10 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                         <div className="grid w-full items-center gap-x-5 gap-y-3 pr-1 md:pr-3 grid-cols-1 [grid-template-areas:'title'_'status'_'actions'] @[600px]/row:grid-cols-[minmax(0,1fr)_auto] @[600px]/row:[grid-template-areas:'title_actions'_'status_status'] @[1040px]/row:grid-cols-[minmax(240px,320px)_minmax(0,1fr)_auto] @[1040px]/row:[grid-template-areas:'title_status_actions']">
                           {/* Chapter, book & grade */}
                           <div className="flex flex-col gap-0.5 group-hover:translate-x-1 transition-transform min-w-0 [grid-area:title]">
-                            <h3 className="text-base md:text-lg font-bold text-[#122D30] tracking-tight truncate">
+                            <h3 className="text-base md:text-lg font-bold text-[#1D6315] tracking-tight truncate">
                               {subject.title}
                             </h3>
-                            <p className="text-[11px] lg:text-[12px] font-bold text-[#122D30]/50 ml-[2px] uppercase tracking-wider truncate">
+                            <p className="text-[11px] lg:text-[12px] font-bold text-[#1D6315]/50 ml-[2px] uppercase tracking-wider truncate">
                               {subject.book_title} · Ch{" "}
                               {subject.chapter_ordinal} · Grade {subject.grade}
                               {/* Narrow rows have no room for the subject chip; it reads here instead. */}
@@ -719,7 +719,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                           <div className="flex min-w-0 items-center gap-4 @[1040px]/row:gap-6 [grid-area:status]">
                             <span
                               title={subject.subject}
-                              className="hidden @[600px]/row:inline-block w-[128px] lg:w-[148px] shrink-0 text-center text-sm lg:text-[15px] font-bold text-[#122D30]/70 bg-[#075E63]/5 px-3 py-1.5 rounded-xl border border-[#122D30]/10 truncate"
+                              className="hidden @[600px]/row:inline-block w-[128px] lg:w-[148px] shrink-0 text-center text-sm lg:text-[15px] font-bold text-[#1D6315]/70 bg-[#287624]/5 px-3 py-1.5 rounded-xl border border-[#1D6315]/10 truncate"
                             >
                               {subject.subject}
                             </span>
@@ -943,7 +943,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
                                 {redrawsRunning > 0 && (
                                   <span
                                     title={`${redrawsRunning} redraw${redrawsRunning === 1 ? "" : "s"} still drawing`}
-                                    className="pointer-events-none absolute -bottom-1.5 -right-1.5 inline-flex items-center gap-0.5 bg-[#075E63] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums"
+                                    className="pointer-events-none absolute -bottom-1.5 -right-1.5 inline-flex items-center gap-0.5 bg-[#287624] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center tabular-nums"
                                   >
                                     <RotateCw
                                       size={7}
@@ -1015,8 +1015,8 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
 
         {/* Pagination */}
         {total_count > 0 && (
-          <div className="flex items-center justify-between pt-3 mt-2 border-t border-[#122D30]/5">
-            <span className="text-[11px] font-bold text-[#122D30]/40">
+          <div className="flex items-center justify-between pt-3 mt-2 border-t border-[#1D6315]/5">
+            <span className="text-[11px] font-bold text-[#1D6315]/40">
               {offset + 1}–{Math.min(offset + limit, total_count)} of{" "}
               {total_count}
             </span>
@@ -1031,7 +1031,7 @@ export function SubjectRegistry({ onUploadClick }: SubjectRegistryProps) {
               >
                 <ChevronLeft size={16} />
               </Button>
-              <span className="text-[11px] font-bold text-[#122D30]/60 px-2">
+              <span className="text-[11px] font-bold text-[#1D6315]/60 px-2">
                 {currentPage} / {totalPages}
               </span>
               <Button

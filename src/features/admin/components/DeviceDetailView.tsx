@@ -525,7 +525,7 @@ export function DeviceDetailView({ deviceId }: { deviceId: string }) {
       ) : null}
 
       {/* 2. At a Glance strip */}
-      <section className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] p-4">
+      <section className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(29,99,21,.06),0_1px_3px_rgba(29,99,21,.05)] p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">
           At a Glance
         </h2>

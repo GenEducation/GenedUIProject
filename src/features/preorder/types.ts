@@ -1,4 +1,4 @@
-// Types for the GenEd Deskbot pre-order flow.
+// Types for the Zoovi Deskbot pre-order flow.
 
 export type BuyerType = "parent" | "school" | "other";
 

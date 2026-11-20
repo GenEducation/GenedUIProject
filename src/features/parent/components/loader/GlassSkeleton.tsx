@@ -10,7 +10,7 @@ export function GlassSkeleton({ className = "", style }: { className?: string; s
     <span
       aria-hidden
       style={style}
-      className={`relative block overflow-hidden rounded-lg border border-white/70 bg-[#E4F5EE]/70 ${className}`}
+      className={`relative block overflow-hidden rounded-lg border border-white/70 bg-[#ECF5D8]/70 ${className}`}
     >
       <span className="absolute inset-y-0 -left-full w-[200%] bg-[linear-gradient(105deg,transparent_35%,rgba(255,255,255,0.75)_50%,transparent_65%)] motion-safe:animate-[shimmer_1.8s_ease-in-out_infinite]" />
     </span>

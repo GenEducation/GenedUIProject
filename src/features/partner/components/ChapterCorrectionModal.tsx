@@ -15,7 +15,7 @@ interface ChapterCorrectionModalProps {
 }
 
 const inputClass =
-  "w-full px-4 py-2.5 rounded-xl border border-[#122D30]/15 text-sm text-[#122D30] focus:outline-none focus:border-[#075E63]";
+  "w-full px-4 py-2.5 rounded-xl border border-[#1D6315]/15 text-sm text-[#1D6315] focus:outline-none focus:border-[#287624]";
 
 /** Correct where a chapter sits (book, edition, number, title) when core files it differently, then run it again
  * (backend `PUT /v1/sources/{id}/chapter`). The server's refusal names what core already has; a 409 says why the
@@ -98,14 +98,14 @@ export function ChapterCorrectionModal({
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[2rem] shadow-2xl z-[101] p-8"
       >
-        <div className="mb-5 w-12 h-12 rounded-2xl flex items-center justify-center bg-[#075E63]/10 text-[#075E63]">
+        <div className="mb-5 w-12 h-12 rounded-2xl flex items-center justify-center bg-[#287624]/10 text-[#287624]">
           <PencilLine size={24} />
         </div>
-        <h3 className="text-xl font-bold text-[#122D30] mb-2">
+        <h3 className="text-xl font-bold text-[#1D6315] mb-2">
           Correct the chapter&apos;s details
         </h3>
-        <p className="text-sm text-[#122D30]/60 leading-relaxed mb-4">
-          Match what GenEd already has for this book. Saving runs the chapter
+        <p className="text-sm text-[#1D6315]/60 leading-relaxed mb-4">
+          Match what Zoovi already has for this book. Saving runs the chapter
           again; it reuses the pages already read.
         </p>
         {refusal && (
@@ -117,7 +117,7 @@ export function ChapterCorrectionModal({
           </p>
         )}
         <div className="flex flex-col gap-3 mb-5">
-          <label className="text-xs font-semibold text-[#122D30]/70">
+          <label className="text-xs font-semibold text-[#1D6315]/70">
             Book title
             <BookPicker
               id="correction-book"
@@ -132,7 +132,7 @@ export function ChapterCorrectionModal({
               className={inputClass}
             />
           </label>
-          <label className="text-xs font-semibold text-[#122D30]/70">
+          <label className="text-xs font-semibold text-[#1D6315]/70">
             Edition
             <input
               className={inputClass}
@@ -141,7 +141,7 @@ export function ChapterCorrectionModal({
             />
           </label>
           <div className="flex gap-3">
-            <label className="text-xs font-semibold text-[#122D30]/70 w-28">
+            <label className="text-xs font-semibold text-[#1D6315]/70 w-28">
               Chapter no.
               <input
                 className={inputClass}
@@ -151,7 +151,7 @@ export function ChapterCorrectionModal({
                 onChange={(e) => setChapterNo(e.target.value)}
               />
             </label>
-            <label className="text-xs font-semibold text-[#122D30]/70 flex-1">
+            <label className="text-xs font-semibold text-[#1D6315]/70 flex-1">
               Chapter title
               <input
                 className={inputClass}

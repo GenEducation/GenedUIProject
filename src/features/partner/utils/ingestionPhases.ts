@@ -29,7 +29,7 @@ export const PHASES: {
     key: "understand",
     label: "Understand",
     stages: ["components", "reconcile"],
-    does: "The concepts the chapter teaches, checked against GenEd's.",
+    does: "The concepts the chapter teaches, checked against Zoovi's.",
   },
   {
     key: "build",
@@ -94,7 +94,7 @@ export function phaseSummary(
     const matched = n(counts, "components_matched");
     if (found !== null) parts.push(plural(found, "concept"));
     if (fresh !== null || matched !== null)
-      parts.push(`${fresh ?? 0} new, ${matched ?? 0} already in GenEd`);
+      parts.push(`${fresh ?? 0} new, ${matched ?? 0} already in Zoovi`);
   } else if (key === "build") {
     const questions = n(counts, "questions");
     const figures = n(counts, "figure_groups");

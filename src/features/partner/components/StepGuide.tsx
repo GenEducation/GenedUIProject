@@ -12,7 +12,7 @@ import type {
 export interface WriteTarget {
   sectionKey: string;
   conceptKey: string;
-  /** The objective's key; absent for a kept concept GenEd's plan has no objectives for. */
+  /** The objective's key; absent for a kept concept Zoovi's plan has no objectives for. */
   obligationKey?: string;
   statement: string;
   activity: boolean;
@@ -76,22 +76,22 @@ export function describe(action: StepAction): string {
     case "decide_proposals":
       return action.count
         ? `${plural(action.count, "proposal")} ${action.count === 1 ? "is" : "are"} waiting for your decision${action.activities ? ` (${plural(action.activities, "activity", "activities")})` : ""}. Accept, edit or reject ${action.count === 1 ? "it" : "each one"}.`
-        : "GenEd has no assessment plan for this step, so accepted questions can't count towards it yet. There is nothing to accept: GenEd has to plan the chapter's questions again.";
+        : "Zoovi has no assessment plan for this step, so accepted questions can't count towards it yet. There is nothing to accept: Zoovi has to plan the chapter's questions again.";
     case "keep_concept":
-      return `GenEd put “${action.concept}” on hold: ${action.detail ?? ""} If it belongs in this lesson, keep it, then give it questions.`;
+      return `Zoovi put “${action.concept}” on hold: ${action.detail ?? ""} If it belongs in this lesson, keep it, then give it questions.`;
     case "add_activity":
-      return `“${action.concept}” asks learners to write, speak, read aloud or listen (${action.detail}), and has no activity yet. Write one, or ask GenEd to propose one.`;
+      return `“${action.concept}” asks learners to write, speak, read aloud or listen (${action.detail}), and has no activity yet. Write one, or ask Zoovi to propose one.`;
     case "add_question":
       return action.obligation_key
-        ? `“${action.concept}” needs ${action.needed ? plural(action.needed, "more question") : "more questions"} to check “${action.detail}” (three different questions, or two if one is a matching, ordering, grouping, fill-in or pick-several question). Write one, or ask GenEd for more.`
+        ? `“${action.concept}” needs ${action.needed ? plural(action.needed, "more question") : "more questions"} to check “${action.detail}” (three different questions, or two if one is a matching, ordering, grouping, fill-in or pick-several question). Write one, or ask Zoovi for more.`
         : `You kept “${action.concept}”, and it has no questions yet. Write one; it counts once you accept it.`;
     case "more_questions":
-      return `This step needs ${plural(action.count ?? 1, "more checked question")}. Accept or write ${action.count === 1 ? "one" : "some"}, or ask GenEd for more.`;
+      return `This step needs ${plural(action.count ?? 1, "more checked question")}. Accept or write ${action.count === 1 ? "one" : "some"}, or ask Zoovi for more.`;
   }
 }
 
 /**
- * A step that is blocked only because GenEd has no plan for it: the backend's bare ``decide_proposals`` with nothing to decide
+ * A step that is blocked only because Zoovi has no plan for it: the backend's bare ``decide_proposals`` with nothing to decide
  * (ADR 0049's fallback when no objective exists to cover). Nothing the partner accepts unblocks it.
  */
 export function waitsOnPlan(step: StepActions | undefined): boolean {
@@ -108,7 +108,7 @@ export function needLabel(step: StepActions | undefined): string | null {
   if (!a) return null;
   switch (a.kind) {
     case "decide_proposals":
-      return a.count ? `${a.count} to decide` : "Waiting on GenEd's plan";
+      return a.count ? `${a.count} to decide` : "Waiting on Zoovi's plan";
     case "keep_concept":
       return "Concept on hold";
     case "add_activity":
@@ -124,7 +124,7 @@ export function needLabel(step: StepActions | undefined): string | null {
 
 /**
  * What one blocked step needs: one line per need, with its own button beside it (keep the concept, write a question or an
- * activity). Asking GenEd refills the whole step, so it is offered once, under the list. Proposals to decide are on the step
+ * activity). Asking Zoovi refills the whole step, so it is offered once, under the list. Proposals to decide are on the step
  * itself, so they get no button here.
  */
 export function StepTodo({
@@ -136,7 +136,7 @@ export function StepTodo({
   onAsk,
 }: {
   step: StepActions;
-  /** Steps GenEd is writing questions for right now (``*``: the whole chapter). */
+  /** Steps Zoovi is writing questions for right now (``*``: the whole chapter). */
   generating?: Set<string>;
   busy: string | null;
   onKeep: (conceptKey: string) => void;
@@ -158,7 +158,7 @@ export function StepTodo({
       >
         {writingHere && (
           <li role="status" className="pb-2 text-xs font-bold text-violet-700">
-            GenEd is writing questions for this step. They appear here for your
+            Zoovi is writing questions for this step. They appear here for your
             decision when ready; you can write your own meanwhile.
           </li>
         )}
@@ -167,7 +167,7 @@ export function StepTodo({
             key={i}
             className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2 first:pt-0 last:pb-0"
           >
-            <p className="min-w-[220px] flex-1 text-xs leading-relaxed text-[#122D30]/80">
+            <p className="min-w-[220px] flex-1 text-xs leading-relaxed text-[#1D6315]/80">
               {describe(a)}
             </p>
             {a.kind === "keep_concept" && a.concept_key && (
@@ -211,10 +211,10 @@ export function StepTodo({
             disabled={generating.has(step.section_key)}
             onClick={() => onAsk(step.section_key)}
           >
-            Ask GenEd to propose
+            Ask Zoovi to propose
           </Button>
-          <span className="text-[11px] text-[#122D30]/55">
-            GenEd writes what this step still needs; you decide on each one.
+          <span className="text-[11px] text-[#1D6315]/55">
+            Zoovi writes what this step still needs; you decide on each one.
           </span>
         </div>
       )}

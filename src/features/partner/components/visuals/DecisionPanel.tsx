@@ -137,7 +137,7 @@ export function DecisionPanel({
   return (
     <section
       aria-label="Your decision"
-      className="rounded-2xl bg-[#075E63] p-4 md:p-5 text-white"
+      className="rounded-2xl bg-[#287624] p-4 md:p-5 text-white"
     >
       <AnimatePresence mode="wait" initial={false}>
         {mode === "idle" ? (
@@ -177,7 +177,7 @@ export function DecisionPanel({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="bg-white rounded-xl p-4 text-[#122D30] flex flex-col gap-4"
+            className="bg-white rounded-xl p-4 text-[#1D6315] flex flex-col gap-4"
           >
             {marked && regenerate && (
               <MarksPreview marks={marks} onEdit={onEditMarks} />
@@ -217,12 +217,12 @@ export function DecisionPanel({
               />
               <span
                 aria-hidden
-                className="relative h-5 w-9 shrink-0 rounded-full bg-[#075E63]/15 transition-colors peer-checked:bg-[#075E63] after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-4 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#122D30]/40"
+                className="relative h-5 w-9 shrink-0 rounded-full bg-[#287624]/15 transition-colors peer-checked:bg-[#287624] after:absolute after:top-0.5 after:left-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-4 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[#1D6315]/40"
               />
               <span className="text-sm font-bold">Make a new version</span>
             </label>
 
-            <div className="flex justify-end gap-2 pt-1 border-t border-[#122D30]/5">
+            <div className="flex justify-end gap-2 pt-1 border-t border-[#1D6315]/5">
               <Button
                 variant="tertiary"
                 onClick={() => {

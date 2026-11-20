@@ -55,14 +55,14 @@ afterEach(() => {
 });
 
 describe("SubjectRegistry — polling", () => {
-  it("says it can't reach GenEd while list reads fail", async () => {
+  it("says it can't reach Zoovi while list reads fail", async () => {
     usePartnerStore.setState({
       subjectsError: "Failed to fetch",
       subjectsFailures: 2,
       fetchSubjects: vi.fn(async () => {}),
     });
     render(<SubjectRegistry onUploadClick={vi.fn()} />);
-    expect(screen.getByText(/Can't reach GenEd, retrying/)).toBeInTheDocument();
+    expect(screen.getByText(/Can't reach Zoovi, retrying/)).toBeInTheDocument();
   });
 
   it("skips ticks while the tab is hidden and polls in the background when visible", async () => {

@@ -33,7 +33,7 @@ import type {
  * are not verdicts at all.
  */
 export const DIAG_STYLES: Record<DiagnosticStatus, string> = {
-  PASS: "bg-[#059F6D]/10 text-[#059F6D]",
+  PASS: "bg-[#3A8A2E]/10 text-[#3A8A2E]",
   WARN: "bg-warning-bg text-warning-ink",
   FAIL: "bg-danger-bg text-danger-ink",
   UNKNOWN: "bg-warning-bg text-warning-ink",

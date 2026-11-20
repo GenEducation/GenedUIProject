@@ -114,8 +114,8 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
       )}
 
       <div
-        className="flex items-end gap-2 sm:gap-3 transition-all relative bg-white border border-[#E3E8E2] rounded-2xl focus-within:border-[var(--tutor)]/40 focus-within:ring-4 focus-within:ring-[var(--tutor)]/[0.07]"
-        style={{ padding: "10px clamp(12px, 3vw, 20px)", boxShadow: "0 1px 2px rgba(18,45,48,0.04), 0 10px 30px -20px rgba(18,45,48,0.25)" }}
+        className="flex items-end gap-2 sm:gap-3 transition-all relative bg-white border border-[#E7E2D2] rounded-2xl focus-within:border-[var(--tutor)]/40 focus-within:ring-4 focus-within:ring-[var(--tutor)]/[0.07]"
+        style={{ padding: "10px clamp(12px, 3vw, 20px)", boxShadow: "0 1px 2px rgba(29,99,21,0.04), 0 10px 30px -20px rgba(29,99,21,0.25)" }}
       >
         <motion.textarea
           key="textarea"
@@ -139,7 +139,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
           }
           rows={1}
           className="flex-1 bg-transparent text-[15px] font-medium focus:outline-none resize-none overflow-y-auto min-h-[28px] max-h-[120px] md:max-h-[200px] leading-relaxed py-1"
-          style={{ height: "auto", color: "#122D30" }}
+          style={{ height: "auto", color: "#1D6315" }}
         />
 
         <div className="flex items-center gap-3 mb-0.5">
@@ -190,7 +190,7 @@ export function StudentChatInput({ chatTitle, isCentered = false, isHub = false 
         </div>
       </div>
       {!isCentered && !isHub && !hintDismissed && (
-        <p className="text-[11px] font-bold text-center mt-3 uppercase tracking-[0.1em]" style={{ color: "#8FA1A3" }}>
+        <p className="text-[11px] font-bold text-center mt-3 uppercase tracking-[0.1em]" style={{ color: "#94A28A" }}>
           Press Enter to send &bull; Shift+Enter for new line
         </p>
       )}

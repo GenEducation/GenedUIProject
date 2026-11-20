@@ -36,7 +36,7 @@ export function ComponentRow({
         <span className="text-sm font-medium text-ink">{name}</span>
         <span
           className={`rounded-md px-2 py-0.5 text-[11px] ${
-            failed ? "bg-danger-bg text-danger-ink" : "bg-[#059F6D]/10 text-[#059F6D]"
+            failed ? "bg-danger-bg text-danger-ink" : "bg-[#3A8A2E]/10 text-[#3A8A2E]"
           }`}
         >
           {status}

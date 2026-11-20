@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
 interface AuthShellProps {
   title: string;
@@ -26,16 +26,16 @@ export function AuthShell({ title, subtitle, width = "md", children }: AuthShell
       <div
         className={`w-full ${
           width === "xl" ? "max-w-xl" : "max-w-md"
-        } max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden rounded-[28px] border border-[#122D30]/10 bg-white/80 backdrop-blur-xl shadow-[0_20px_60px_-20px_rgba(18,45,48,0.28)]`}
+        } max-h-[calc(100vh-3rem)] flex flex-col overflow-hidden rounded-[28px] border border-[#1D6315]/10 bg-white/80 backdrop-blur-xl shadow-[0_20px_60px_-20px_rgba(29,99,21,0.28)]`}
       >
         {/* Logo + title, inside the card */}
         <div className="shrink-0 px-8 pt-8 pb-5 sm:px-10 text-center">
           <Link href="/" className="inline-block transition-opacity hover:opacity-80">
-            <GenEdLogo height={52} priority />
+            <ZooviLogo height={52} priority />
           </Link>
-          <h1 className="mt-5 text-2xl font-bold tracking-tight text-[#122D30]">{title}</h1>
+          <h1 className="mt-5 text-2xl font-bold tracking-tight text-[#1D6315]">{title}</h1>
           {subtitle ? (
-            <p className="mt-1.5 text-sm font-medium text-[#3E5558]/55">{subtitle}</p>
+            <p className="mt-1.5 text-sm font-medium text-[#3B5533]/55">{subtitle}</p>
           ) : null}
         </div>
 
@@ -43,7 +43,7 @@ export function AuthShell({ title, subtitle, width = "md", children }: AuthShell
         <div className="min-h-0 flex-1 overflow-y-auto px-8 pb-6 sm:px-10">{children}</div>
 
         {/* Copyright, inside the card */}
-        <div className="shrink-0 border-t border-[#122D30]/8 px-8 py-3.5 sm:px-10 text-center text-[11px] font-medium text-[#3E5558]/40">
+        <div className="shrink-0 border-t border-[#1D6315]/8 px-8 py-3.5 sm:px-10 text-center text-[11px] font-medium text-[#3B5533]/40">
           &copy; {new Date().getFullYear()} GenEd. All rights reserved.
         </div>
       </div>

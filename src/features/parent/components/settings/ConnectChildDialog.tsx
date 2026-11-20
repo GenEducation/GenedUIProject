@@ -4,7 +4,7 @@ import React, { useEffect, useId, useRef } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import type { LinkedStudent } from "../../services/parentService";
 import { AddChildSteps, RequestRow } from "./linkParts";
 
@@ -15,7 +15,7 @@ const POLL_MS = 15_000;
  * First-run popup for a parent with no child connected yet: the same three
  * steps as Settings, plus any request already waiting, which can be approved
  * right here. It checks for new invites while open, so a child sending one
- * from their GenEd makes it appear without a reload.
+ * from their Zoovi makes it appear without a reload.
  */
 export function ConnectChildDialog({
   open,
@@ -69,7 +69,7 @@ export function ConnectChildDialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div aria-hidden className="absolute inset-0 bg-[#122D30]/40 backdrop-blur-sm" onClick={onDismiss} />
+          <div aria-hidden className="absolute inset-0 bg-[#1D6315]/40 backdrop-blur-sm" onClick={onDismiss} />
 
           <motion.div
             ref={panel}
@@ -81,11 +81,11 @@ export function ConnectChildDialog({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? undefined : { opacity: 0, y: 16, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 380, damping: 34 }}
-            className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-[820px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-white/80 p-5 shadow-[0_40px_90px_-30px_rgba(18,45,48,0.6)] outline-none sm:p-8"
-            style={{ background: "linear-gradient(150deg, #E4F5EE 0%, #F5FAF9 45%, #F4F9E6 100%)" }}
+            className="relative max-h-[calc(100dvh-1.5rem)] w-full max-w-[820px] overflow-y-auto overflow-x-hidden rounded-[28px] border border-white/80 p-5 shadow-[0_40px_90px_-30px_rgba(29,99,21,0.6)] outline-none sm:p-8"
+            style={{ background: "linear-gradient(150deg, #ECF5D8 0%, #F8F9EF 45%, #F4F9E6 100%)" }}
           >
-            <span aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#D9F279]/40 blur-3xl" />
-            <span aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-[#9FE3C4]/40 blur-3xl" />
+            <span aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[#A6CF08]/40 blur-3xl" />
+            <span aria-hidden className="pointer-events-none absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-[#C9E88A]/40 blur-3xl" />
 
             {/* Button sets its own position, so the wrapper places it */}
             <div className="absolute right-4 top-4 z-10">
@@ -95,9 +95,9 @@ export function ConnectChildDialog({
             </div>
 
             <div className="relative">
-              <GenEdLogo variant="mark" height={44} />
+              <ZooviLogo variant="mark" height={44} />
               <p className="mt-4 text-[11.5px] font-bold uppercase tracking-[0.14em] text-[var(--pp-green-deep)]">
-                Welcome to GenEd{firstName ? `, ${firstName}` : ""}
+                Welcome to Zoovi{firstName ? `, ${firstName}` : ""}
               </p>
               <h2 id={titleId} className="mt-1 text-[26px] font-extrabold leading-tight tracking-[-0.02em] text-[var(--pp-ink)] sm:text-[30px]">
                 Let&apos;s connect your child

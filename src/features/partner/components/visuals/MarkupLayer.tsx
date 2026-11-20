@@ -133,12 +133,12 @@ export function MarkupLayer({
               onClick={() => onSelect(m.id)}
               className={`pointer-events-auto absolute rounded-md border-2 transition-colors ${
                 m.id === activeId
-                  ? "border-[#075E63] bg-[#075E63]/15"
-                  : "border-[#075E63]/80 bg-[#075E63]/5 hover:bg-[#075E63]/10"
+                  ? "border-[#287624] bg-[#287624]/15"
+                  : "border-[#287624]/80 bg-[#287624]/5 hover:bg-[#287624]/10"
               }`}
               style={pct(m.box)}
             >
-              <span className="absolute -left-2.5 -top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#075E63] text-[10px] font-black text-white ring-2 ring-white">
+              <span className="absolute -left-2.5 -top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#287624] text-[10px] font-black text-white ring-2 ring-white">
                 {i + 1}
               </span>
             </button>
@@ -147,7 +147,7 @@ export function MarkupLayer({
         {draft && (
           <div
             aria-hidden
-            className={`absolute rounded-md border-2 ${tool === "crop" ? "border-dashed border-white shadow-[0_0_0_9999px_rgb(18_45_48/0.45)]" : "border-[#075E63] bg-[#075E63]/10"}`}
+            className={`absolute rounded-md border-2 ${tool === "crop" ? "border-dashed border-white shadow-[0_0_0_9999px_rgb(18_45_48/0.45)]" : "border-[#287624] bg-[#287624]/10"}`}
             style={pct(draft)}
           />
         )}

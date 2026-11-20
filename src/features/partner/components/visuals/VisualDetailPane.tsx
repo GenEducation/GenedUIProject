@@ -63,7 +63,7 @@ const formatDate = (iso: string) => {
 
 const STATE_STYLE: Record<CandidateState, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
-  accepted: "bg-[#DCEBE7]/60 text-[#122D30] border-[#122D30]/10",
+  accepted: "bg-[#E8F0CC]/60 text-[#1D6315] border-[#1D6315]/10",
   rejected: "bg-red-50 text-red-600 border-red-200",
 };
 
@@ -91,7 +91,7 @@ function SectionLabel({
   children: React.ReactNode;
 }) {
   return (
-    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2">
+    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#1D6315]/50 uppercase tracking-widest mb-2">
       {icon}
       {children}
     </h5>
@@ -118,12 +118,12 @@ function Passages({ detail }: { detail: VisualDetail }) {
         {used.map((p) => (
           <blockquote
             key={p.ref}
-            className="relative rounded-xl bg-[#FBFAF5] border border-[#122D30]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#075E63]/60"
+            className="relative rounded-xl bg-[#FBFAF5] border border-[#1D6315]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#287624]/60"
           >
-            <p className="text-[13px] leading-relaxed text-[#122D30]/85 whitespace-pre-line">
+            <p className="text-[13px] leading-relaxed text-[#1D6315]/85 whitespace-pre-line">
               {p.text}
             </p>
-            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/35">
+            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#1D6315]/35">
               {p.ref}
             </cite>
           </blockquote>
@@ -131,19 +131,19 @@ function Passages({ detail }: { detail: VisualDetail }) {
       </div>
       {others.length > 0 && (
         <details className="mt-2 group">
-          <summary className="cursor-pointer text-[11px] font-bold text-[#122D30]/50 hover:text-[#122D30] select-none">
+          <summary className="cursor-pointer text-[11px] font-bold text-[#1D6315]/50 hover:text-[#1D6315] select-none">
             Other passages from this concept ({others.length})
           </summary>
           <div className="mt-2 flex flex-col gap-2">
             {others.map((p) => (
               <blockquote
                 key={p.ref}
-                className="rounded-xl bg-[#F6F7F2] px-3 py-2.5"
+                className="rounded-xl bg-[#F7F4EA] px-3 py-2.5"
               >
-                <p className="text-xs leading-relaxed text-[#122D30]/60 whitespace-pre-line">
+                <p className="text-xs leading-relaxed text-[#1D6315]/60 whitespace-pre-line">
                   {p.text}
                 </p>
-                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/30">
+                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#1D6315]/30">
                   {p.ref}
                 </cite>
               </blockquote>
@@ -179,15 +179,15 @@ function FamilyTimeline({
                 onClick={() => onOpen(member.id)}
                 className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
                   current
-                    ? "bg-[#075E63]/5 cursor-default"
-                    : "hover:bg-[#075E63]/5"
+                    ? "bg-[#287624]/5 cursor-default"
+                    : "hover:bg-[#287624]/5"
                 }`}
               >
-                <span className="text-xs font-black text-[#122D30] w-16 shrink-0">
+                <span className="text-xs font-black text-[#1D6315] w-16 shrink-0">
                   Version {i + 1}
                 </span>
                 <StateChip state={member.state} />
-                <span className="ml-auto text-[11px] font-bold text-[#122D30]/40">
+                <span className="ml-auto text-[11px] font-bold text-[#1D6315]/40">
                   {formatDate(member.created_at)}
                 </span>
               </button>
@@ -301,7 +301,7 @@ export function VisualDetailPane({
 
   return (
     <div className="flex flex-col min-h-full">
-      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#122D30]/5">
+      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#1D6315]/5">
         <Button
           variant="tertiary"
           size="sm"
@@ -339,7 +339,7 @@ export function VisualDetailPane({
 
       {error && !detail && (
         <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
-          <p className="text-sm font-bold text-[#122D30]">{error}</p>
+          <p className="text-sm font-bold text-[#1D6315]">{error}</p>
           <Button variant="outline" onClick={() => void reload()}>
             Try again
           </Button>
@@ -365,7 +365,7 @@ export function VisualDetailPane({
           <div className="flex flex-col gap-4 lg:sticky lg:top-[68px] self-start w-full">
             <div
               ref={pictureRef}
-              className="relative rounded-2xl border border-[#122D30]/10 overflow-hidden bg-white"
+              className="relative rounded-2xl border border-[#1D6315]/10 overflow-hidden bg-white"
             >
               <div
                 className={zoomed ? "overflow-auto max-h-[70vh]" : ""}
@@ -393,7 +393,7 @@ export function VisualDetailPane({
 
               {/* Mark up: pick a tool, then drag on the picture (a tap drops a pin). */}
               {canMark && marking && (
-                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/95 p-1 shadow-[0_6px_18px_-8px_rgb(18_45_48/0.45)] ring-1 ring-[#122D30]/10">
+                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/95 p-1 shadow-[0_6px_18px_-8px_rgb(18_45_48/0.45)] ring-1 ring-[#1D6315]/10">
                   <div
                     role="radiogroup"
                     aria-label="Mark-up tool"
@@ -465,7 +465,7 @@ export function VisualDetailPane({
               )}
             </div>
             {canMark && marking && marks.length === 0 && (
-              <p className="text-xs font-bold text-[#122D30]/55">
+              <p className="text-xs font-bold text-[#1D6315]/55">
                 {tool === "crop"
                   ? "Drag over the area to keep. Everything outside it is left out of the new version."
                   : "Drag a box over the part to change, or tap to drop a pin. Add as many as you need."}
@@ -504,28 +504,28 @@ export function VisualDetailPane({
           <div className="flex flex-col gap-6 min-w-0">
             <header>
               {detail.concept.section_title && (
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40 mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40 mb-1">
                   {detail.concept.section_title}
                 </p>
               )}
-              <h3 className="text-xl md:text-2xl font-black text-[#122D30] tracking-tight leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-[#1D6315] tracking-tight leading-tight">
                 {detail.concept.title}
               </h3>
               {detail.concept.definition && (
-                <p className="mt-2 text-sm leading-relaxed text-[#122D30]/70">
+                <p className="mt-2 text-sm leading-relaxed text-[#1D6315]/70">
                   {detail.concept.definition}
                 </p>
               )}
             </header>
 
             {detail.concept.feedback && (
-              <div className="rounded-xl bg-[#DCEBE7]/40 border border-[#122D30]/10 px-4 py-3 flex items-start gap-2.5">
+              <div className="rounded-xl bg-[#E8F0CC]/40 border border-[#1D6315]/10 px-4 py-3 flex items-start gap-2.5">
                 <Sparkles
                   size={14}
-                  className="text-[#122D30] mt-0.5 shrink-0"
+                  className="text-[#1D6315] mt-0.5 shrink-0"
                   aria-hidden
                 />
-                <p className="text-xs text-[#122D30]/80">
+                <p className="text-xs text-[#1D6315]/80">
                   <span className="font-black">Made again after: </span>
                   {detail.concept.feedback.reason_codes
                     .map((c) => REASON_LABELS[c] ?? c)
@@ -551,12 +551,12 @@ export function VisualDetailPane({
                   {detail.spec.checklist.map((item, i) => (
                     <li
                       key={i}
-                      className="flex items-start gap-2.5 text-[13px] text-[#122D30]/85"
+                      className="flex items-start gap-2.5 text-[13px] text-[#1D6315]/85"
                     >
-                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#122D30]/25 flex items-center justify-center">
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#1D6315]/25 flex items-center justify-center">
                         <Check
                           size={10}
-                          className="text-[#122D30]/30"
+                          className="text-[#1D6315]/30"
                           aria-hidden
                         />
                       </span>
@@ -591,8 +591,8 @@ export function VisualDetailPane({
               )}
 
             {detail.decision && (
-              <p className="text-xs text-[#122D30]/60">
-                <span className="font-black text-[#122D30]">
+              <p className="text-xs text-[#1D6315]/60">
+                <span className="font-black text-[#1D6315]">
                   {detail.decision.decision === "accept"
                     ? "Accepted"
                     : "Rejected"}

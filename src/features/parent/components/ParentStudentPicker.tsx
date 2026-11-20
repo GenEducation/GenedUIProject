@@ -10,7 +10,7 @@ import { GlassSkeleton } from "./loader/GlassSkeleton";
 /**
  * Portal entry screen for parents with more than one linked child: "Who are
  * you checking on today?". Picking a child hands off to that child's
- * dashboard. The palette is the GenEd "Deep Ocean + Citron" brand sheet,
+ * dashboard. The palette is the Zoovi "Deep Ocean + Citron" brand sheet,
  * scoped to this screen so the rest of the portal is untouched.
  */
 
@@ -27,8 +27,8 @@ const FINE_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 const SWIPE_THRESHOLD = 70;
 
 const THEME = {
-  "--gd-ocean": "#115A60",
-  "--gd-citron": "#D7EA7C",
+  "--gd-ocean": "#1D6315",
+  "--gd-citron": "#D4E98A",
   "--gd-paper": "#F5F6F1",
   "--gd-mist": "#D2E8E3",
   "--gd-ink": "#132829",
@@ -123,10 +123,10 @@ export function ParentStudentPicker(props: ParentStudentPickerProps) {
       >
         <motion.img
           variants={item}
-          src="/brand/gened-logo-deep-ocean-transparent.png"
-          alt="GenEd"
-          width={354}
-          height={140}
+          src="/brand/zoovi-logo.png"
+          alt="Zoovi"
+          width={1063}
+          height={365}
           className="h-auto w-[232px] select-none sm:w-[284px]"
           draggable={false}
         />

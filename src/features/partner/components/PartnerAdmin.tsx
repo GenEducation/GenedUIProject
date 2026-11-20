@@ -9,7 +9,7 @@ import { CurriculumIngestion } from "./CurriculumIngestion";
 import { AnimatePresence, motion } from "framer-motion";
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import { usePartnerStore, type Subject } from "../store/usePartnerStore";
 import { LabSetup } from "@/features/lab/components/LabSetup";
 import { FEATURES } from "@/constants/features";
@@ -45,7 +45,7 @@ export function PartnerAdmin() {
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
   return (
-    <div className="portal-legacy-type flex h-screen bg-[#F6F7F2] overflow-hidden">
+    <div className="portal-legacy-type flex h-screen bg-[#F7F4EA] overflow-hidden">
       {/* Navigation Sidebar */}
       <SideBar
         activeView={activeView}
@@ -61,12 +61,12 @@ export function PartnerAdmin() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#F6F7F2]">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#F7F4EA]">
         {/* Top Navbar */}
-        <header className="relative h-16 md:h-[88px] shrink-0 border-b border-[#122D30]/5 bg-white/40 flex items-center justify-between gap-3 px-4 md:px-8 lg:px-12 z-50 transition-all">
+        <header className="relative h-16 md:h-[88px] shrink-0 border-b border-[#1D6315]/5 bg-white/40 flex items-center justify-between gap-3 px-4 md:px-8 lg:px-12 z-50 transition-all">
           <div className="flex-1 min-w-0">
             {/* On a phone the centred logo has the bar to itself; the rail's highlighted icon says which page this is. */}
-            <h2 className="hidden sm:block truncate text-lg md:text-xl font-black text-[#122D30] tracking-tight">
+            <h2 className="hidden sm:block truncate text-lg md:text-xl font-black text-[#1D6315] tracking-tight">
               {activeView === "subjects"
                 ? "Subjects"
                 : activeView === "labs"
@@ -76,7 +76,7 @@ export function PartnerAdmin() {
           </div>
           {/* Below lg the sidebar is a rail without the logo: the logo sits in the middle of this bar instead. */}
           <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:hidden">
-            <GenEdLogo height={30} className="md:h-9 md:w-auto" />
+            <ZooviLogo height={30} className="md:h-9 md:w-auto" />
           </div>
           <div className="flex items-center gap-4">
             {partnerId && <NotificationBell userId={partnerId} align="right" />}

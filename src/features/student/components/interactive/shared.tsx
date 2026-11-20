@@ -45,7 +45,7 @@ export function InteractiveShell({
         borderRadius: 20,
         background: COLORS.panel,
         border: "1px solid #075E6322",
-        boxShadow: "0 1px 2px rgba(18,45,48,0.04), 0 10px 30px -22px rgba(18,45,48,0.25)",
+        boxShadow: "0 1px 2px rgba(29,99,21,0.04), 0 10px 30px -22px rgba(29,99,21,0.25)",
         maxWidth: 680,
       }}
     >

@@ -71,7 +71,7 @@ export function VisualsModal({
       onClose={onClose}
       size="full"
       title={subject ? `Visuals for ${subject.title}` : "Visuals"}
-      panelStyle={{ maxWidth: "min(1180px, 100%)", background: "#F6F7F2" }}
+      panelStyle={{ maxWidth: "min(1180px, 100%)", background: "#F7F4EA" }}
     >
       {/* Keyed so each row opens on a fresh tab/selection. */}
       {subject && (
@@ -188,18 +188,18 @@ function VisualsModalBody({
   return (
     <div className="flex flex-col min-h-full">
       {/* Header */}
-      <header className="shrink-0 flex items-start gap-3 sm:gap-4 px-4 sm:px-5 md:px-7 pt-5 sm:pt-6 pb-4 bg-white border-b border-[#122D30]/5">
-        <div className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-3 sm:gap-4 px-4 sm:px-5 md:px-7 pt-5 sm:pt-6 pb-4 bg-white border-b border-[#1D6315]/5">
+        <div className="h-10 w-10 sm:h-11 sm:w-11 shrink-0 rounded-2xl bg-[#287624] text-white flex items-center justify-center">
           <Images size={20} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40">
             Teaching visuals
           </p>
-          <h2 className="text-lg md:text-xl font-black text-[#122D30] tracking-tight truncate">
+          <h2 className="text-lg md:text-xl font-black text-[#1D6315] tracking-tight truncate">
             {subject.title}
           </h2>
-          <p className="text-[11px] font-bold text-[#122D30]/50 uppercase tracking-wider line-clamp-2 sm:truncate">
+          <p className="text-[11px] font-bold text-[#1D6315]/50 uppercase tracking-wider line-clamp-2 sm:truncate">
             {subject.book_title} · Ch {subject.chapter_ordinal} · Grade{" "}
             {subject.grade} · {subject.subject}
           </p>
@@ -226,7 +226,7 @@ function VisualsModalBody({
       {notice && (
         <p
           role="status"
-          className="mx-4 sm:mx-5 md:mx-7 mt-4 flex items-center gap-2 rounded-xl bg-[#DCEBE7] border border-[#075E63]/15 px-3 py-2 text-xs font-bold text-[#075E63]"
+          className="mx-4 sm:mx-5 md:mx-7 mt-4 flex items-center gap-2 rounded-xl bg-[#E8F0CC] border border-[#287624]/15 px-3 py-2 text-xs font-bold text-[#287624]"
         >
           <CheckCircle2 size={14} className="shrink-0" aria-hidden />
           <span className="flex-1">{notice}</span>
@@ -293,7 +293,7 @@ function VisualsModalBody({
               role="tablist"
               aria-label="Visual state"
               onKeyDown={onTabKey}
-              className="grid grid-cols-2 w-full gap-1 p-1 bg-white rounded-2xl border border-[#122D30]/5 sm:flex sm:w-auto sm:self-start"
+              className="grid grid-cols-2 w-full gap-1 p-1 bg-white rounded-2xl border border-[#1D6315]/5 sm:flex sm:w-auto sm:self-start"
             >
               {TABS.map((t) => {
                 const active = t.id === tab;
@@ -309,16 +309,16 @@ function VisualsModalBody({
                     aria-controls="visuals-tabpanel"
                     tabIndex={active ? 0 : -1}
                     onClick={() => setTab(t.id)}
-                    className={`sm:flex-none whitespace-nowrap px-3 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider sm:tracking-widest transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63] ${
+                    className={`sm:flex-none whitespace-nowrap px-3 sm:px-3.5 py-2 sm:py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider sm:tracking-widest transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287624] ${
                       active
-                        ? "bg-[#075E63] text-white"
-                        : "text-[#122D30]/65 hover:text-[#122D30] hover:bg-[#075E63]/5"
+                        ? "bg-[#287624] text-white"
+                        : "text-[#1D6315]/65 hover:text-[#1D6315] hover:bg-[#287624]/5"
                     }`}
                   >
                     {t.label}
                     {n ? (
                       <span
-                        className={`ml-1.5 tabular-nums ${active ? "text-white/80" : "text-[#122D30]/65"}`}
+                        className={`ml-1.5 tabular-nums ${active ? "text-white/80" : "text-[#1D6315]/65"}`}
                       >
                         {n}
                       </span>
@@ -337,7 +337,7 @@ function VisualsModalBody({
               {tab === "redraws" ? (
                 redraws.error && !redraws.items.length ? (
                   <div className="flex flex-col items-center gap-3 py-16 text-center">
-                    <p className="text-sm font-bold text-[#122D30]">
+                    <p className="text-sm font-bold text-[#1D6315]">
                       {redraws.error}
                     </p>
                     <Button
@@ -364,7 +364,7 @@ function VisualsModalBody({
                 )
               ) : list.error && !list.items.length ? (
                 <div className="flex flex-col items-center gap-3 py-16 text-center">
-                  <p className="text-sm font-bold text-[#122D30]">
+                  <p className="text-sm font-bold text-[#1D6315]">
                     {list.error}
                   </p>
                   <Button variant="outline" onClick={() => void list.refresh()}>
@@ -425,10 +425,10 @@ function VisualsModalBody({
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
-      <div className="h-14 w-14 rounded-2xl bg-white border border-[#122D30]/5 flex items-center justify-center text-[#122D30]/25">
+      <div className="h-14 w-14 rounded-2xl bg-white border border-[#1D6315]/5 flex items-center justify-center text-[#1D6315]/25">
         <Images size={24} strokeWidth={1.5} />
       </div>
-      <p className="text-sm font-bold text-[#122D30]/60">{text}</p>
+      <p className="text-sm font-bold text-[#1D6315]/60">{text}</p>
     </div>
   );
 }

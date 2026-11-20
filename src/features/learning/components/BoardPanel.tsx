@@ -42,10 +42,10 @@ function EmptyBoard() {
   return (
     <div className="flex flex-col items-center gap-3 py-10 text-center">
       <svg viewBox="0 0 160 110" aria-hidden className="h-28 w-auto">
-        <rect x="8" y="10" width="144" height="88" rx="14" fill="none" stroke="#CFD9D3" strokeWidth="2.5" strokeDasharray="7 7" />
-        <path d="M40 74 L64 44 L84 64 L98 50 L122 74 Z" fill="#DCEBE7" stroke="#075E63" strokeWidth="2.2" strokeLinejoin="round" />
-        <circle cx="112" cy="36" r="7" fill="#D9F279" stroke="#B8D63F" strokeWidth="1.5" />
-        <path d="M128 18 C129 22 130 23 134 24 C130 25 129 26 128 30 C127 26 126 25 122 24 C126 23 127 22 128 18 Z" fill="#B8D63F" />
+        <rect x="8" y="10" width="144" height="88" rx="14" fill="none" stroke="#DAD5C2" strokeWidth="2.5" strokeDasharray="7 7" />
+        <path d="M40 74 L64 44 L84 64 L98 50 L122 74 Z" fill="#E8F0CC" stroke="#287624" strokeWidth="2.2" strokeLinejoin="round" />
+        <circle cx="112" cy="36" r="7" fill="#A6CF08" stroke="#8DB000" strokeWidth="1.5" />
+        <path d="M128 18 C129 22 130 23 134 24 C130 25 129 26 128 30 C127 26 126 25 122 24 C126 23 127 22 128 18 Z" fill="#8DB000" />
       </svg>
       <p className="lesson-hand text-[22px] text-[var(--ls-ink-mid)]">Your tutor will draw here.</p>
     </div>

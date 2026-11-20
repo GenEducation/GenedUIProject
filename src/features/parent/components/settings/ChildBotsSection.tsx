@@ -17,7 +17,7 @@ const THEME: BotListTheme = {
 };
 
 /**
- * Each connected child's GenEd bots (backend ADR 0043), so a parent can disconnect one: a lost or passed-on bot, or
+ * Each connected child's Zoovi bots (backend ADR 0043), so a parent can disconnect one: a lost or passed-on bot, or
  * one the child shouldn't be using. Children whose list can't be loaded are left out rather than shown as empty.
  */
 export function ChildBotsSection({ students }: { students: LinkedStudent[] }) {
@@ -45,7 +45,7 @@ export function ChildBotsSection({ students }: { students: LinkedStudent[] }) {
           <Bot size={19} strokeWidth={2.2} />
         </span>
         <div>
-          <h2 id="bots-title" className="text-[18px] font-extrabold text-[var(--pp-ink)]">GenEd bots</h2>
+          <h2 id="bots-title" className="text-[18px] font-extrabold text-[var(--pp-ink)]">Zoovi bots</h2>
           <p className="text-[13px] text-[var(--pp-ink-soft)]">A removed bot disconnects within the hour and asks for a new code.</p>
         </div>
       </header>

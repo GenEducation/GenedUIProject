@@ -222,7 +222,7 @@ describe("Completing a chapter's questions", () => {
     ).toBeInTheDocument();
   });
 
-  it("reviews GenEd's prepared questions: bulk accept leaves doubted ones, a rejection needs a reason, then approve", async () => {
+  it("reviews Zoovi's prepared questions: bulk accept leaves doubted ones, a rejection needs a reason, then approve", async () => {
     sourcesFixture.setBank(SID, BANK);
     const dialog = await openAuthoring();
     expect(
@@ -426,18 +426,18 @@ describe("Completing a chapter's questions", () => {
 });
 
 describe("The popup's layout", () => {
-  it("opens on GenEd's prepared questions, before the printed questions", async () => {
+  it("opens on Zoovi's prepared questions, before the printed questions", async () => {
     const dialog = await openAuthoring();
     const tabs = within(dialog)
       .getAllByRole("tab")
       .map((t) => t.textContent);
     expect(tabs).toEqual([
-      "Prepared by GenEd",
+      "Prepared by Zoovi",
       "Your questions",
       "Printed questions0/2",
     ]);
     expect(
-      within(dialog).getByRole("tab", { name: /Prepared by GenEd/ }),
+      within(dialog).getByRole("tab", { name: /Prepared by Zoovi/ }),
     ).toHaveAttribute("aria-selected", "true");
     expect(
       await within(dialog).findByText(
@@ -451,18 +451,18 @@ describe("The popup's layout", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the save footer on GenEd's tab only while another tab holds unsaved work", async () => {
+  it("shows the save footer on Zoovi's tab only while another tab holds unsaved work", async () => {
     const dialog = await openAuthoring();
     const saveButton = () =>
       within(dialog).queryByRole("button", { name: "Save and prepare release" });
-    // GenEd's question bank has its own approve bar: no second, empty set of buttons under it.
+    // Zoovi's question bank has its own approve bar: no second, empty set of buttons under it.
     expect(saveButton()).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("tab", { name: /Printed questions/ }));
     expect(saveButton()).toBeDisabled();
     const picture = within(dialog).getByRole("article", { name: "SYNTHETIC picture question?" });
     fireEvent.click(within(picture).getByLabelText("SYNTHETIC red"));
-    // Back on GenEd's tab, the unsaved answer keeps its save buttons in sight.
-    fireEvent.click(within(dialog).getByRole("tab", { name: /Prepared by GenEd/ }));
+    // Back on Zoovi's tab, the unsaved answer keeps its save buttons in sight.
+    fireEvent.click(within(dialog).getByRole("tab", { name: /Prepared by Zoovi/ }));
     expect(saveButton()).toBeEnabled();
   });
 
@@ -577,7 +577,7 @@ describe("Key rules", () => {
 });
 
 describe("Question formats (backend ADR 0045)", () => {
-  it("accepts a blank marked as ___ or as GenEd's numbered [1], once per answer", async () => {
+  it("accepts a blank marked as ___ or as Zoovi's numbered [1], once per answer", async () => {
     const { formatProblem } = await import("../QuestionFormats");
     const blanks = (prompt: string, answers: string[]) =>
       formatProblem({

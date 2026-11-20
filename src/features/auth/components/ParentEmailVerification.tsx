@@ -5,9 +5,9 @@ import { asError } from "@/utils/errors";
 
 const inputCls = (hasError: boolean) =>
   `w-full rounded-xl border ${
-    hasError ? "border-rose-400 bg-rose-50/30" : "border-[#122D30]/15 bg-white/70"
-  } px-5 py-3.5 text-sm text-[#122D30] transition-all duration-200 placeholder:text-[#122D30]/25 hover:border-[#075E63]/40 focus:border-[#075E63] focus:outline-none focus:ring-2 focus:ring-[#075E63]/15`;
-const labelCls = "block text-[9px] font-bold uppercase tracking-[0.28em] text-[#122D30]/45 mb-2.5 pl-0.5";
+    hasError ? "border-rose-400 bg-rose-50/30" : "border-[#1D6315]/15 bg-white/70"
+  } px-5 py-3.5 text-sm text-[#1D6315] transition-all duration-200 placeholder:text-[#1D6315]/25 hover:border-[#287624]/40 focus:border-[#287624] focus:outline-none focus:ring-2 focus:ring-[#287624]/15`;
+const labelCls = "block text-[9px] font-bold uppercase tracking-[0.28em] text-[#1D6315]/45 mb-2.5 pl-0.5";
 const errorCls = "text-rose-500 text-[10px] font-semibold mt-1.5 ml-0.5 italic animate-in fade-in slide-in-from-top-1";
 
 /**
@@ -104,16 +104,16 @@ export function ParentEmailVerification({
           type="button"
           onClick={sendCode}
           disabled={sending || !trimmed || cooldown > 0}
-          className="px-5 py-3.5 rounded-xl bg-[#122D30]/5 text-[#122D30] text-xs font-bold whitespace-nowrap transition-all hover:bg-[#122D30]/10 active:scale-95 disabled:opacity-50"
+          className="px-5 py-3.5 rounded-xl bg-[#1D6315]/5 text-[#1D6315] text-xs font-bold whitespace-nowrap transition-all hover:bg-[#1D6315]/10 active:scale-95 disabled:opacity-50"
         >
           {sending ? "Sending…" : cooldown > 0 ? `Resend in ${cooldown}s` : codeSent ? "Resend code" : "Send code to parent"}
         </button>
       </div>
-      <p className="text-[#122D30]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
+      <p className="text-[#1D6315]/40 text-[9px] mt-1.5 ml-0.5 font-medium leading-relaxed">
         {required ? "" : "Optional. "}We&apos;ll email your parent a code to confirm it&apos;s really their address. You
         don&apos;t have to wait for them to make an account: you can start learning straight away.
       </p>
-      {message && <p className="text-[#075E63] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight">{message}</p>}
+      {message && <p className="text-[#287624] text-[10px] font-bold mt-1.5 ml-0.5 tracking-tight">{message}</p>}
       {shownError && <p className={errorCls}>{shownError}</p>}
 
       {(codeSent || !!codeError) && (

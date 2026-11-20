@@ -20,9 +20,9 @@ interface RedrawTallyBarProps {
   explainCounts?: boolean;
 }
 
-// #122D30 at 65% on white is 4.7:1: the lightest ink that still meets WCAG AA for small text.
+// #1D6315 at 65% on white is 4.7:1: the lightest ink that still meets WCAG AA for small text.
 const LABEL =
-  "text-[10px] font-black uppercase tracking-widest text-[#122D30]/65";
+  "text-[10px] font-black uppercase tracking-widest text-[#1D6315]/65";
 
 /**
  * Where the review of one chapter's visuals stands, at a glance:
@@ -55,15 +55,15 @@ export function RedrawTallyBar({
   return (
     <section
       aria-label="Review progress"
-      className="rounded-2xl bg-white border border-[#122D30]/5 px-4 py-3 flex flex-col gap-2.5"
+      className="rounded-2xl bg-white border border-[#1D6315]/5 px-4 py-3 flex flex-col gap-2.5"
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
         <div className="flex flex-col gap-1.5 md:w-60 shrink-0">
           <p className="flex items-baseline justify-between gap-2">
             <span className={LABEL}>Pictures reviewed</span>
-            <span className="text-sm font-black tabular-nums text-[#122D30]">
+            <span className="text-sm font-black tabular-nums text-[#1D6315]">
               {targets.reviewed}
-              <span className="text-[#122D30]/65">/{targets.total}</span>
+              <span className="text-[#1D6315]/65">/{targets.total}</span>
             </span>
           </p>
           <div
@@ -73,7 +73,7 @@ export function RedrawTallyBar({
             aria-valuemax={total}
             aria-valuenow={Math.min(targets.reviewed, total)}
             aria-valuetext={progressText}
-            className="h-2 w-full rounded-full bg-[#122D30]/[0.07] overflow-hidden flex gap-px"
+            className="h-2 w-full rounded-full bg-[#1D6315]/[0.07] overflow-hidden flex gap-px"
           >
             <span
               className="h-full bg-emerald-500 transition-[width] duration-500"
@@ -96,21 +96,21 @@ export function RedrawTallyBar({
           <Stat
             label="Rejected"
             value={targets.rejected}
-            tone={targets.rejected ? "text-red-700" : "text-[#122D30]"}
+            tone={targets.rejected ? "text-red-700" : "text-[#1D6315]"}
             swatch="bg-red-500"
           />
           <div className="flex items-baseline gap-2">
             <dt className={LABEL}>Sent for redraw</dt>
             <dd className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-              <span className="text-sm font-black tabular-nums text-[#075E63]">
+              <span className="text-sm font-black tabular-nums text-[#287624]">
                 {redraws.total}
               </span>
               {breakdown.length > 0 && (
-                <span className="flex items-center gap-1 text-[11px] font-bold text-[#122D30]/70 tabular-nums">
+                <span className="flex items-center gap-1 text-[11px] font-bold text-[#1D6315]/70 tabular-nums">
                   {running > 0 && (
                     <Loader2
                       size={11}
-                      className="animate-spin text-[#075E63]"
+                      className="animate-spin text-[#287624]"
                       aria-hidden
                     />
                   )}
@@ -144,7 +144,7 @@ export function RedrawTallyBar({
       </div>
 
       {explainCounts && (
-        <p className="text-[11px] font-semibold text-[#122D30]/65">
+        <p className="text-[11px] font-semibold text-[#1D6315]/65">
           Counts each picture once, at its newest version. The tabs below count
           every version, so their numbers can be higher.
         </p>

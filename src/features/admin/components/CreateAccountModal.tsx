@@ -146,7 +146,7 @@ export function CreateAccountModal({ onClose, onCreated }: Props) {
                   onClick={() => setRole(r)}
                   className={`min-h-9 rounded-[9px] px-3 py-2 text-[12px] font-bold tracking-wide transition-all ${
                     role === r
-                      ? "bg-emerald text-white shadow-[0_1px_3px_rgba(18,45,48,.15)]"
+                      ? "bg-emerald text-white shadow-[0_1px_3px_rgba(29,99,21,.15)]"
                       : "text-muted hover:text-ink"
                   }`}
                 >

@@ -48,7 +48,7 @@ export const useRazorpay = () => {
           email: userEmail,
         },
         theme: {
-          color: "#075E63", // GenEd Green
+          color: "#287624", // Zoovi green
         },
         handler: async (response: RazorpayHandlerResponse) => {
           try {

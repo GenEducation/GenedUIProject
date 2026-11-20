@@ -25,7 +25,7 @@ export function ConnectionQualityBanner({ quality, notice }: ConnectionQualityBa
           // pending. A spinner here would tell the child to wait for something that
           // is not coming. A pale soft-surface wash with deep-ocean text — a step
           // lighter than the rotating notice so the two stay distinguishable.
-          bg: "#EEF5F3",
+          bg: "#F3F6E6",
           border: `${STUDENT_COLORS.tutor}40`,
           color: STUDENT_COLORS.tutor,
           icon: <CheckCircle2 size={14} style={{ color: STUDENT_COLORS.tutor }} />,

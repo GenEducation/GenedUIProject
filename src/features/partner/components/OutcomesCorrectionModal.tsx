@@ -84,7 +84,7 @@ export function OutcomesCorrectionModal({
   }
 
   const option = (code: string) => (
-    <label className="flex items-start gap-3 px-3 py-2 rounded-xl border border-[#122D30]/10 text-sm text-[#122D30]">
+    <label className="flex items-start gap-3 px-3 py-2 rounded-xl border border-[#1D6315]/10 text-sm text-[#1D6315]">
       <input
         type="checkbox"
         className="mt-1"
@@ -94,7 +94,7 @@ export function OutcomesCorrectionModal({
       <span className="flex-1 min-w-0">
         <span className="font-semibold">{code}</span>
         {names[code] && (
-          <span className="block text-[#122D30]/60">{names[code]}</span>
+          <span className="block text-[#1D6315]/60">{names[code]}</span>
         )}
         {uncovered.has(code) && (
           <span
@@ -127,13 +127,13 @@ export function OutcomesCorrectionModal({
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-[2rem] shadow-2xl z-[101] p-8"
       >
-        <div className="mb-5 w-12 h-12 rounded-2xl flex items-center justify-center bg-[#075E63]/10 text-[#075E63]">
+        <div className="mb-5 w-12 h-12 rounded-2xl flex items-center justify-center bg-[#287624]/10 text-[#287624]">
           <ListChecks size={24} />
         </div>
-        <h3 className="text-xl font-bold text-[#122D30] mb-2">
+        <h3 className="text-xl font-bold text-[#1D6315] mb-2">
           Choose learning outcomes
         </h3>
-        <p className="text-sm text-[#122D30]/60 leading-relaxed mb-4">
+        <p className="text-sm text-[#1D6315]/60 leading-relaxed mb-4">
           Keep the outcomes this chapter teaches, or choose others of this
           subject and grade. Saving runs the chapter again; it reuses the pages
           already read and matches its concepts to the outcomes you choose. A
@@ -144,7 +144,7 @@ export function OutcomesCorrectionModal({
             <li key={code}>{option(code)}</li>
           ))}
           {others.length > 0 && (
-            <li className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#122D30]/50">
+            <li className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#1D6315]/50">
               Other outcomes of this subject and grade
             </li>
           )}

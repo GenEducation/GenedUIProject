@@ -189,7 +189,7 @@ export function AssessmentSidebar({
                       isCompleted
                         ? "bg-[var(--accent)] text-[var(--accent-ink)] border-2 border-[var(--accent-deep)] shadow-[0_0_25px_rgba(217,242,121,0.55)]"
                         : isCurrent
-                        ? "bg-white text-[var(--primary)] border-2 border-[var(--primary)] shadow-[0_0_30px_rgba(7,94,99,0.22)]"
+                        ? "bg-white text-[var(--primary)] border-2 border-[var(--primary)] shadow-[0_0_30px_rgba(40,118,36,0.22)]"
                         : "bg-white border border-[var(--surface-border)] text-[var(--text-faint)]"
                     }
                     group-hover:scale-110
@@ -203,7 +203,7 @@ export function AssessmentSidebar({
                         ? "bg-[var(--ink)]"
                         : isLocked
                         ? "bg-[var(--text-faint)]"
-                        : "bg-[var(--primary)] shadow-[0_0_10px_rgba(7,94,99,0.4)]"
+                        : "bg-[var(--primary)] shadow-[0_0_10px_rgba(40,118,36,0.4)]"
                     }`}
                   >
                     {isCompleted ? (

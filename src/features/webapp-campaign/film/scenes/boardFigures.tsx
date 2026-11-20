@@ -20,7 +20,7 @@ export function BoardTitle({ p, at, text }: { p: Progress; at: Range; text: stri
           at={[at[1] - 0.02, at[1] + 0.08]}
           d="M2 7 C 20 2, 34 11, 52 6 S 86 2, 104 7 S 140 11, 160 5 S 188 4, 198 7"
           fill="none"
-          stroke="#B8D63F"
+          stroke="#8DB000"
           strokeWidth={3}
           strokeLinecap="round"
         />

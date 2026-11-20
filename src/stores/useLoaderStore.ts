@@ -4,7 +4,7 @@ import { create } from 'zustand';
 export type LoaderVariant = 'default' | 'parent';
 
 /** What the logo-toss loader is waiting on; drives its status line. */
-// The GenEd logo-toss loader serves parents and partners; partners have their
+// The Zoovi logo-toss loader serves parents and partners; partners have their
 // own wording.
 export type ParentLoaderStage = 'signup' | 'signin-handoff' | 'entry' | 'partner-signin' | 'partner-signup';
 

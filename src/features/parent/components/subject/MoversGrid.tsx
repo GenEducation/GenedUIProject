@@ -31,7 +31,7 @@ function MoverCard({ mover }: { mover: Mover }) {
   const tone = BAND_TONES[bandOf(mover.latest)];
   const single = mover.points.length === 1;
   return (
-    <li className="flex flex-col rounded-2xl border border-white/90 bg-white/65 p-4 transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-22px_rgba(19,41,61,0.4)]">
+    <li className="flex flex-col rounded-2xl border border-white/90 bg-white/65 p-4 transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-22px_rgba(29,72,21,0.4)]">
       <div className="flex items-start justify-between gap-3">
         <p className="line-clamp-2 min-h-[2.5em] text-[13.5px] font-bold leading-[1.25] text-[var(--pp-ink)]" title={mover.name}>
           {mover.name}

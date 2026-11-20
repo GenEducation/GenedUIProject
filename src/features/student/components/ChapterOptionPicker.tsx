@@ -20,10 +20,10 @@ interface ParsedOption {
 
 // Brand tokens (kept consistent with ChatMessageBubble / StudentChatMain).
 const TUTOR = "var(--tutor)";
-const SOFT = "#DCEBE7";
-const TEXT = "#122D30";
-const MUTED = "#7F9295";
-const BORDER = "#E3E8E2";
+const SOFT = "#E8F0CC";
+const TEXT = "#1D6315";
+const MUTED = "#7D8C73";
+const BORDER = "#E7E2D2";
 const HOVER = "#F1F7F4"; // a breath of the soft surface
 
 const CHAPTER_RE = /^Chapter\s+(\d+)\s+(.*)$/i;

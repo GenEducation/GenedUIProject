@@ -2,7 +2,7 @@
 
 import { Users, MonitorSmartphone, LogOut } from "lucide-react";
 import type { TeacherProfile } from "../store/useTeacherStore";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
 type TeacherView = "roster" | "chats" | "analytics" | "lab";
 
@@ -40,18 +40,18 @@ export function TeacherSideBar({ activeView, onViewChange, onLogout, teacherProf
       <div className="mb-10 flex flex-col gap-5">
         <div className="flex h-12 w-full items-center justify-center overflow-hidden lg:h-14 lg:justify-start">
           <div className="block lg:hidden">
-            <GenEdLogo variant="mark" height={40} />
+            <ZooviLogo variant="mark" height={40} />
           </div>
           <div className="hidden lg:block">
-            <GenEdLogo height={52} priority />
+            <ZooviLogo height={52} priority />
           </div>
         </div>
         <div className="hidden lg:block">
           <p className="text-[10px] font-bold uppercase leading-none tracking-widest text-ink/40">Teacher Portal</p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-[0_1px_2px_rgba(18,45,48,.06)] lg:p-3">
-          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-[#122D30] to-[#0B474B] font-serif text-sm font-bold text-white">
+        <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-[0_1px_2px_rgba(29,99,21,.06)] lg:p-3">
+          <div className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-gradient-to-br from-[#1D6315] to-[#22661F] font-serif text-sm font-bold text-white">
             {initials(name)}
           </div>
           <div className="hidden min-w-0 lg:block">
@@ -73,7 +73,7 @@ export function TeacherSideBar({ activeView, onViewChange, onLogout, teacherProf
               onClick={() => onViewChange(item.id)}
               className={`group relative flex items-center justify-center gap-3.5 rounded-2xl p-2.5 transition-all duration-200 lg:justify-start lg:px-3.5 lg:py-3 ${
                 item.isActive
-                  ? "bg-white text-ink shadow-[0_4px_20px_rgba(18,45,48,.08)]"
+                  ? "bg-white text-ink shadow-[0_4px_20px_rgba(29,99,21,.08)]"
                   : "text-muted hover:bg-white/60 hover:text-ink"
               }`}
             >

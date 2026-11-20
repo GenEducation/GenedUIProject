@@ -54,7 +54,7 @@ export function VisualImage({
       {broken ? (
         <div
           data-testid="visual-image-placeholder"
-          className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#122D30]/30"
+          className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[#1D6315]/30"
         >
           <ImageOff size={28} strokeWidth={1.5} />
           <span className="text-[10px] font-black uppercase tracking-widest">

@@ -20,18 +20,18 @@ export interface VoiceScript {
 }
 
 function phase(v: number, s: VoiceScript): { label: string; dot: string; level: number } {
-  if (v < s.hearing[0] - 0.05) return { label: "Listening…", dot: "#075E63", level: 0.12 };
-  if (v < s.hearing[1]) return { label: "Hearing you", dot: "#B8D63F", level: 0.85 };
-  if (v < s.speaking[0]) return { label: `${TUTOR.name} is thinking…`, dot: "#5FA8A3", level: 0.06 };
-  if (v < s.speaking[1]) return { label: `${TUTOR.name} is speaking`, dot: "#B8D63F", level: 0.6 };
-  return { label: "Listening…", dot: "#075E63", level: 0.12 };
+  if (v < s.hearing[0] - 0.05) return { label: "Listening…", dot: "#287624", level: 0.12 };
+  if (v < s.hearing[1]) return { label: "Hearing you", dot: "#8DB000", level: 0.85 };
+  if (v < s.speaking[0]) return { label: `${TUTOR.name} is thinking…`, dot: "#86B83A", level: 0.06 };
+  if (v < s.speaking[1]) return { label: `${TUTOR.name} is speaking`, dot: "#8DB000", level: 0.6 };
+  return { label: "Listening…", dot: "#287624", level: 0.12 };
 }
 
 export function VoiceBar({ p, script }: { p: Progress; script: VoiceScript }) {
   const label = useTransform(p, (v) => phase(v, script).label);
   const dot = useTransform(p, (v) => phase(v, script).dot);
   const barColor = useTransform<number, string>(p, (v) =>
-    v >= script.speaking[0] && v < script.speaking[1] ? "#B8D63F" : "#075E63"
+    v >= script.speaking[0] && v < script.speaking[1] ? "#8DB000" : "#287624"
   );
   const micRing = useTransform(p, (v) =>
     v >= script.hearing[0] && v < script.hearing[1] ? "0 0 0 0.3em rgba(217,242,121,0.9)" : "0 0 0 0em rgba(217,242,121,0)"

@@ -53,9 +53,9 @@ const sides = (s: string) => {
     : ([s.slice(0, at).trim(), s.slice(at + 1).trim()] as const);
 };
 const label =
-  "text-[11px] font-black uppercase tracking-widest text-[#122D30]/50";
+  "text-[11px] font-black uppercase tracking-widest text-[#1D6315]/50";
 const field =
-  "w-full rounded-xl border border-[#122D30]/15 bg-white px-3 py-2 text-sm text-[#122D30] focus:outline-none focus:ring-2 focus:ring-[#075E63]/30";
+  "w-full rounded-xl border border-[#1D6315]/15 bg-white px-3 py-2 text-sm text-[#1D6315] focus:outline-none focus:ring-2 focus:ring-[#287624]/30";
 
 /** The text a partner types for each format, kept apart from the question so switching formats never loses it. */
 interface Texts {
@@ -310,7 +310,7 @@ function PairRows({
       <legend className={label}>
         Pairs: each left item matches the item on its right
       </legend>
-      <p className="text-[11px] text-[#122D30]/50">
+      <p className="text-[11px] text-[#1D6315]/50">
         Learners see the right-hand column shuffled. Write at least three pairs.
       </p>
       {rows.map(([left, right], i) => (
@@ -321,7 +321,7 @@ function PairRows({
             value={left}
             onChange={(e) => set(i, 0, e.target.value.replace(/=/g, ""))}
           />
-          <span aria-hidden className="text-[#122D30]/40">
+          <span aria-hidden className="text-[#1D6315]/40">
             ↔
           </span>
           <input
@@ -375,7 +375,7 @@ export function FormatFields({
   const area = (name: keyof Texts, title: string, rows = 3, hint?: string) => (
     <label className="flex flex-col gap-1">
       <span className={label}>{title}</span>
-      {hint && <span className="text-[11px] text-[#122D30]/50">{hint}</span>}
+      {hint && <span className="text-[11px] text-[#1D6315]/50">{hint}</span>}
       <textarea
         className={field}
         rows={rows}
@@ -405,7 +405,7 @@ export function FormatFields({
               {options.map((o, i) => (
                 <label
                   key={i}
-                  className="flex items-center gap-2 text-sm text-[#122D30]"
+                  className="flex items-center gap-2 text-sm text-[#1D6315]"
                 >
                   <input
                     type={kind === "mcq" ? "radio" : "checkbox"}
@@ -471,7 +471,7 @@ export function FormatFields({
               onChange={(e) => change({ number: e.target.value })}
             />
           </label>
-          <label className="flex items-center gap-2 text-sm text-[#122D30]">
+          <label className="flex items-center gap-2 text-sm text-[#1D6315]">
             <input
               type="checkbox"
               checked={t.line.on}
@@ -553,7 +553,7 @@ export function FormatFields({
               "Copy it exactly from the chapter.",
             )}
           {area("example", "An example of a good answer (optional)", 3)}
-          <p className="text-xs text-[#122D30]/60">
+          <p className="text-xs text-[#1D6315]/60">
             A free answer with no fixed key. Learners must try it to finish the
             step, and can practise it again.
           </p>

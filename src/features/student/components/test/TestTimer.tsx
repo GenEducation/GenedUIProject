@@ -68,7 +68,7 @@ export function TestTimer({ totalSeconds, onExpired }: TestTimerProps) {
       >
         {/* Calm state: a teal-light clock on the dark paper header; warning/critical keep their own hue. */}
         <motion.div
-          className={!isCritical && !isWarning ? "text-[#5FA8A3]" : undefined}
+          className={!isCritical && !isWarning ? "text-[#86B83A]" : undefined}
           animate={
             isCritical
               ? { scale: [1, 1.2, 1], rotate: [0, -5, 5, 0] }

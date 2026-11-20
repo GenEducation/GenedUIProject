@@ -45,17 +45,17 @@ const REFUSAL: Record<string, string> = {
 const TIER: Record<string, { label: string; tone: string; hint: string }> = {
   strong: {
     label: "Strong evidence",
-    tone: "bg-[#075E63]/10 text-[#075E63]",
+    tone: "bg-[#287624]/10 text-[#287624]",
     hint: "One correct answer counts double.",
   },
   weak: {
     label: "Ordinary evidence",
-    tone: "bg-[#122D30]/5 text-[#122D30]/60",
+    tone: "bg-[#1D6315]/5 text-[#1D6315]/60",
     hint: "Counts once.",
   },
   rubric: {
     label: "Marked by rubric",
-    tone: "bg-[#122D30]/5 text-[#122D30]/60",
+    tone: "bg-[#1D6315]/5 text-[#1D6315]/60",
     hint: "Marked against a rubric.",
   },
   none: {
@@ -90,13 +90,13 @@ export function QuestionDeviceChips({ q }: { q: BankQuestion }) {
         (fit.eligible ? (
           <span
             className={`${chip} bg-emerald-50 text-emerald-700`}
-            title="The GenEd device can show this question."
+            title="The Zoovi device can show this question."
           >
             <Smartphone size={11} aria-hidden /> Fits the device
           </span>
         ) : (
           <span
-            className={`${chip} bg-[#122D30]/5 text-[#122D30]/60`}
+            className={`${chip} bg-[#1D6315]/5 text-[#1D6315]/60`}
             title={`Shown in the app only: ${refusalText(fit.refusal)}.`}
           >
             <Monitor size={11} aria-hidden /> App only
@@ -111,7 +111,7 @@ export function DeviceRefusalNote({ q }: { q: BankQuestion }) {
   const fit = q.device?.[DEVICE_PROFILE];
   if (!fit || fit.eligible || fit.refusal === "activity") return null;
   return (
-    <p className="text-[11.5px] text-[#122D30]/55">
+    <p className="text-[11.5px] text-[#1D6315]/55">
       Not on the device: {refusalText(fit.refusal)}. It still counts in the app.
     </p>
   );
@@ -213,11 +213,11 @@ export function DeviceReadiness({
   return (
     <details
       open={ready < rows.length}
-      className="group rounded-2xl bg-[#F6F7F2] px-3.5 py-3"
+      className="group rounded-2xl bg-[#F7F4EA] px-3.5 py-3"
     >
-      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#122D30]/55 [&::-webkit-details-marker]:hidden">
-        <Smartphone size={13} aria-hidden /> On the GenEd device
-        <span className="ml-auto normal-case tracking-normal font-bold tabular-nums text-[#122D30]/50">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#1D6315]/55 [&::-webkit-details-marker]:hidden">
+        <Smartphone size={13} aria-hidden /> On the Zoovi device
+        <span className="ml-auto normal-case tracking-normal font-bold tabular-nums text-[#1D6315]/50">
           {ready} of {rows.length} ready
           {afterDrafts > ready &&
             ` · ${afterDrafts} once you accept the drafts`}
@@ -232,7 +232,7 @@ export function DeviceReadiness({
           return (
             <li
               key={c.concept_key}
-              className="flex items-start gap-2 text-xs text-[#122D30]/80"
+              className="flex items-start gap-2 text-xs text-[#1D6315]/80"
             >
               {ok ? (
                 <CheckCircle2
@@ -248,7 +248,7 @@ export function DeviceReadiness({
                 />
               )}
               <span>
-                <span className="font-bold text-[#122D30]">{c.title}</span>
+                <span className="font-bold text-[#1D6315]">{c.title}</span>
                 <span
                   className={`block text-[11px] ${draftsFix ? "text-sky-800" : look.tone}`}
                 >
@@ -264,7 +264,7 @@ export function DeviceReadiness({
         })}
       </ul>
       {ready < rows.length && (
-        <p className="mt-2.5 text-[11px] leading-relaxed text-[#122D30]/55">
+        <p className="mt-2.5 text-[11px] leading-relaxed text-[#1D6315]/55">
           Only accepted questions reach learners. {limitsText(limits)} Questions
           that don&rsquo;t fit still count in the app.
         </p>
@@ -275,7 +275,7 @@ export function DeviceReadiness({
 
 const SURFACE: Record<string, { label: string; icon: typeof Monitor }> = {
   web: { label: "Web app", icon: Monitor },
-  [DEVICE_PROFILE]: { label: "GenEd device", icon: Smartphone },
+  [DEVICE_PROFILE]: { label: "Zoovi device", icon: Smartphone },
 };
 
 /** A concept key in readable form: the part after the section prefix, words spaced. */
@@ -310,7 +310,7 @@ export function ReadyForStudents({
       aria-label="Ready for students"
       className="flex flex-col gap-2 rounded-2xl bg-white px-4 py-3.5"
     >
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+      <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40">
         Ready for students
       </p>
       <ul className="flex flex-col gap-2">
@@ -323,9 +323,9 @@ export function ReadyForStudents({
           const ready = s.steps.filter((st) => st.ready).length;
           const short = s.steps.filter((st) => !st.ready);
           return (
-            <li key={s.surface} className="text-sm text-[#122D30]">
+            <li key={s.surface} className="text-sm text-[#1D6315]">
               <span className="flex items-center gap-2">
-                <Icon size={14} aria-hidden className="text-[#122D30]/50" />
+                <Icon size={14} aria-hidden className="text-[#1D6315]/50" />
                 <span className="font-bold">{look.label}</span>
                 <span
                   className={`ml-auto flex items-center gap-1 text-xs font-bold tabular-nums ${s.ready ? "text-emerald-700" : "text-amber-800"}`}
@@ -339,7 +339,7 @@ export function ReadyForStudents({
                 </span>
               </span>
               {short.length > 0 && (
-                <ul className="mt-1 ml-6 flex flex-col gap-0.5 text-[11.5px] text-[#122D30]/65">
+                <ul className="mt-1 ml-6 flex flex-col gap-0.5 text-[11.5px] text-[#1D6315]/65">
                   {short.map((st) => (
                     <li key={st.section_key}>
                       <span className="font-bold">
@@ -355,7 +355,7 @@ export function ReadyForStudents({
         })}
       </ul>
       {readiness.some((s) => !s.ready) && (
-        <p className="text-[11px] leading-relaxed text-[#122D30]/55">
+        <p className="text-[11px] leading-relaxed text-[#1D6315]/55">
           Counted from accepted questions only. You can still publish: a step
           that isn&rsquo;t ready on the device still works in the app.
         </p>

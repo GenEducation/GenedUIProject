@@ -53,12 +53,12 @@ import type {
 } from "../types/sources";
 
 /**
- * The chapter's AI-prepared assessment package (backend ADR 0047). GenEd designs, writes and checks the questions on its own; the
+ * The chapter's AI-prepared assessment package (backend ADR 0047). Zoovi designs, writes and checks the questions on its own; the
  * partner reviews the finished draft step by step: accept, edit, reject with a reason, ask for another, accept in bulk, then approve.
  * Nothing counts until accepted, and nothing reaches students until the chapter's release is reviewed and published.
  */
 
-/** How often to look again while GenEd is still preparing questions. */
+/** How often to look again while Zoovi is still preparing questions. */
 export const BANK_POLL_MS = 5000;
 /** A queued run no worker has claimed after this long is called out: writing is likely switched off on the server. */
 const STUCK_AFTER_MIN = 5;
@@ -87,15 +87,15 @@ const DIFFICULTY = { easy: "Easy", medium: "Medium", hard: "Hard" } as const;
 /** An activity's mode and, when given, what a good answer includes (ADR 0048): there is no fixed answer to show. */
 function ActivityDetails({ body }: { body: BankQuestion["question"]["body"] }) {
   return (
-    <div className="flex flex-col gap-1 text-xs text-[#122D30]/70">
+    <div className="flex flex-col gap-1 text-xs text-[#1D6315]/70">
       <p>
-        <span className="font-bold text-[#122D30]">The learner: </span>
+        <span className="font-bold text-[#1D6315]">The learner: </span>
         {ACTIVITY_MODE[body.activity_mode ?? "write"]}. A free answer: the tutor
         gives feedback, and the learner must try it to finish the step.
       </p>
       {body.passage && (
         <p className="whitespace-pre-line">
-          <span className="font-bold text-[#122D30]">
+          <span className="font-bold text-[#1D6315]">
             {body.activity_mode === "listen"
               ? "Passage (only heard, never shown): "
               : "Passage to read aloud: "}
@@ -105,13 +105,13 @@ function ActivityDetails({ body }: { body: BankQuestion["question"]["body"] }) {
       )}
       {body.rubric && (
         <p className="whitespace-pre-line">
-          <span className="font-bold text-[#122D30]">A good answer: </span>
+          <span className="font-bold text-[#1D6315]">A good answer: </span>
           {body.rubric}
         </p>
       )}
       {body.example_answer && (
         <p className="whitespace-pre-line">
-          <span className="font-bold text-[#122D30]">Example: </span>
+          <span className="font-bold text-[#1D6315]">Example: </span>
           {body.example_answer}
         </p>
       )}
@@ -155,17 +155,17 @@ function QuestionCard({
           ? "border-emerald-200"
           : doubted(q)
             ? "border-amber-200"
-            : "border-[#122D30]/10"
+            : "border-[#1D6315]/10"
       }`}
     >
       <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3.5">
-        <span className={`${chip} bg-[#075E63]/10 text-[#075E63]`}>
+        <span className={`${chip} bg-[#287624]/10 text-[#287624]`}>
           {KIND_LABEL[body.answer_kind]}
         </span>
-        <span className={`${chip} bg-[#122D30]/5 text-[#122D30]/60`}>
+        <span className={`${chip} bg-[#1D6315]/5 text-[#1D6315]/60`}>
           {DIFFICULTY[meta.difficulty]}
         </span>
-        <span className={`${chip} bg-[#122D30]/5 text-[#122D30]/60`}>
+        <span className={`${chip} bg-[#1D6315]/5 text-[#1D6315]/60`}>
           {PROVENANCE[meta.provenance]}
         </span>
         <QuestionDeviceChips q={q} />
@@ -189,7 +189,7 @@ function QuestionCard({
         {/* The prompt once. Usually it's the card's heading and the learner's view shows only what they answer with; a
             fill-in question's view is the sentence itself, so there the view alone says it. */}
         {(activity || !blanks) && (
-          <p className="text-[15px] font-bold leading-snug text-[#122D30] whitespace-pre-line">
+          <p className="text-[15px] font-bold leading-snug text-[#1D6315] whitespace-pre-line">
             {body.prompt}
           </p>
         )}
@@ -205,7 +205,7 @@ function QuestionCard({
                 showPrompt={false}
               />
             </div>
-            <p className="rounded-xl bg-emerald-50/70 px-3 py-2 text-xs text-[#122D30]/80">
+            <p className="rounded-xl bg-emerald-50/70 px-3 py-2 text-xs text-[#1D6315]/80">
               <span className="font-black text-emerald-800">Answer: </span>
               {keyText(body)}
             </p>
@@ -229,8 +229,8 @@ function QuestionCard({
           </p>
         )}
         {hasDetails && (
-          <details className="group text-xs text-[#122D30]/70">
-            <summary className="flex cursor-pointer list-none items-center gap-1 font-bold text-[#122D30]/60 hover:text-[#122D30] [&::-webkit-details-marker]:hidden">
+          <details className="group text-xs text-[#1D6315]/70">
+            <summary className="flex cursor-pointer list-none items-center gap-1 font-bold text-[#1D6315]/60 hover:text-[#1D6315] [&::-webkit-details-marker]:hidden">
               <ChevronRight
                 size={13}
                 className="transition-transform group-open:rotate-90"
@@ -238,16 +238,16 @@ function QuestionCard({
               />
               Why it&rsquo;s right, wrong answers and feedback
             </summary>
-            <div className="mt-2 flex flex-col gap-2 border-l-2 border-[#122D30]/8 pl-3">
+            <div className="mt-2 flex flex-col gap-2 border-l-2 border-[#1D6315]/8 pl-3">
               {body.explanation && (
                 <p>
-                  <span className="font-bold text-[#122D30]">Why: </span>
+                  <span className="font-bold text-[#1D6315]">Why: </span>
                   {body.explanation}
                 </p>
               )}
               {distractors.length > 0 && (
                 <div>
-                  <p className="font-bold text-[#122D30]">
+                  <p className="font-bold text-[#1D6315]">
                     Wrong answers and the mistake each shows
                   </p>
                   <ul className="list-disc pl-5 mt-1">
@@ -262,7 +262,7 @@ function QuestionCard({
               )}
               {meta.remediation && (
                 <p>
-                  <span className="font-bold text-[#122D30]">
+                  <span className="font-bold text-[#1D6315]">
                     If a student gets it wrong:{" "}
                   </span>
                   {meta.remediation}
@@ -274,21 +274,21 @@ function QuestionCard({
       </div>
 
       {rejecting ? (
-        <div className="flex flex-col gap-3 border-t border-[#122D30]/8 bg-[#F6F7F2] px-4 py-3.5 rounded-b-2xl">
+        <div className="flex flex-col gap-3 border-t border-[#1D6315]/8 bg-[#F7F4EA] px-4 py-3.5 rounded-b-2xl">
           {/* The app's own select, in the review's teal: not the browser's native menu. */}
           <Select<RejectionReason>
             label="Why reject it?"
             size="sm"
-            accentColor="#075E63"
+            accentColor="#287624"
             value={reason}
             onChange={setReason}
             options={REASONS}
           />
           <label className="block text-[12.5px] font-semibold text-[var(--text-mid)]">
-            Anything GenEd should know for the replacement{" "}
-            <span className="font-normal text-[#122D30]/45">(optional)</span>
+            Anything Zoovi should know for the replacement{" "}
+            <span className="font-normal text-[#1D6315]/45">(optional)</span>
             <input
-              className="mt-1.5 block w-full rounded-xl border border-[#122D30]/12 bg-white px-3 py-2 text-xs font-normal text-[#122D30] placeholder:text-[#122D30]/35 focus:outline-none focus:border-[#075E63] focus:ring-2 focus:ring-[#075E63]/15"
+              className="mt-1.5 block w-full rounded-xl border border-[#1D6315]/12 bg-white px-3 py-2 text-xs font-normal text-[#1D6315] placeholder:text-[#1D6315]/35 focus:outline-none focus:border-[#287624] focus:ring-2 focus:ring-[#287624]/15"
               maxLength={500}
               placeholder="e.g. keep it about the second stanza"
               value={note}
@@ -315,7 +315,7 @@ function QuestionCard({
         </div>
       ) : (
         q.state !== "rejected" && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-[#122D30]/8 px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-2 border-t border-[#1D6315]/8 px-4 py-2.5">
             {!accepted && (
               <Button
                 size="sm"
@@ -378,22 +378,22 @@ function AcceptedRow({
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="group flex w-full items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 px-3.5 py-2.5 text-left hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63]"
+      className="group flex w-full items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 px-3.5 py-2.5 text-left hover:border-emerald-300 hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287624]"
     >
       <CheckCircle2
         size={16}
         className="shrink-0 text-emerald-600"
         aria-hidden
       />
-      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#122D30]">
+      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#1D6315]">
         {q.question.body.prompt}
       </span>
-      <span className="shrink-0 text-[11px] font-bold text-[#122D30]/45">
+      <span className="shrink-0 text-[11px] font-bold text-[#1D6315]/45">
         {KIND_LABEL[q.question.body.answer_kind]}
       </span>
       <ChevronRight
         size={14}
-        className="shrink-0 text-[#122D30]/35 group-hover:text-[#122D30]/70"
+        className="shrink-0 text-[#1D6315]/35 group-hover:text-[#1D6315]/70"
         aria-hidden
       />
     </button>
@@ -435,27 +435,27 @@ const PHASE: Record<
   },
   review: {
     label: "To review",
-    pill: "bg-amber-300 text-[#122D30]",
+    pill: "bg-amber-300 text-[#1D6315]",
     bar: "bg-amber-300",
-    badge: "bg-amber-300 text-[#122D30]",
+    badge: "bg-amber-300 text-[#1D6315]",
   },
   waiting: {
     label: "Being written",
-    pill: "bg-[#075E63]/8 text-[#075E63]",
-    bar: "bg-[#075E63]/25 animate-pulse",
-    badge: "bg-[#075E63]/10 text-[#075E63]",
+    pill: "bg-[#287624]/8 text-[#287624]",
+    bar: "bg-[#287624]/25 animate-pulse",
+    badge: "bg-[#287624]/10 text-[#287624]",
   },
   gap: {
     label: "Needs an activity",
-    pill: "bg-[#122D30]/6 text-amber-800",
+    pill: "bg-[#1D6315]/6 text-amber-800",
     bar: "bg-[repeating-linear-gradient(135deg,#D97706_0_3px,#FCD34D_3px_6px)]",
     badge: "bg-amber-100 text-amber-800",
   },
   incomplete: {
     label: "Incomplete",
-    pill: "bg-[#122D30]/6 text-[#122D30]/65",
-    bar: "bg-[#122D30]/15",
-    badge: "bg-[#122D30]/8 text-[#122D30]/60",
+    pill: "bg-[#1D6315]/6 text-[#1D6315]/65",
+    bar: "bg-[#1D6315]/15",
+    badge: "bg-[#1D6315]/8 text-[#1D6315]/60",
   },
 };
 
@@ -515,12 +515,12 @@ function StepMark({
         done
           ? "bg-emerald-600 text-white"
           : current
-            ? "bg-[#075E63] text-white"
+            ? "bg-[#287624] text-white"
             : phase === "waiting"
-              ? "bg-[#075E63]/10 text-[#075E63]"
+              ? "bg-[#287624]/10 text-[#287624]"
               : waitsOnPlan(step.todo)
-                ? "bg-white text-[#122D30]/50 ring-2 ring-inset ring-[#122D30]/15"
-                : "bg-white text-[#122D30]/70 ring-2 ring-inset ring-amber-300"
+                ? "bg-white text-[#1D6315]/50 ring-2 ring-inset ring-[#1D6315]/15"
+                : "bg-white text-[#1D6315]/70 ring-2 ring-inset ring-amber-300"
       }`}
     >
       {done ? (
@@ -567,7 +567,7 @@ function StepList({
   return (
     <nav aria-label="Lesson steps" className="min-w-0">
       {parent && (
-        <p className="mb-2 hidden truncate px-1 text-[10.5px] font-black uppercase tracking-[0.14em] text-[#122D30]/45 @[46rem]:block">
+        <p className="mb-2 hidden truncate px-1 text-[10.5px] font-black uppercase tracking-[0.14em] text-[#1D6315]/45 @[46rem]:block">
           {parent}
         </p>
       )}
@@ -584,21 +584,21 @@ function StepList({
                 aria-current={on ? "step" : undefined}
                 onClick={() => onPick(st.node.section_key)}
                 title={st.node.title}
-                className={`flex w-full max-w-[240px] items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#075E63] @[46rem]:max-w-none ${
+                className={`flex w-full max-w-[240px] items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#287624] @[46rem]:max-w-none ${
                   on
-                    ? "bg-white shadow-[0_1px_2px_rgba(18,45,48,0.08),0_0_0_1px_rgba(7,94,99,0.25)]"
+                    ? "bg-white shadow-[0_1px_2px_rgba(29,99,21,0.08),0_0_0_1px_rgba(40,118,36,0.25)]"
                     : "hover:bg-white/70"
                 }`}
               >
                 <StepMark step={st} queued={queued} current={on} />
                 <span className="min-w-0 flex-1">
                   <span
-                    className={`block truncate text-[13px] leading-tight ${on ? "font-black text-[#122D30]" : "font-bold text-[#122D30]/80"}`}
+                    className={`block truncate text-[13px] leading-tight ${on ? "font-black text-[#1D6315]" : "font-bold text-[#1D6315]/80"}`}
                   >
                     {name}
                   </span>
                   <span
-                    className={`block truncate text-[11px] ${done ? "text-emerald-700" : st.phase === "waiting" ? "text-[#075E63]/70" : waitsOnPlan(st.todo) ? "text-[#122D30]/50" : "text-amber-800"}`}
+                    className={`block truncate text-[11px] ${done ? "text-emerald-700" : st.phase === "waiting" ? "text-[#287624]/70" : waitsOnPlan(st.todo) ? "text-[#1D6315]/50" : "text-amber-800"}`}
                   >
                     {stepNeed(st, queued)}
                   </span>
@@ -728,15 +728,15 @@ function StepWorkspace({
       className="min-w-0 scroll-mt-4 flex flex-col gap-4"
     >
       <header className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-[11px] font-bold text-[#122D30]/50">
+        <div className="flex items-center gap-2 text-[11px] font-bold text-[#1D6315]/50">
           <span className="tabular-nums">
             Step {index + 1} of {total}
           </span>
           {crumb && <span className="truncate">· {crumb}</span>}
           <span className="flex-1" />
           {waitsOnPlan(todo) ? (
-            <span className={`${chip} bg-[#122D30]/6 text-[#122D30]/60`}>
-              Waiting on GenEd
+            <span className={`${chip} bg-[#1D6315]/6 text-[#1D6315]/60`}>
+              Waiting on Zoovi
             </span>
           ) : (
             <span className={`${chip} ${look.pill}`}>
@@ -744,11 +744,11 @@ function StepWorkspace({
             </span>
           )}
         </div>
-        <h3 className="text-xl font-black leading-tight text-[#122D30]">
+        <h3 className="text-xl font-black leading-tight text-[#1D6315]">
           {name}
         </h3>
         {!waiting && (
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[#122D30]/60">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[#1D6315]/60">
             <span className="flex items-center gap-1.5">
               <span
                 className="flex gap-0.5"
@@ -758,7 +758,7 @@ function StepWorkspace({
                 {Array.from({ length: floor }, (_, i) => (
                   <span
                     key={i}
-                    className={`h-1.5 w-4 rounded-full ${i < checked ? "bg-[#075E63]" : "bg-[#122D30]/12"}`}
+                    className={`h-1.5 w-4 rounded-full ${i < checked ? "bg-[#287624]" : "bg-[#1D6315]/12"}`}
                   />
                 ))}
               </span>
@@ -780,23 +780,23 @@ function StepWorkspace({
         // Blocked on GenEd's side, not the partner's: say so, and ask for nothing that can't help.
         <div
           role="status"
-          className="flex items-start gap-3 rounded-2xl border border-[#122D30]/10 bg-[#F6F7F2] p-3.5"
+          className="flex items-start gap-3 rounded-2xl border border-[#1D6315]/10 bg-[#F7F4EA] p-3.5"
         >
           <Info
             size={16}
-            className="mt-0.5 shrink-0 text-[#075E63]"
+            className="mt-0.5 shrink-0 text-[#287624]"
             aria-hidden
           />
-          <span className="text-xs leading-relaxed text-[#122D30]/75">
-            <span className="block text-sm font-black text-[#122D30]">
+          <span className="text-xs leading-relaxed text-[#1D6315]/75">
+            <span className="block text-sm font-black text-[#1D6315]">
               Nothing for you to do here
             </span>
             {accepted > 0
               ? `Your ${accepted} accepted question${accepted === 1 ? " is" : "s are"} kept. `
               : ""}
-            GenEd has no assessment plan for this step, so accepted questions
+            Zoovi has no assessment plan for this step, so accepted questions
             can&rsquo;t count towards it yet and the step can&rsquo;t be
-            approved. GenEd has to plan the chapter&rsquo;s questions again; ask
+            approved. Zoovi has to plan the chapter&rsquo;s questions again; ask
             GenEd to check.
           </span>
         </div>
@@ -833,9 +833,9 @@ function StepWorkspace({
       {(obligations.length > 0 || blocked.length > 0) && (
         <details
           open={!done}
-          className="group rounded-2xl bg-[#F6F7F2] px-3.5 py-3"
+          className="group rounded-2xl bg-[#F7F4EA] px-3.5 py-3"
         >
-          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#122D30]/55 [&::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-[#1D6315]/55 [&::-webkit-details-marker]:hidden">
             <ChevronRight
               size={13}
               className="transition-transform group-open:rotate-90"
@@ -843,7 +843,7 @@ function StepWorkspace({
             />
             What learners must show
             {obligations.length > 0 && (
-              <span className="ml-auto normal-case tracking-normal font-bold tabular-nums text-[#122D30]/50">
+              <span className="ml-auto normal-case tracking-normal font-bold tabular-nums text-[#1D6315]/50">
                 {covered} of {obligations.length} covered
               </span>
             )}
@@ -852,7 +852,7 @@ function StepWorkspace({
             {obligations.map((o) => (
               <li
                 key={`${o.concept}-${o.key}`}
-                className="flex items-start gap-2 text-xs text-[#122D30]/80"
+                className="flex items-start gap-2 text-xs text-[#1D6315]/80"
               >
                 {o.production && !o.approved_covered ? (
                   <AlertTriangle
@@ -869,28 +869,28 @@ function StepWorkspace({
                 ) : (
                   <Circle
                     size={13}
-                    className="mt-0.5 text-[#122D30]/25 shrink-0"
+                    className="mt-0.5 text-[#1D6315]/25 shrink-0"
                     aria-hidden
                   />
                 )}
                 <span>
-                  <span className="font-bold text-[#122D30]">{o.concept}</span>
-                  <span className="text-[#122D30]/40"> — </span>
+                  <span className="font-bold text-[#1D6315]">{o.concept}</span>
+                  <span className="text-[#1D6315]/40"> — </span>
                   {o.statement}
-                  <span className="block text-[11px] text-[#122D30]/50">
+                  <span className="block text-[11px] text-[#1D6315]/50">
                     {o.production
                       ? o.approved_covered
                         ? "Answered by an accepted activity."
                         : o.draft_covered
                           ? "Accept the activity below."
-                          : "Needs an activity: GenEd proposes one, or write your own."
+                          : "Needs an activity: Zoovi proposes one, or write your own."
                       : o.approved_covered
                         ? "Covered by accepted questions."
                         : o.draft_covered
                           ? "Accept enough of the questions below."
                           : waiting
                             ? "Questions are on the way."
-                            : "GenEd needs more questions here."}
+                            : "Zoovi needs more questions here."}
                   </span>
                 </span>
               </li>
@@ -898,12 +898,12 @@ function StepWorkspace({
             {blocked.map((c) => (
               <li
                 key={c.concept_key}
-                className={`flex items-start gap-2 text-xs ${waiting ? "text-[#122D30]/80" : "text-amber-900"}`}
+                className={`flex items-start gap-2 text-xs ${waiting ? "text-[#1D6315]/80" : "text-amber-900"}`}
               >
                 {waiting ? (
                   <Clock
                     size={13}
-                    className="mt-0.5 shrink-0 text-[#075E63]/60"
+                    className="mt-0.5 shrink-0 text-[#287624]/60"
                     aria-hidden
                   />
                 ) : (
@@ -919,7 +919,7 @@ function StepWorkspace({
                     {c.status === "held"
                       ? `On hold. ${c.why ?? ""}`
                       : waiting
-                        ? "Not planned yet; GenEd plans it while it writes."
+                        ? "Not planned yet; Zoovi plans it while it writes."
                         : `Not planned. ${c.why ?? ""}`}
                   </span>
                 </span>
@@ -927,8 +927,8 @@ function StepWorkspace({
             ))}
           </ul>
           {openSlots.length > 0 && !waiting && (
-            <details className="mt-2.5 text-xs text-[#122D30]/70">
-              <summary className="cursor-pointer font-bold text-[#122D30]/70 hover:text-[#122D30]">
+            <details className="mt-2.5 text-xs text-[#1D6315]/70">
+              <summary className="cursor-pointer font-bold text-[#1D6315]/70 hover:text-[#1D6315]">
                 Why {openSlots.length} question{" "}
                 {openSlots.length === 1 ? "slot is" : "slots are"} still open
               </summary>
@@ -938,7 +938,7 @@ function StepWorkspace({
                     <span className="font-bold">{s.concept}:</span>{" "}
                     {SLOT_REASON[s.category]} {s.detail}
                     {s.last_reasons && s.last_reasons.length > 0 && (
-                      <span className="text-[#122D30]/50">
+                      <span className="text-[#1D6315]/50">
                         {" "}
                         ({s.last_reasons[0]})
                       </span>
@@ -953,7 +953,7 @@ function StepWorkspace({
 
       {waiting && (
         <div
-          className="rounded-2xl border border-dashed border-[#075E63]/25 p-4 flex flex-col gap-2"
+          className="rounded-2xl border border-dashed border-[#287624]/25 p-4 flex flex-col gap-2"
           aria-hidden
         >
           {[0, 1].map((i) => (
@@ -962,9 +962,9 @@ function StepWorkspace({
               className="flex flex-col gap-2 animate-pulse"
               style={{ animationDelay: `${i * 200}ms` }}
             >
-              <span className="h-2.5 w-24 rounded-full bg-[#075E63]/10" />
-              <span className="h-3 w-4/5 rounded-full bg-[#122D30]/8" />
-              <span className="h-3 w-3/5 rounded-full bg-[#122D30]/6" />
+              <span className="h-2.5 w-24 rounded-full bg-[#287624]/10" />
+              <span className="h-3 w-4/5 rounded-full bg-[#1D6315]/8" />
+              <span className="h-3 w-3/5 rounded-full bg-[#1D6315]/6" />
             </div>
           ))}
         </div>
@@ -973,9 +973,9 @@ function StepWorkspace({
       {toDecide.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="text-sm font-black text-[#122D30]">
+            <h4 className="text-sm font-black text-[#1D6315]">
               To decide{" "}
-              <span className="tabular-nums text-[#122D30]/40">
+              <span className="tabular-nums text-[#1D6315]/40">
                 {live.filter((q) => q.state === "draft").length}
               </span>
             </h4>
@@ -1009,9 +1009,9 @@ function StepWorkspace({
 
       {acceptedBefore.length > 0 && (
         <div className="flex flex-col gap-2">
-          <h4 className="text-sm font-black text-[#122D30]">
+          <h4 className="text-sm font-black text-[#1D6315]">
             Accepted{" "}
-            <span className="tabular-nums text-[#122D30]/40">
+            <span className="tabular-nums text-[#1D6315]/40">
               {acceptedBefore.length}
             </span>
           </h4>
@@ -1037,11 +1037,11 @@ function StepWorkspace({
               leadingIcon={<Plus size={14} />}
               onClick={() => setAsking(true)}
             >
-              Ask GenEd for another question
+              Ask Zoovi for another question
             </Button>
           ) : (
             <form
-              className="flex flex-wrap items-end gap-2 rounded-2xl border border-[#122D30]/10 bg-white p-3"
+              className="flex flex-wrap items-end gap-2 rounded-2xl border border-[#1D6315]/10 bg-white p-3"
               onSubmit={(e) => {
                 e.preventDefault();
                 act(`more:${node.section_key}`, () =>
@@ -1055,11 +1055,11 @@ function StepWorkspace({
                 setAsking(false);
               }}
             >
-              <label className="flex-1 min-w-[200px] text-[11px] font-bold text-[#122D30]/60">
+              <label className="flex-1 min-w-[200px] text-[11px] font-bold text-[#1D6315]/60">
                 An idea for it (optional)
                 <input
                   autoFocus
-                  className="mt-1 block w-full rounded-lg border border-[#122D30]/15 bg-white px-2.5 py-1.5 text-xs font-normal focus:outline-none focus:border-[#075E63] focus:ring-2 focus:ring-[#075E63]/15"
+                  className="mt-1 block w-full rounded-lg border border-[#1D6315]/15 bg-white px-2.5 py-1.5 text-xs font-normal focus:outline-none focus:border-[#287624] focus:ring-2 focus:ring-[#287624]/15"
                   maxLength={300}
                   placeholder="e.g. a cricket example"
                   value={hint}
@@ -1087,7 +1087,7 @@ function StepWorkspace({
       )}
 
       {(prev || next) && (
-        <div className="flex items-center gap-2 border-t border-[#122D30]/8 pt-3">
+        <div className="flex items-center gap-2 border-t border-[#1D6315]/8 pt-3">
           {prev && (
             <Button
               size="sm"
@@ -1133,7 +1133,7 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
           fill="none"
           stroke="currentColor"
           strokeWidth="5"
-          className="text-[#122D30]/8"
+          className="text-[#1D6315]/8"
         />
         <circle
           cx="26"
@@ -1148,9 +1148,9 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
           className="text-emerald-500 transition-[stroke-dashoffset] duration-700"
         />
       </svg>
-      <span className="text-[13px] font-black text-[#122D30] tabular-nums">
+      <span className="text-[13px] font-black text-[#1D6315] tabular-nums">
         {done}
-        <span className="text-[#122D30]/35">/{total}</span>
+        <span className="text-[#1D6315]/35">/{total}</span>
       </span>
     </span>
   );
@@ -1164,9 +1164,9 @@ const SLOT_REASON: Record<BankOpenSlot["category"], string> = {
   curriculum_issue: "The chapter reading needs fixing first.",
   unresolved_correctness:
     "A question exists but its answer isn't proved unique; check it yourself.",
-  retries_exhausted: "GenEd's attempts didn't pass its checks.",
+  retries_exhausted: "Zoovi's attempts didn't pass its checks.",
   generation_defect:
-    "GenEd didn't produce a usable question; asking for another may fix it.",
+    "Zoovi didn't produce a usable question; asking for another may fix it.",
 };
 
 export function AssessmentBankPanel({
@@ -1306,14 +1306,14 @@ export function AssessmentBankPanel({
     return (
       <p
         role="alert"
-        className="text-sm font-bold text-[#122D30]/70 py-10 text-center"
+        className="text-sm font-bold text-[#1D6315]/70 py-10 text-center"
       >
         {error}
       </p>
     );
   if (!pkg)
     return (
-      <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
+      <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#1D6315]/40 py-10">
         <Loader2 size={16} className="animate-spin" aria-hidden /> Loading the
         prepared questions…
       </p>
@@ -1332,9 +1332,9 @@ export function AssessmentBankPanel({
   const doneCount = counts.ready + counts.accepted;
   // What still stops the release: every step must be publishable (backend `bank_approval`'s coverage_ready).
   const blocked = steps.filter((st) => !st.node.publishable);
-  // Steps only GenEd can unblock: it has no plan for them (see ``waitsOnPlan``).
+  // Steps only Zoovi can unblock: it has no plan for them (see ``waitsOnPlan``).
   const planless = blocked.filter((st) => waitsOnPlan(st.todo));
-  // No step has a single objective and none is publishable: GenEd's plan for the whole chapter is missing, so no decision here
+  // No step has a single objective and none is publishable: Zoovi's plan for the whole chapter is missing, so no decision here
   // can make a step approvable, though the questions can still be reviewed.
   const noPlan =
     steps.length > 0 &&
@@ -1378,9 +1378,9 @@ export function AssessmentBankPanel({
     writing && current && writing.sectionKey === current.node.section_key ? (
       <div
         aria-label="Write your own"
-        className="rounded-2xl border border-[#075E63]/20 bg-white p-4 flex flex-col gap-2"
+        className="rounded-2xl border border-[#287624]/20 bg-white p-4 flex flex-col gap-2"
       >
-        <p className="text-xs text-[#122D30]/70">
+        <p className="text-xs text-[#1D6315]/70">
           For &ldquo;{writing.statement}&rdquo;. It counts for this step as soon
           as you save it.
         </p>
@@ -1416,31 +1416,31 @@ export function AssessmentBankPanel({
   return (
     <div className="@container flex flex-col gap-4">
       {/* The chapter at a glance: how far the review is, and anything wrong on GenEd's side. */}
-      <div className="rounded-3xl bg-white border border-[#122D30]/8 p-4 flex flex-col gap-3">
+      <div className="rounded-3xl bg-white border border-[#1D6315]/8 p-4 flex flex-col gap-3">
         <div className="flex items-center gap-4">
           <ProgressRing done={doneCount} total={s.nodes} />
           <div className="min-w-0 flex-1">
-            <p className="text-base font-black text-[#122D30] leading-tight">
+            <p className="text-base font-black text-[#1D6315] leading-tight">
               {s.nodes === 0
                 ? "No steps yet"
                 : doneCount === s.nodes
                   ? "Every step is accepted"
                   : `${doneCount} of ${s.nodes} steps accepted`}
             </p>
-            <p className="mt-0.5 text-xs text-[#122D30]/60">
-              Go through the steps: accept, edit or reject GenEd&rsquo;s
+            <p className="mt-0.5 text-xs text-[#1D6315]/60">
+              Go through the steps: accept, edit or reject Zoovi&rsquo;s
               questions, then approve. Nothing counts until you accept it.
             </p>
           </div>
           <dl className="hidden shrink-0 gap-4 text-right text-xs @[40rem]:flex">
             {(
               [
-                ["questions", s.questions, "text-[#122D30]"],
+                ["questions", s.questions, "text-[#1D6315]"],
                 ["accepted", s.accepted, "text-emerald-700"],
                 [
                   "need your check",
                   s.needs_attention,
-                  s.needs_attention > 0 ? "text-amber-700" : "text-[#122D30]",
+                  s.needs_attention > 0 ? "text-amber-700" : "text-[#1D6315]",
                 ],
               ] as const
             ).map(([label, value, tone]) => (
@@ -1450,7 +1450,7 @@ export function AssessmentBankPanel({
                 >
                   {value}
                 </dd>
-                <dt className="mt-1 text-[11px] text-[#122D30]/50">{label}</dt>
+                <dt className="mt-1 text-[11px] text-[#1D6315]/50">{label}</dt>
               </div>
             ))}
           </dl>
@@ -1468,7 +1468,7 @@ export function AssessmentBankPanel({
                 title={`${st.index + 1}. ${st.node.title} — ${stepNeed(st, queuedOnly)}`}
                 className={`h-1.5 flex-1 rounded-full ${PHASE[st.phase].bar} ${
                   st.node.section_key === currentKey
-                    ? "outline-2 outline-offset-1 outline-[#075E63]"
+                    ? "outline-2 outline-offset-1 outline-[#287624]"
                     : ""
                 }`}
               />
@@ -1479,20 +1479,20 @@ export function AssessmentBankPanel({
         {(noPlan || planless.length > 0) && (
           <div
             role="status"
-            className="rounded-2xl border border-[#122D30]/10 bg-[#F6F7F2] px-3.5 py-3 flex items-start gap-3"
+            className="rounded-2xl border border-[#1D6315]/10 bg-[#F7F4EA] px-3.5 py-3 flex items-start gap-3"
           >
-            <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-[#075E63] text-white">
+            <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-[#287624] text-white">
               <Info size={14} aria-hidden />
             </span>
-            <span className="text-xs text-[#122D30]/75">
-              <span className="block font-black text-[#122D30]">
+            <span className="text-xs text-[#1D6315]/75">
+              <span className="block font-black text-[#1D6315]">
                 {noPlan
-                  ? "GenEd has no assessment plan for this chapter"
-                  : `GenEd has no assessment plan for ${planless.length} ${planless.length === 1 ? "step" : "steps"}`}
+                  ? "Zoovi has no assessment plan for this chapter"
+                  : `Zoovi has no assessment plan for ${planless.length} ${planless.length === 1 ? "step" : "steps"}`}
               </span>
               {noPlan
-                ? "You can still accept, edit and reject questions, and they're kept, but they can't count until GenEd plans what each step should check, so no step can be approved yet. "
-                : "Accepted questions are kept, but they can't count until GenEd plans what each step should check, so those steps can't be approved yet. "}
+                ? "You can still accept, edit and reject questions, and they're kept, but they can't count until Zoovi plans what each step should check, so no step can be approved yet. "
+                : "Accepted questions are kept, but they can't count until Zoovi plans what each step should check, so those steps can't be approved yet. "}
               This is on GenEd&rsquo;s side; ask GenEd to check.
             </span>
           </div>
@@ -1506,11 +1506,11 @@ export function AssessmentBankPanel({
             <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-red-600 text-white">
               <AlertTriangle size={14} aria-hidden />
             </span>
-            <span className="text-xs text-[#122D30]/75">
+            <span className="text-xs text-[#1D6315]/75">
               <span className="block font-black text-red-800">
                 {lastFailed.state === "stopped"
-                  ? "GenEd stopped writing questions"
-                  : "GenEd couldn’t write questions for this chapter"}
+                  ? "Zoovi stopped writing questions"
+                  : "Zoovi couldn’t write questions for this chapter"}
               </span>
               {lastFailed.detail ? `${lastFailed.detail}. ` : ""}
               This is on GenEd&rsquo;s side; ask GenEd to check. Once it&rsquo;s
@@ -1527,11 +1527,11 @@ export function AssessmentBankPanel({
             <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-amber-600 text-white">
               <AlertTriangle size={14} aria-hidden />
             </span>
-            <span className="text-xs text-[#122D30]/75">
+            <span className="text-xs text-[#1D6315]/75">
               <span className="block font-black text-amber-900">
                 Question writing hasn&rsquo;t started
               </span>
-              This chapter has waited {waitedMin} min and no GenEd writer has
+              This chapter has waited {waitedMin} min and no Zoovi writer has
               picked it up. Question writing may be switched off on this server;
               ask GenEd to check. This page updates by itself when it starts.
             </span>
@@ -1556,18 +1556,18 @@ export function AssessmentBankPanel({
                 onShow={goTo}
               />
             );
-            // While GenEd writes, its progress shows; afterwards the request log folds away.
+            // While Zoovi writes, its progress shows; afterwards the request log folds away.
             return runsActive ? (
               status
             ) : (
               <details className="group text-xs">
-                <summary className="flex cursor-pointer list-none items-center gap-1 font-bold text-[#122D30]/50 hover:text-[#122D30] [&::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center gap-1 font-bold text-[#1D6315]/50 hover:text-[#1D6315] [&::-webkit-details-marker]:hidden">
                   <ChevronRight
                     size={13}
                     className="transition-transform group-open:rotate-90"
                     aria-hidden
                   />
-                  GenEd&rsquo;s question requests
+                  Zoovi&rsquo;s question requests
                 </summary>
                 <div className="mt-2">{status}</div>
               </details>
@@ -1582,7 +1582,7 @@ export function AssessmentBankPanel({
             <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-black text-amber-900 [&::-webkit-details-marker]:hidden">
               <AlertTriangle size={13} aria-hidden />
               {pkg.findings.length} issue{pkg.findings.length === 1 ? "" : "s"}{" "}
-              GenEd found in how the chapter was read
+              Zoovi found in how the chapter was read
               <ChevronRight
                 size={13}
                 className="ml-auto transition-transform group-open:rotate-90"
@@ -1595,7 +1595,7 @@ export function AssessmentBankPanel({
                   <p>{f.issue}</p>
                   {f.resolution === "corrected" ? (
                     <p className="text-amber-800">
-                      GenEd used this corrected description:{" "}
+                      Zoovi used this corrected description:{" "}
                       {f.proposed_definition}
                     </p>
                   ) : (
@@ -1614,14 +1614,14 @@ export function AssessmentBankPanel({
       </div>
 
       {pkg.nodes.length === 0 && !preparing && (
-        <p className="text-sm text-[#122D30]/60 text-center py-6">
-          GenEd hasn&rsquo;t prepared questions for this chapter yet.
+        <p className="text-sm text-[#1D6315]/60 text-center py-6">
+          Zoovi hasn&rsquo;t prepared questions for this chapter yet.
         </p>
       )}
 
       {current && (
         <div className="grid grid-cols-1 gap-4 @[46rem]:grid-cols-[minmax(210px,250px)_minmax(0,1fr)] @[46rem]:items-start">
-          <div className="rounded-2xl bg-[#F6F7F2] p-1.5 @[46rem]:sticky @[46rem]:top-0 @[46rem]:max-h-[calc(100dvh-14rem)] @[46rem]:overflow-y-auto @[46rem]:p-2">
+          <div className="rounded-2xl bg-[#F7F4EA] p-1.5 @[46rem]:sticky @[46rem]:top-0 @[46rem]:max-h-[calc(100dvh-14rem)] @[46rem]:overflow-y-auto @[46rem]:p-2">
             <StepList
               steps={steps}
               parent={parent}
@@ -1632,7 +1632,7 @@ export function AssessmentBankPanel({
           </div>
           <div
             id="bank-workspace"
-            className="min-w-0 scroll-mt-4 rounded-3xl border border-[#122D30]/8 bg-white p-4 @[46rem]:p-5 flex flex-col gap-3"
+            className="min-w-0 scroll-mt-4 rounded-3xl border border-[#1D6315]/8 bg-white p-4 @[46rem]:p-5 flex flex-col gap-3"
           >
             {notice && (
               <p
@@ -1713,13 +1713,13 @@ export function AssessmentBankPanel({
         (approvedNow ? (
           <div
             role="status"
-            className="sticky bottom-0 z-10 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center gap-3 shadow-[0_-8px_24px_-12px_rgba(18,45,48,0.25)]"
+            className="sticky bottom-0 z-10 rounded-2xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center gap-3 shadow-[0_-8px_24px_-12px_rgba(29,99,21,0.25)]"
           >
             <span className="grid place-items-center h-7 w-7 shrink-0 rounded-full bg-emerald-600 text-white">
               <Check size={14} strokeWidth={3} aria-hidden />
             </span>
-            <span className="text-xs text-[#122D30]/70">
-              <span className="block text-sm font-black text-[#122D30]">
+            <span className="text-xs text-[#1D6315]/70">
+              <span className="block text-sm font-black text-[#1D6315]">
                 Approved
                 {pkg.approval?.approved_at
                   ? ` · ${new Date(pkg.approval.approved_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}`
@@ -1732,16 +1732,16 @@ export function AssessmentBankPanel({
           </div>
         ) : (
           <div
-            className={`sticky bottom-0 z-10 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3 shadow-[0_-8px_24px_-12px_rgba(18,45,48,0.35)] ${
+            className={`sticky bottom-0 z-10 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3 shadow-[0_-8px_24px_-12px_rgba(29,99,21,0.35)] ${
               blocked.length > 0
-                ? "bg-white border border-[#122D30]/10"
-                : "bg-[#122D30] text-white"
+                ? "bg-white border border-[#1D6315]/10"
+                : "bg-[#1D6315] text-white"
             }`}
           >
             <span className="min-w-[200px] flex-1 text-xs">
               {blocked.length > 0 ? (
                 <>
-                  <span className="flex items-center gap-1.5 text-sm font-black text-[#122D30]">
+                  <span className="flex items-center gap-1.5 text-sm font-black text-[#1D6315]">
                     <AlertTriangle
                       size={14}
                       className="text-amber-600"
@@ -1751,12 +1751,12 @@ export function AssessmentBankPanel({
                       ? "1 step still needs accepted questions"
                       : `${blocked.length} steps still need accepted questions`}
                   </span>
-                  <span className="text-[#122D30]/55">
+                  <span className="text-[#1D6315]/55">
                     {noPlan
-                      ? "None can be approved until GenEd plans the chapter's questions."
+                      ? "None can be approved until Zoovi plans the chapter's questions."
                       : `${
                           planless.length > 0
-                            ? `${planless.length} of them ${planless.length === 1 ? "waits" : "wait"} on GenEd's plan, not on you. `
+                            ? `${planless.length} of them ${planless.length === 1 ? "waits" : "wait"} on Zoovi's plan, not on you. `
                             : ""
                         }You can approve once every step is covered.`}
                   </span>

@@ -66,7 +66,7 @@ export function SceneReport({ p }: { p: Progress }) {
               <div className="gc-rc-ring">
                 <svg viewBox="0 0 100 100" aria-hidden>
                   <circle cx="50" cy="50" r="44.9" className="gc-rc-track" strokeWidth="10.2" />
-                  <Draw p={p} at={[0.08, 0.34]} to={0.68} d={RING(44.9)} fill="none" stroke="#B8D63F" strokeWidth={10.2} strokeLinecap="round" />
+                  <Draw p={p} at={[0.08, 0.34]} to={0.68} d={RING(44.9)} fill="none" stroke="#8DB000" strokeWidth={10.2} strokeLinecap="round" />
                 </svg>
                 <span>
                   <b>
@@ -138,11 +138,11 @@ export function SceneReport({ p }: { p: Progress }) {
               </Insight>
               <div className="gc-rc-ins gc-rc-ins-ai">
                 <div className="gc-rc-ins-top">
-                  <span className="gc-rc-ins-dot" style={{ background: "#122D30" }}>
-                    <MaskIcon src={`${RC}/insights/ai-insight.png`} color="#A9CCC7" size="0.7em" />
+                  <span className="gc-rc-ins-dot" style={{ background: "#1D6315" }}>
+                    <MaskIcon src={`${RC}/insights/ai-insight.png`} color="#C2DA94" size="0.7em" />
                   </span>
                   <b>AI Learning Insight</b>
-                  <em>Powered by GenEd AI</em>
+                  <em>Powered by Zoovi AI</em>
                 </div>
                 <div className="gc-rc-ins-body">
                   <p className="gc-rc-ai-head">Strong reasoning in Mathematics; Science needs steadier practice.</p>
@@ -179,10 +179,10 @@ function Callout({ kind, subject, mastery, band }: { kind: "strong" | "attention
   const tone = BANDS[band];
   return (
     <div className="gc-rc-callout" style={{ background: `linear-gradient(135deg, ${tone.wash[0]}, ${tone.wash[1]})`, borderColor: tone.edge }}>
-      <span className="gc-rc-callout-ico" style={{ background: kind === "strong" ? "#DCEBE7" : tone.accent }}>
+      <span className="gc-rc-callout-ico" style={{ background: kind === "strong" ? "#E8F0CC" : tone.accent }}>
         <MaskIcon
           src={`${RC}/insights/${kind === "strong" ? "positive-insight" : "needs-attention"}.png`}
-          color={kind === "strong" ? "#075E63" : "#fff"}
+          color={kind === "strong" ? "#287624" : "#fff"}
           size="0.7em"
         />
       </span>
@@ -192,7 +192,7 @@ function Callout({ kind, subject, mastery, band }: { kind: "strong" | "attention
           {subject} <span style={{ color: tone.ink }}>({mastery}%)</span>
         </b>
       </span>
-      <MaskIcon src={`${RC}/actions/right-arrow.png`} color="#5E7477" size="0.6em" />
+      <MaskIcon src={`${RC}/actions/right-arrow.png`} color="#5A6E52" size="0.6em" />
     </div>
   );
 }
@@ -257,7 +257,7 @@ function SubjectRow({
       </div>
       <MiniRing p={p} at={at} value={mastery} color={tone.accent} label="Mastery" />
       <MiniRing p={p} at={at} value={coverage} color="#6A9295" label="Coverage" />
-      <MaskIcon src={`${RC}/actions/right-arrow.png`} color="#5E7477" size="0.65em" />
+      <MaskIcon src={`${RC}/actions/right-arrow.png`} color="#5A6E52" size="0.65em" />
     </Reveal>
   );
 }

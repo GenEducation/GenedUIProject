@@ -149,7 +149,7 @@ function FactBody({
       >
         {asking ? "Take a guess" : "Did you know?"}
       </div>
-      <p className="text-sm leading-relaxed" style={{ color: "var(--text-mid, #3E5558)" }}>
+      <p className="text-sm leading-relaxed" style={{ color: "var(--text-mid, #3B5533)" }}>
         {asking ? fact.question : fact.text}
       </p>
       {asking && (

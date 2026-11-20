@@ -95,7 +95,7 @@ export function FeatureVideo({ onJoin }: { onJoin: () => void }) {
   }, [film]);
 
   return (
-    <section className="gc-video gc-video-player" aria-label="How GenEd works: a 35-second demo">
+    <section className="gc-video gc-video-player" aria-label="How Zoovi works: a 35-second demo">
       {film && (
         <video
           key={film.src}

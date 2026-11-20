@@ -6,8 +6,8 @@
  * cannot resolve a `var()` through them. Keep the two in sync.
  */
 export const LS_COLORS = {
-  emerald: "#075E63",
-  emeraldSoft: "#E8F2EF",
+  emerald: "#287624",
+  emeraldSoft: "#EEF4DD",
   blue: "#4A90D9",
   blueSoft: "#E8F1FA",
   amber: "#E8A33D",

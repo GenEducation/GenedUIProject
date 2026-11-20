@@ -160,7 +160,7 @@ function SubjectCard({ subj, si, data, ui }: { subj: SubjectData; si: number; da
                           borderRadius: "4px",
                           background: ch.status === "completed" ? "var(--soft)" : "rgba(245, 158, 11, 0.1)",
                           color: ch.status === "completed" ? "var(--emerald)" : "#b36b00",
-                          border: `1px solid ${ch.status === "completed" ? "#C9DFD8" : "rgba(245, 158, 11, 0.3)"}`
+                          border: `1px solid ${ch.status === "completed" ? "#D5E6B5" : "rgba(245, 158, 11, 0.3)"}`
                         }}>
                           {ch.status === "completed" ? "Completed" : "In Progress"}
                         </span>
@@ -217,8 +217,8 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
   const bandLegend = [
     { lbl: "Developing", range: "< 40", color: "#EF4444" },
     { lbl: "Approaching", range: "40–59", color: "#F59E0B" },
-    { lbl: "Proficient", range: "60–79", color: "#2F7A7E" },
-    { lbl: "Advanced", range: "80+", color: "#075E63" },
+    { lbl: "Proficient", range: "60–79", color: "#3A8A2E" },
+    { lbl: "Advanced", range: "80+", color: "#287624" },
   ];
 
   return (
@@ -271,7 +271,7 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
                       <div className="rc-dial" key={s.subject}>
                         <svg viewBox="0 0 40 40">
                           <circle cx="20" cy="20" r={r} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth="4" />
-                          <circle cx="20" cy="20" r={r} fill="none" stroke="#5FA8A3" strokeWidth="4" strokeDasharray={circ.toFixed(1)} strokeDashoffset={offset.toFixed(1)} strokeLinecap="round" transform="rotate(-90 20 20)" />
+                          <circle cx="20" cy="20" r={r} fill="none" stroke="#86B83A" strokeWidth="4" strokeDasharray={circ.toFixed(1)} strokeDashoffset={offset.toFixed(1)} strokeLinecap="round" transform="rotate(-90 20 20)" />
                           <text x="20" y="24" textAnchor="middle" fontFamily="var(--display)" fontWeight="700" fontSize="14" fill="#fff">{score}</text>
                         </svg>
                         <div className="rc-dial-txt">
@@ -538,7 +538,7 @@ export function ReportCardBody({ data, ui }: { data: ReportCardData; ui: ReportC
           </section>
 
           {print && (
-            <div className="rc-print-footer">{displayName} · GenEducation Learner Report · {generatedAt}</div>
+            <div className="rc-print-footer">{displayName} · Zoovi Learner Report · {generatedAt}</div>
           )}
         </>
       )}

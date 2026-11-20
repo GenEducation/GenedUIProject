@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-vi.mock("@/components/shared/GenEdLogo", () => ({ GenEdLogo: () => <div /> }));
+vi.mock("@/components/shared/ZooviLogo", () => ({ ZooviLogo: () => <div /> }));
 
 import { SideBar } from "../SideBar";
 
@@ -25,10 +25,10 @@ describe("SideBar header", () => {
   });
 
   it("adds 'School' when the name doesn't already include it", async () => {
-    localStorage.setItem("gened_user_profile", JSON.stringify({ role: "PARTNER", organization: "GenEd" }));
+    localStorage.setItem("gened_user_profile", JSON.stringify({ role: "PARTNER", organization: "Zoovi" }));
     renderSideBar();
 
-    expect(await screen.findByRole("heading", { name: "GenEd School" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Zoovi School" })).toBeInTheDocument();
   });
 
   it("falls back to 'Partner Portal' when there is no organization", async () => {

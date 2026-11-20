@@ -8,7 +8,8 @@ import { getStudentDisplayName, titleCase } from "../utils/displayName";
 import { STUDENT_COLORS } from "../theme/colors";
 import { STRINGS } from "../constants/strings";
 import {
-  Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   Home as HomeIcon,
   Target,
   CalendarDays,
@@ -17,7 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { UpgradeButton } from "@/features/billing/UpgradeButton";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo, wordmarkLetterOffset } from "@/components/shared/ZooviLogo";
 
 /* ═══ TOKENS ═══ — sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
@@ -158,7 +159,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-30"
-          style={{ background: "rgba(18,45,48,0.35)" }}
+          style={{ background: "rgba(29,99,21,0.35)" }}
           onClick={onClose}
         />
       )}
@@ -174,7 +175,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 maxWidth: "85vw",
                 background: C.sidebarBg,
                 borderRight: `1px solid ${C.sidebarBorder}`,
-                boxShadow: isOpen ? "0 0 32px rgba(18,45,48,0.14)" : "none",
+                boxShadow: isOpen ? "0 0 32px rgba(29,99,21,0.14)" : "none",
               }
             : {
                 width: sidebarW,
@@ -188,20 +189,17 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
         <div className="flex flex-col h-full" style={{ padding: "18px 14px" }}>
           {/* Header: logo + close */}
           <div className="flex items-center justify-between mb-7 px-0.5 py-1">
-            <button aria-label="GenEd home" onClick={() => navigate("/student")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
-              <GenEdLogo height={46} priority />
+            <button aria-label="Zoovi home" onClick={() => navigate("/student")} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
+              <ZooviLogo height={46} priority />
             </button>
+            {/* A quiet panel toggle: no box until hovered, lined up with the logo's letters, not its i-dot. */}
             <button aria-label="Close sidebar"
               onClick={onClose}
-              className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all"
-              style={{
-                background: C.sidebarHover,
-                color: C.sidebarText,
-                fontSize: 16,
-              }}
+              className="sidebar-toggle flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer"
+              style={{ transform: `translateY(${wordmarkLetterOffset(46)}px)` }}
               title="Close sidebar"
             >
-              <Menu size={16} strokeWidth={1.75} />
+              <PanelLeftClose size={18} strokeWidth={1.75} />
             </button>
           </div>
 
@@ -228,7 +226,7 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
               className="mt-auto relative overflow-hidden rounded-2xl"
               style={{
                 padding: "16px 14px 14px",
-                background: `linear-gradient(160deg, ${STUDENT_COLORS.primary} 0%, #0B474B 100%)`,
+                background: `linear-gradient(160deg, ${STUDENT_COLORS.primary} 0%, #22661F 100%)`,
                 boxShadow: "0 12px 26px -16px rgb(7 94 99 / 0.7)",
               }}
             >
@@ -238,8 +236,8 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
                 style={{ width: 120, height: 120, right: -44, top: -54, background: "radial-gradient(circle, rgb(217 242 121 / 0.28), transparent 70%)" }}
               />
               <div className="relative text-[15px] font-extrabold text-white leading-tight">Go Pro</div>
-              <p className="relative mt-1 mb-3 text-[12.5px] leading-snug" style={{ color: "#A9CCC7" }}>
-                Keep learning with {titleCase(studentProfile.ai_name || "Nia")}, no daily limits.
+              <p className="relative mt-1 mb-3 text-[12.5px] leading-snug" style={{ color: "#C2DA94" }}>
+                Keep learning with {titleCase(studentProfile.ai_name || "Zoovi")}, no daily limits.
               </p>
               <UpgradeButton
                 userId={studentProfile.user_id}
@@ -258,15 +256,10 @@ export const StudentHomeSidebar = React.memo(function StudentHomeSidebar({
           {/* Expand button */}
           <button aria-label="Open sidebar"
             onClick={onOpen}
-            className="flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all mb-7"
-            style={{
-              background: C.sidebarHover,
-              color: C.sidebarText,
-              fontSize: 16,
-            }}
+            className="sidebar-toggle flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer mb-7"
             title="Open sidebar"
           >
-            <Menu size={16} strokeWidth={1.75} />
+            <PanelLeftOpen size={18} strokeWidth={1.75} />
           </button>
 
           {/* Nav icons */}

@@ -11,7 +11,7 @@ const STOPS = [
   { x: 990, y: 448, label: "Discounts", at: 0.64 },
 ];
 
-/** Opening: the GenEd logo and the promise, over a learning path drawing itself. */
+/** Opening: the Zoovi logo and the promise, over a learning path drawing itself. */
 export function SceneOpen({ p }: { p: Progress }) {
   const glow = useRange(p, [0.1, 0.7]);
   const glowScale = useTransform(glow, [0, 1], [0.7, 1.15]);
@@ -21,9 +21,9 @@ export function SceneOpen({ p }: { p: Progress }) {
       <svg className="gc-open-path" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid slice" aria-hidden>
         <defs>
           <linearGradient id="gc-path-grad" x1="0" x2="1">
-            <stop offset="0" stopColor="#075E63" stopOpacity="0" />
-            <stop offset="0.35" stopColor="#5FA8A3" />
-            <stop offset="1" stopColor="#D9F279" />
+            <stop offset="0" stopColor="#287624" stopOpacity="0" />
+            <stop offset="0.35" stopColor="#86B83A" />
+            <stop offset="1" stopColor="#A6CF08" />
           </linearGradient>
         </defs>
         <Draw p={p} at={[0.08, 0.72]} d={PATH} fill="none" stroke="url(#gc-path-grad)" strokeWidth={3} strokeLinecap="round" />
@@ -34,7 +34,7 @@ export function SceneOpen({ p }: { p: Progress }) {
       <div className="gc-title-copy">
         <Reveal p={p} at={[0, 0.14]} y={0.6} scale={0.92}>
           {/* eslint-disable-next-line @next/next/no-img-element -- static brand art in the film */}
-          <img src="/brand/gened-logo.png" alt="GenEd" className="gc-film-logo" />
+          <img src="/brand/zoovi-logo.png" alt="Zoovi" className="gc-film-logo" />
         </Reveal>
         <Reveal p={p} at={[0.1, 0.28]} y={1.2}>
           <h2 className="gc-title-xl">Your child&apos;s own AI tutor.</h2>
@@ -54,7 +54,7 @@ function PathStop({ p, x, y, label, at }: { p: Progress; x: number; y: number; l
   const r = useTransform(t, [0, 1], [0, 9]);
   return (
     <motion.g style={{ opacity: t }}>
-      <motion.circle cx={x} cy={y} r={r} fill="#082C2F" stroke="#D9F279" strokeWidth={3} />
+      <motion.circle cx={x} cy={y} r={r} fill="#082C2F" stroke="#A6CF08" strokeWidth={3} />
       <text x={x} y={y - 22} textAnchor="middle" className="gc-path-label">
         {label}
       </text>

@@ -14,7 +14,7 @@ import type { VisualSummary } from "../types/visuals";
 /** What a held picture question needs from the partner, in plain words. */
 export const PICTURE_REASON: Record<PictureReason, string> = {
   not_identified:
-    "This question mentions a picture, but GenEd couldn’t tell which one. Choose its picture, or remove the question.",
+    "This question mentions a picture, but Zoovi couldn’t tell which one. Choose its picture, or remove the question.",
   redraw_pending:
     "Its picture’s redraw is waiting for your review. Accept the redraw in Visuals and the next run includes it.",
   no_redraw:
@@ -107,8 +107,8 @@ export function PictureQuestionsPanel({
   return (
     <div className="flex flex-col gap-3">
       {held.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3 border border-[#122D30]/8">
-          <p className="text-xs text-[#122D30]/70 flex-1 min-w-48">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white px-4 py-3 border border-[#1D6315]/8">
+          <p className="text-xs text-[#1D6315]/70 flex-1 min-w-48">
             {open.length} of {held.length} held{" "}
             {held.length === 1 ? "question needs" : "questions need"} a
             decision. Nothing here blocks the chapter.
@@ -183,7 +183,7 @@ function PictureCard({
           : "Shown with its picture";
   return (
     <article
-      className={`rounded-2xl border bg-white p-4 flex flex-col gap-3 ${removing ? "opacity-60" : ""} ${held && !removing ? "border-amber-300" : "border-[#122D30]/8"}`}
+      className={`rounded-2xl border bg-white p-4 flex flex-col gap-3 ${removing ? "opacity-60" : ""} ${held && !removing ? "border-amber-300" : "border-[#1D6315]/8"}`}
       aria-label={question.prompt}
     >
       <div className="flex items-start gap-3">
@@ -197,10 +197,10 @@ function PictureCard({
           />
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#122D30]">
+          <p className="text-sm font-semibold text-[#1D6315]">
             {question.prompt}
           </p>
-          <p className="text-[11px] text-[#122D30]/50 mt-0.5">
+          <p className="text-[11px] text-[#1D6315]/50 mt-0.5">
             {question.page ? `Page ${question.page} · ` : ""}
             {status}
           </p>
@@ -252,7 +252,7 @@ function PictureCard({
                 question.reason === "no_redraw")
             }
           >
-            <summary className="cursor-pointer text-xs font-bold text-[#075E63]">
+            <summary className="cursor-pointer text-xs font-bold text-[#287624]">
               {linked.length
                 ? "Choose a different picture"
                 : "Choose its picture"}
@@ -281,10 +281,10 @@ function Thumb({ visual, alt }: { visual?: VisualSummary; alt: string }) {
     <img
       src={src}
       alt={alt}
-      className="h-24 w-full object-contain rounded-lg bg-[#F6F7F2]"
+      className="h-24 w-full object-contain rounded-lg bg-[#F7F4EA]"
     />
   ) : (
-    <div className="h-24 w-full rounded-lg bg-[#F6F7F2] flex items-center justify-center text-[#122D30]/30">
+    <div className="h-24 w-full rounded-lg bg-[#F7F4EA] flex items-center justify-center text-[#1D6315]/30">
       <ImageOff size={18} aria-hidden />
     </div>
   );
@@ -306,7 +306,7 @@ function FigureTile({
         <Thumb visual={found.crop} alt={`Textbook figure ${figureKey}`} />
         <Thumb visual={found.redraw} alt={`Redraw of figure ${figureKey}`} />
       </div>
-      <figcaption className="text-[10.5px] text-[#122D30]/50">
+      <figcaption className="text-[10.5px] text-[#1D6315]/50">
         {label}: textbook · redraw
         {found.redraw ? ` (${found.redraw.state})` : " (none yet)"}
       </figcaption>
@@ -328,10 +328,10 @@ function Suggestion({
   const found = images[figure.key] ?? {};
   return (
     <div
-      className={`rounded-xl border p-2 flex flex-col gap-1.5 ${picked ? "border-[#075E63]" : "border-[#122D30]/8"}`}
+      className={`rounded-xl border p-2 flex flex-col gap-1.5 ${picked ? "border-[#287624]" : "border-[#1D6315]/8"}`}
     >
       <Thumb visual={found.crop ?? found.redraw} alt={`Figure ${figure.key}`} />
-      <p className="text-[10.5px] text-[#122D30]/50">
+      <p className="text-[10.5px] text-[#1D6315]/50">
         {figure.page ? `Page ${figure.page} · ` : ""}
         {figure.role}
       </p>

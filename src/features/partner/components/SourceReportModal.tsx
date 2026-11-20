@@ -54,69 +54,69 @@ const dom = <T extends object>(props: Passed<T>): T => {
   return rest;
 };
 
-/** The raw report, for GenEd, styled to sit inside the portal. */
+/** The raw report, for Zoovi, styled to sit inside the portal. */
 const MARKDOWN: Components = {
   h1: (p) => (
-    <h3 className="text-sm font-black text-[#122D30] mt-2 mb-2" {...dom(p)} />
+    <h3 className="text-sm font-black text-[#1D6315] mt-2 mb-2" {...dom(p)} />
   ),
   h2: (p) => (
     <h4
-      className="text-[11px] font-black uppercase tracking-widest text-[#122D30]/60 mt-5 mb-2"
+      className="text-[11px] font-black uppercase tracking-widest text-[#1D6315]/60 mt-5 mb-2"
       {...dom(p)}
     />
   ),
   h3: (p) => (
     <h5
-      className="text-xs font-black text-[#122D30]/70 mt-4 mb-1"
+      className="text-xs font-black text-[#1D6315]/70 mt-4 mb-1"
       {...dom(p)}
     />
   ),
   p: (p) => (
     <p
-      className="text-xs leading-relaxed text-[#122D30]/75 my-1.5"
+      className="text-xs leading-relaxed text-[#1D6315]/75 my-1.5"
       {...dom(p)}
     />
   ),
   ul: (p) => (
     <ul
-      className="list-disc pl-5 space-y-0.5 text-xs text-[#122D30]/75"
+      className="list-disc pl-5 space-y-0.5 text-xs text-[#1D6315]/75"
       {...dom(p)}
     />
   ),
   ol: (p) => (
     <ol
-      className="list-decimal pl-5 space-y-0.5 text-xs text-[#122D30]/75"
+      className="list-decimal pl-5 space-y-0.5 text-xs text-[#1D6315]/75"
       {...dom(p)}
     />
   ),
   li: (p) => <li className="break-words" {...dom(p)} />,
   code: (p) => (
     <code
-      className="font-mono text-[11px] bg-[#075E63]/5 rounded px-1 py-px break-all"
+      className="font-mono text-[11px] bg-[#287624]/5 rounded px-1 py-px break-all"
       {...dom(p)}
     />
   ),
   pre: (p) => (
     <pre
-      className="text-[11px] bg-[#075E63]/5 rounded-xl p-3 overflow-x-auto"
+      className="text-[11px] bg-[#287624]/5 rounded-xl p-3 overflow-x-auto"
       {...dom(p)}
     />
   ),
   table: (p) => <table className="text-xs border-collapse my-2" {...dom(p)} />,
   th: (p) => (
     <th
-      className="border border-[#122D30]/10 px-2 py-1 text-left"
+      className="border border-[#1D6315]/10 px-2 py-1 text-left"
       {...dom(p)}
     />
   ),
   td: (p) => (
-    <td className="border border-[#122D30]/10 px-2 py-1" {...dom(p)} />
+    <td className="border border-[#1D6315]/10 px-2 py-1" {...dom(p)} />
   ),
 };
 
 const sectionTitle =
-  "flex items-center gap-2 text-[11px] lg:text-xs font-black uppercase tracking-widest text-[#122D30]/50 mb-2";
-const card = "rounded-2xl bg-white border border-[#122D30]/5";
+  "flex items-center gap-2 text-[11px] lg:text-xs font-black uppercase tracking-widest text-[#1D6315]/50 mb-2";
+const card = "rounded-2xl bg-white border border-[#1D6315]/5";
 
 export function SourceReportModal(props: SourceReportModalProps) {
   const { subject, onClose } = props;
@@ -126,7 +126,7 @@ export function SourceReportModal(props: SourceReportModalProps) {
       onClose={onClose}
       size="full"
       title={subject ? `Report for ${subject.title}` : "Report"}
-      panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F6F7F2" }}
+      panelStyle={{ maxWidth: "min(920px, 100%)", background: "#F7F4EA" }}
     >
       {/* Keyed so each chapter's report starts from an empty, loading state. */}
       {subject && (
@@ -137,9 +137,9 @@ export function SourceReportModal(props: SourceReportModalProps) {
 }
 
 const TONE = {
-  action: { box: "border-[#075E63]/20 bg-[#075E63]/5", icon: "text-[#075E63]" },
+  action: { box: "border-[#287624]/20 bg-[#287624]/5", icon: "text-[#287624]" },
   problem: { box: "border-red-200 bg-red-50/70", icon: "text-red-600" },
-  info: { box: "border-[#122D30]/10 bg-white", icon: "text-[#122D30]/50" },
+  info: { box: "border-[#1D6315]/10 bg-white", icon: "text-[#1D6315]/50" },
   done: {
     box: "border-emerald-200 bg-emerald-50/70",
     icon: "text-emerald-600",
@@ -220,13 +220,13 @@ function Outcome({
         )}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#122D30]/50">
+        <p className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#1D6315]/50">
           What to do next
         </p>
-        <p className="text-[15px] lg:text-base font-black text-[#122D30]">
+        <p className="text-[15px] lg:text-base font-black text-[#1D6315]">
           {copy.title}
         </p>
-        <p className="text-xs lg:text-[13px] text-[#122D30]/70">{copy.body}</p>
+        <p className="text-xs lg:text-[13px] text-[#1D6315]/70">{copy.body}</p>
       </div>
       {action?.run && (
         <Button pill leadingIcon={action.icon} onClick={action.run}>
@@ -248,13 +248,13 @@ function Stat({
 }) {
   return (
     <div className={`${card} px-4 py-3`}>
-      <dt className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#122D30]/40">
+      <dt className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#1D6315]/40">
         {label}
       </dt>
-      <dd className="text-2xl font-black tabular-nums text-[#122D30]">
+      <dd className="text-2xl font-black tabular-nums text-[#1D6315]">
         {value ?? "—"}
       </dd>
-      {sub && <dd className="text-[11px] text-[#122D30]/55">{sub}</dd>}
+      {sub && <dd className="text-[11px] text-[#1D6315]/55">{sub}</dd>}
     </div>
   );
 }
@@ -263,17 +263,17 @@ function Problem({ problem }: { problem: ReportProblem }) {
   const yours = problem.fixedBy === "you";
   return (
     <li
-      className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${yours ? "border-amber-200 bg-amber-50/70" : "border-[#122D30]/10 bg-white"}`}
+      className={`flex items-start gap-3 rounded-2xl border px-4 py-3 ${yours ? "border-amber-200 bg-amber-50/70" : "border-[#1D6315]/10 bg-white"}`}
     >
       <span
-        className={`mt-0.5 shrink-0 ${yours ? "text-amber-600" : "text-[#122D30]/40"}`}
+        className={`mt-0.5 shrink-0 ${yours ? "text-amber-600" : "text-[#1D6315]/40"}`}
         aria-hidden
       >
         {yours ? <UserRound size={18} /> : <ShieldCheck size={18} />}
       </span>
       <div className="min-w-0">
-        <p className="text-sm text-[#122D30] leading-snug">{problem.text}</p>
-        <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+        <p className="text-sm text-[#1D6315] leading-snug">{problem.text}</p>
+        <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40">
           {yours ? "You can fix this" : "GenEd will look at this"}
           {problem.count > 1 ? ` · ${problem.count} times` : ""}
         </p>
@@ -305,20 +305,20 @@ function Disclosure({
         aria-controls={id}
         disabled={count === 0}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left hover:bg-[#075E63]/[0.03] disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#075E63]/40"
+        className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left hover:bg-[#287624]/[0.03] disabled:cursor-default disabled:hover:bg-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#287624]/40"
       >
         <span className="min-w-0 flex-1">
           <span
-            className={`block text-sm font-bold ${count ? "text-[#122D30]" : "text-[#122D30]/40"}`}
+            className={`block text-sm font-bold ${count ? "text-[#1D6315]" : "text-[#1D6315]/40"}`}
           >
             {title}
           </span>
           {hint && (
-            <span className="block text-[11px] text-[#122D30]/50">{hint}</span>
+            <span className="block text-[11px] text-[#1D6315]/50">{hint}</span>
           )}
         </span>
         <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-black tabular-nums ${count ? "bg-[#075E63]/10 text-[#075E63]" : "bg-[#122D30]/5 text-[#122D30]/35"}`}
+          className={`rounded-full px-2.5 py-0.5 text-xs font-black tabular-nums ${count ? "bg-[#287624]/10 text-[#287624]" : "bg-[#1D6315]/5 text-[#1D6315]/35"}`}
         >
           {count}
         </span>
@@ -326,12 +326,12 @@ function Disclosure({
           <ChevronDown
             size={18}
             aria-hidden
-            className={`shrink-0 text-[#122D30]/50 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`shrink-0 text-[#1D6315]/50 transition-transform ${open ? "rotate-180" : ""}`}
           />
         )}
       </button>
       {open && count > 0 && (
-        <div id={id} className="border-t border-[#122D30]/5 px-4 py-3">
+        <div id={id} className="border-t border-[#1D6315]/5 px-4 py-3">
           {children}
         </div>
       )}
@@ -343,13 +343,13 @@ function QuestionList({ items }: { items: ReportQuestion[] }) {
   return (
     <ol className="flex flex-col gap-2.5">
       {items.map((q, i) => (
-        <li key={i} className="text-[13px] leading-snug text-[#122D30]">
+        <li key={i} className="text-[13px] leading-snug text-[#1D6315]">
           <p>{q.prompt}</p>
-          <p className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-[#122D30]/55">
+          <p className="mt-0.5 flex flex-wrap gap-x-3 text-[11px] text-[#1D6315]/55">
             {q.answer && (
               <span>
                 Answer:{" "}
-                <b className="font-semibold text-[#075E63]">{q.answer}</b>
+                <b className="font-semibold text-[#287624]">{q.answer}</b>
               </span>
             )}
             {q.note && <span>{q.note}</span>}
@@ -361,9 +361,9 @@ function QuestionList({ items }: { items: ReportQuestion[] }) {
 }
 
 const RESOLUTION: Record<string, { label: string; cls: string }> = {
-  novel: { label: "New", cls: "bg-[#075E63]/10 text-[#075E63]" },
-  match: { label: "Already in GenEd", cls: "bg-[#122D30]/5 text-[#122D30]/60" },
-  same_as: { label: "Merged", cls: "bg-[#122D30]/5 text-[#122D30]/60" },
+  novel: { label: "New", cls: "bg-[#287624]/10 text-[#287624]" },
+  match: { label: "Already in Zoovi", cls: "bg-[#1D6315]/5 text-[#1D6315]/60" },
+  same_as: { label: "Merged", cls: "bg-[#1D6315]/5 text-[#1D6315]/60" },
 };
 
 /**
@@ -411,18 +411,18 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
 
   return (
     <div className="flex flex-col min-h-full">
-      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#122D30]/5">
-        <div className="h-11 w-11 lg:h-12 lg:w-12 shrink-0 rounded-2xl bg-[#075E63] text-white flex items-center justify-center">
+      <header className="shrink-0 flex items-start gap-4 px-5 md:px-7 pt-6 pb-4 bg-white border-b border-[#1D6315]/5">
+        <div className="h-11 w-11 lg:h-12 lg:w-12 shrink-0 rounded-2xl bg-[#287624] text-white flex items-center justify-center">
           <ClipboardList size={22} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#122D30]/40">
+          <p className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-[#1D6315]/40">
             Ingestion report
           </p>
-          <h2 className="text-lg md:text-xl lg:text-2xl font-black text-[#122D30] tracking-tight truncate">
+          <h2 className="text-lg md:text-xl lg:text-2xl font-black text-[#1D6315] tracking-tight truncate">
             {subject.title}
           </h2>
-          <p className="text-[11px] lg:text-xs font-bold text-[#122D30]/50 uppercase tracking-wider truncate">
+          <p className="text-[11px] lg:text-xs font-bold text-[#1D6315]/50 uppercase tracking-wider truncate">
             {subject.book_title} · Ch {subject.chapter_ordinal} · Grade{" "}
             {subject.grade} · {subject.subject}
           </p>
@@ -441,12 +441,12 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
         {error ? (
           <p
             role="alert"
-            className="text-sm font-bold text-[#122D30]/70 py-10 text-center"
+            className="text-sm font-bold text-[#1D6315]/70 py-10 text-center"
           >
             {error}
           </p>
         ) : !report || !parsed ? (
-          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#122D30]/40 py-10">
+          <p className="flex items-center justify-center gap-2 text-sm font-bold text-[#1D6315]/40 py-10">
             <Loader2 size={16} className="animate-spin" aria-hidden /> Loading
             the report…
           </p>
@@ -460,7 +460,7 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                 value={parsed.concepts.length || summary?.counts.concepts}
                 sub={
                   parsed.concepts.length
-                    ? `${fresh} new · ${known} already in GenEd`
+                    ? `${fresh} new · ${known} already in Zoovi`
                     : null
                 }
               />
@@ -477,7 +477,7 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
               <Stat
                 label="Figures"
                 value={parsed.figures.length || undefined}
-                sub={parsed.figures.length ? "redrawn by GenEd" : null}
+                sub={parsed.figures.length ? "redrawn by Zoovi" : null}
               />
             </dl>
 
@@ -495,7 +495,7 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                   ))}
                 </ul>
               ) : parsed.passed ? (
-                <p className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-[#122D30]">
+                <p className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-[#1D6315]">
                   <CheckCircle2
                     size={18}
                     aria-hidden
@@ -503,16 +503,16 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                   />
                   Every check passed.
                   {parsed.warnings > 0 && (
-                    <span className="text-[#122D30]/55">
+                    <span className="text-[#1D6315]/55">
                       {" "}
                       {parsed.warnings} minor{" "}
-                      {parsed.warnings === 1 ? "note" : "notes"} for GenEd.
+                      {parsed.warnings === 1 ? "note" : "notes"} for Zoovi.
                     </span>
                   )}
                 </p>
               ) : (
                 // A report without a validation result says nothing about the checks, so neither does this.
-                <p className={`${card} px-4 py-3 text-sm text-[#122D30]/60`}>
+                <p className={`${card} px-4 py-3 text-sm text-[#1D6315]/60`}>
                   This report doesn&apos;t include the checks&apos; result.
                 </p>
               )}
@@ -526,13 +526,13 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                 </h3>
                 <div className={`${card} flex flex-col gap-3 px-4 py-3`}>
                   {parsed.unreadablePages.length > 0 && (
-                    <p className="text-sm text-[#122D30]">
+                    <p className="text-sm text-[#1D6315]">
                       <b>
                         {parsed.unreadablePages.length === 1 ? "Page" : "Pages"}{" "}
                         {parsed.unreadablePages.join(", ")} couldn&apos;t be
                         read
                       </b>
-                      <span className="text-[#122D30]/60">
+                      <span className="text-[#1D6315]/60">
                         {" "}
                         and {parsed.unreadablePages.length === 1
                           ? "is"
@@ -545,9 +545,9 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                   )}
                   {parsed.visualCheck.length > 0 && (
                     <div>
-                      <p className="text-sm text-[#122D30]">
+                      <p className="text-sm text-[#1D6315]">
                         <b>Some text was hard to read.</b>
-                        <span className="text-[#122D30]/60">
+                        <span className="text-[#1D6315]/60">
                           {" "}
                           Compare it with the page:
                         </span>
@@ -556,7 +556,7 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                         {parsed.visualCheck.map((v, i) => (
                           <li
                             key={i}
-                            className="flex gap-2 text-[12px] text-[#122D30]/75"
+                            className="flex gap-2 text-[12px] text-[#1D6315]/75"
                           >
                             <span className="shrink-0 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-bold text-amber-800">
                               p. {v.page}
@@ -581,13 +581,13 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
               <Disclosure
                 title="Concepts"
                 count={parsed.concepts.length}
-                hint="What the chapter teaches, as GenEd will track it"
+                hint="What the chapter teaches, as Zoovi will track it"
               >
                 <ul className="flex flex-col gap-2.5">
                   {parsed.concepts.map((c, i) => (
                     <li
                       key={i}
-                      className="text-[13px] leading-snug text-[#122D30]"
+                      className="text-[13px] leading-snug text-[#1D6315]"
                     >
                       <p className="flex flex-wrap items-center gap-2 font-bold">
                         {c.title}
@@ -597,12 +597,12 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                           {(RESOLUTION[c.resolution] ?? RESOLUTION.match).label}
                         </span>
                         {c.lo && (
-                          <span className="text-[11px] font-semibold text-[#122D30]/45">
+                          <span className="text-[11px] font-semibold text-[#1D6315]/45">
                             {c.lo}
                           </span>
                         )}
                       </p>
-                      <p className="text-[12px] text-[#122D30]/65">
+                      <p className="text-[12px] text-[#1D6315]/65">
                         {c.definition}
                       </p>
                     </li>
@@ -633,17 +633,17 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
               <Disclosure
                 title="Skipped questions"
                 count={parsed.skipped.length}
-                hint="Questions GenEd can't mark on its own"
+                hint="Questions Zoovi can't mark on its own"
               >
                 <ul className="flex flex-col gap-2">
                   {parsed.skipped.map((q, i) => (
                     <li
                       key={i}
-                      className="text-[13px] leading-snug text-[#122D30]"
+                      className="text-[13px] leading-snug text-[#1D6315]"
                     >
                       {q.prompt}
                       {q.reason && (
-                        <span className="ml-2 text-[11px] text-[#122D30]/50">
+                        <span className="ml-2 text-[11px] text-[#1D6315]/50">
                           {q.reason}
                         </span>
                       )}
@@ -656,7 +656,7 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
                 count={parsed.held.length}
                 hint="Shown once you accept their redrawn pictures"
               >
-                <ul className="flex flex-col gap-2 text-[13px] text-[#122D30]">
+                <ul className="flex flex-col gap-2 text-[13px] text-[#1D6315]">
                   {parsed.held.map((q, i) => (
                     <li key={i}>{q}</li>
                   ))}
@@ -665,20 +665,20 @@ function ReportBody(props: SourceReportModalProps & { subject: Subject }) {
               <Disclosure
                 title="Figures"
                 count={parsed.figures.length}
-                hint="Textbook figures are never published; GenEd redraws them"
+                hint="Textbook figures are never published; Zoovi redraws them"
               >
                 <ul className="flex flex-col gap-2">
                   {parsed.figures.map((f, i) => (
                     <li
                       key={i}
-                      className="text-[12.5px] leading-snug text-[#122D30]"
+                      className="text-[12.5px] leading-snug text-[#1D6315]"
                     >
-                      <span className="mr-2 rounded-md bg-[#122D30]/5 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#122D30]/60">
+                      <span className="mr-2 rounded-md bg-[#1D6315]/5 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-[#1D6315]/60">
                         {f.role}
                       </span>
                       {f.reason}
                       {f.target && (
-                        <span className="block text-[11px] text-[#122D30]/50">
+                        <span className="block text-[11px] text-[#1D6315]/50">
                           {f.target}
                         </span>
                       )}

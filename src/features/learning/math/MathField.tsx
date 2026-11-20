@@ -54,7 +54,7 @@ const FIELD_CSS = `
   top: 0.1em;
   bottom: 0.15em;
   border-radius: 1px;
-  background: var(--_caret-color, #075E63);
+  background: var(--_caret-color, #287624);
   animation: gx-blink 1.05s steps(1) infinite;
 }
 @keyframes gx-blink { 50% { opacity: 0; } }

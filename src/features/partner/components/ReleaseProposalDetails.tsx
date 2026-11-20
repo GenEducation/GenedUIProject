@@ -69,7 +69,7 @@ export function ReleaseProposalDetails({
     }
   })();
   return (
-    <div className="mt-3 rounded-xl border border-[#122D30]/5 bg-[#F6F7F2]/70 p-3.5 md:p-4">
+    <div className="mt-3 rounded-xl border border-[#1D6315]/5 bg-[#F7F4EA]/70 p-3.5 md:p-4">
       {body}
     </div>
   );
@@ -94,10 +94,10 @@ function Field({
     return null;
   return (
     <div className={wide ? "sm:col-span-2" : ""}>
-      <dt className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40">
+      <dt className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40">
         {label}
       </dt>
-      <dd className="mt-1 text-[13px] leading-relaxed text-[#122D30]">
+      <dd className="mt-1 text-[13px] leading-relaxed text-[#1D6315]">
         {children}
       </dd>
     </div>
@@ -112,7 +112,7 @@ function Chips({
   tone?: "plain" | "good";
 }) {
   if (items.length === 0)
-    return <span className="text-[#122D30]/40">None</span>;
+    return <span className="text-[#1D6315]/40">None</span>;
   return (
     <span className="flex flex-wrap gap-1.5">
       {items.map((t, i) => (
@@ -121,7 +121,7 @@ function Chips({
           className={`inline-block max-w-full truncate rounded-full border px-2.5 py-0.5 text-[11.5px] font-semibold ${
             tone === "good"
               ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-[#122D30]/10 bg-white text-[#122D30]/80"
+              : "border-[#1D6315]/10 bg-white text-[#1D6315]/80"
           }`}
           title={t}
         >
@@ -144,12 +144,12 @@ function Names({
 }) {
   const { named, unnamed } = namesFor(idList, names);
   if (named.length === 0 && unnamed === 0)
-    return <span className="text-[#122D30]/40">{empty}</span>;
+    return <span className="text-[#1D6315]/40">{empty}</span>;
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       {named.length > 0 && <Chips items={named} />}
       {unnamed > 0 && (
-        <span className="text-[11.5px] text-[#122D30]/50">
+        <span className="text-[11.5px] text-[#1D6315]/50">
           {named.length ? "+ " : ""}
           {unnamed} already published
         </span>
@@ -165,11 +165,11 @@ function Difficulty({ value }: { value: unknown }) {
     <span className="flex items-center gap-2">
       <span className="font-semibold">{d.label}</span>
       <span
-        className="h-1.5 w-20 overflow-hidden rounded-full bg-[#122D30]/10"
+        className="h-1.5 w-20 overflow-hidden rounded-full bg-[#1D6315]/10"
         aria-hidden
       >
         <span
-          className="block h-full rounded-full bg-[#075E63]"
+          className="block h-full rounded-full bg-[#287624]"
           style={{ width: `${Math.round(d.value * 100)}%` }}
         />
       </span>
@@ -179,12 +179,12 @@ function Difficulty({ value }: { value: unknown }) {
 
 function OrderedList({ items }: { items: string[] }) {
   if (items.length === 0)
-    return <span className="text-[#122D30]/40">None</span>;
+    return <span className="text-[#1D6315]/40">None</span>;
   return (
     <ol className="space-y-1">
       {items.map((t, i) => (
         <li key={`${t}-${i}`} className="flex gap-2">
-          <span className="mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[10.5px] font-black text-[#075E63] ring-1 ring-[#122D30]/10 tabular-nums">
+          <span className="mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[10.5px] font-black text-[#287624] ring-1 ring-[#1D6315]/10 tabular-nums">
             {i + 1}
           </span>
           <span className="min-w-0">{t}</span>
@@ -260,10 +260,10 @@ function QuestionDetails({ v, lookup }: KindProps) {
               return (
                 <li
                   key={str(o.id) ?? i}
-                  className={`flex items-start gap-2 rounded-lg border px-2.5 py-1.5 ${right ? "border-emerald-200 bg-emerald-50" : "border-[#122D30]/10 bg-white"}`}
+                  className={`flex items-start gap-2 rounded-lg border px-2.5 py-1.5 ${right ? "border-emerald-200 bg-emerald-50" : "border-[#1D6315]/10 bg-white"}`}
                 >
                   <span
-                    className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full ${right ? "bg-emerald-600 text-white" : "ring-1 ring-[#122D30]/20"}`}
+                    className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full ${right ? "bg-emerald-600 text-white" : "ring-1 ring-[#1D6315]/20"}`}
                   >
                     {right && (
                       <Check size={11} strokeWidth={3} aria-label="Correct" />
@@ -276,7 +276,7 @@ function QuestionDetails({ v, lookup }: KindProps) {
                       {str(o.text)}
                     </span>
                     {mistake && (
-                      <span className="block text-[11.5px] text-[#122D30]/55">
+                      <span className="block text-[11.5px] text-[#1D6315]/55">
                         Catches: {mistake}
                       </span>
                     )}
@@ -377,7 +377,7 @@ function StepDetails({ v, lookup }: KindProps) {
       <Field label="Kind of step">
         {STEP_TYPES[str(v.type) ?? ""] ?? null}
         {v.teach_only === true && (
-          <span className="text-[#122D30]/50"> · teaching only</span>
+          <span className="text-[#1D6315]/50"> · teaching only</span>
         )}
       </Field>
       <Field label="Time">
@@ -489,7 +489,7 @@ function PlanDetails({ v, lookup }: KindProps) {
           {los.map((lo) => (
             <span
               key={lo}
-              className="inline-flex items-center gap-1 rounded-full border border-[#122D30]/10 bg-white px-2.5 py-0.5 text-[11.5px] font-semibold text-[#122D30]/80"
+              className="inline-flex items-center gap-1 rounded-full border border-[#1D6315]/10 bg-white px-2.5 py-0.5 text-[11.5px] font-semibold text-[#1D6315]/80"
             >
               {lo}
               {coverage[lo] && (
@@ -530,7 +530,7 @@ function SectionDetails({ v }: { v: Rec }) {
       <Field label="Passages read">{chunks.length || null}</Field>
       <Field label="Starts with" wide>
         {chunks.length ? (
-          <span className="block border-l-2 border-[#075E63]/30 pl-3 italic text-[#122D30]/70 line-clamp-4">
+          <span className="block border-l-2 border-[#287624]/30 pl-3 italic text-[#1D6315]/70 line-clamp-4">
             {str(chunks[0].text)}
           </span>
         ) : null}
@@ -581,10 +581,10 @@ function LinksDetails({ v, lookup }: KindProps) {
             {prereqs.map((p, i) => (
               <li key={i}>
                 <span className="font-semibold">{concept(p.source_id)}</span>
-                <span className="text-[#122D30]/45"> before </span>
+                <span className="text-[#1D6315]/45"> before </span>
                 <span className="font-semibold">{concept(p.target_id)}</span>
                 {str(p.basis) && (
-                  <span className="block text-[11.5px] text-[#122D30]/55">
+                  <span className="block text-[11.5px] text-[#1D6315]/55">
                     {str(p.basis)}
                   </span>
                 )}
@@ -592,7 +592,7 @@ function LinksDetails({ v, lookup }: KindProps) {
             ))}
           </ul>
         ) : (
-          <span className="text-[#122D30]/40">None</span>
+          <span className="text-[#1D6315]/40">None</span>
         )}
       </Field>
       <Field label={`If a student is stuck · ${recovery.length}`} wide>
@@ -602,12 +602,12 @@ function LinksDetails({ v, lookup }: KindProps) {
               <li key={i}>
                 On{" "}
                 <span className="font-semibold">{concept(r.component_id)}</span>
-                <span className="text-[#122D30]/45">: </span>
+                <span className="text-[#1D6315]/45">: </span>
                 {str(r.node_id)
                   ? (lookup.step.get(str(r.node_id)!) ?? "a published step")
                   : "a step"}
                 {RECOVERY_ROLES[str(r.role) ?? ""] && (
-                  <span className="text-[#122D30]/50">
+                  <span className="text-[#1D6315]/50">
                     {" "}
                     ({RECOVERY_ROLES[str(r.role)!].toLowerCase()})
                   </span>
@@ -616,7 +616,7 @@ function LinksDetails({ v, lookup }: KindProps) {
             ))}
           </ul>
         ) : (
-          <span className="text-[#122D30]/40">None</span>
+          <span className="text-[#1D6315]/40">None</span>
         )}
       </Field>
       <Field label={`What each section covers · ${sections.length}`} wide>
@@ -630,7 +630,7 @@ function LinksDetails({ v, lookup }: KindProps) {
                       "A section")
                     : "A section"}
                 </span>
-                <span className="text-[#122D30]/45">
+                <span className="text-[#1D6315]/45">
                   {" "}
                   {SECTION_RELATIONS[str(s.relation) ?? ""] ?? "covers"}{" "}
                 </span>
@@ -639,7 +639,7 @@ function LinksDetails({ v, lookup }: KindProps) {
             ))}
           </ul>
         ) : (
-          <span className="text-[#122D30]/40">None</span>
+          <span className="text-[#1D6315]/40">None</span>
         )}
       </Field>
     </div>
@@ -657,7 +657,7 @@ function FallbackDetails({ v }: { v: Rec }) {
   );
   if (fields.length === 0)
     return (
-      <p className="text-[13px] text-[#122D30]/50">
+      <p className="text-[13px] text-[#1D6315]/50">
         Nothing more to show for this part.
       </p>
     );
