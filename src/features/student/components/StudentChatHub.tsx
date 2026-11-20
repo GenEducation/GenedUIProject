@@ -111,7 +111,7 @@ export function StudentChatHub({ toggleSidebar }: StudentChatHubProps) {
             }
           }}
           data-tutorial="hamburger-menu"
-          className="w-10 h-10 rounded-xl bg-[#F6F7F2] flex items-center justify-center text-[var(--primary-ink)]/60 hover:text-[var(--tutor)] transition-all"
+          className="w-10 h-10 rounded-xl bg-[#F7F4EA] flex items-center justify-center text-[var(--primary-ink)]/60 hover:text-[var(--tutor)] transition-all"
         >
           <Menu size={20} />
         </button>

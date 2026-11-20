@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronRight, Menu } from "lucide-react";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import { sectionFor } from "../../adminNav";
 import { Avatar } from "../ui/Avatar";
 
@@ -32,7 +32,7 @@ export function AdminTopBar({
           <Menu size={20} />
         </button>
         <span className="md:hidden">
-          <GenEdLogo variant="mark" height={28} />
+          <ZooviLogo variant="mark" height={28} />
         </span>
 
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px]">

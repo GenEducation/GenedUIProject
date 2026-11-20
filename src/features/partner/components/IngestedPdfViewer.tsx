@@ -8,19 +8,25 @@ import { usePartnerStore } from "../store/usePartnerStore";
 // Dynamic import with ssr:false prevents pdfjs-dist from being evaluated on the
 // server (it uses browser-only APIs like DOMMatrix that don't exist in Node.js).
 const PdfViewer = dynamic(
-  () => import("@/features/student/components/pdf-viewer").then((m) => m.PdfViewer),
+  () =>
+    import("@/features/student/components/pdf-viewer").then((m) => m.PdfViewer),
   {
     ssr: false,
     loading: () => (
       <div className="flex flex-col items-center justify-center flex-1 gap-3">
         <div
           className="rounded-full animate-spin"
-          style={{ width: 28, height: 28, border: "3px solid #DCEBE7", borderTopColor: "#122D30" }}
+          style={{
+            width: 28,
+            height: 28,
+            border: "3px solid #E8F0CC",
+            borderTopColor: "#1D6315",
+          }}
         />
-        <p className="text-xs font-bold text-[#122D30]/50">Loading PDF…</p>
+        <p className="text-xs font-bold text-[#1D6315]/50">Loading PDF…</p>
       </div>
     ),
-  }
+  },
 );
 
 export function IngestedPdfViewer() {
@@ -51,39 +57,47 @@ export function IngestedPdfViewer() {
             className="flex flex-col w-full h-full max-w-4xl bg-white rounded-[1.75rem] overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.25)]"
           >
             {/* Header */}
-            <div className="flex items-center justify-between flex-shrink-0 px-4 md:px-5 py-3 bg-[#FBFCFB] border-b border-[#122D30]/10">
+            <div className="flex items-center justify-between flex-shrink-0 px-4 md:px-5 py-3 bg-[#FCFBF6] border-b border-[#1D6315]/10">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="flex-shrink-0 flex items-center justify-center rounded-xl bg-[#075E63]/5 w-9 h-9">
-                  <FileText size={16} className="text-[#122D30]" />
+                <div className="flex-shrink-0 flex items-center justify-center rounded-xl bg-[#287624]/5 w-9 h-9">
+                  <FileText size={16} className="text-[#1D6315]" />
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-[#122D30] tracking-tight">
+                  <p className="truncate text-sm font-bold text-[#1D6315] tracking-tight">
                     {viewerTitle || "Document"}
                   </p>
-                  <p className="text-[10px] font-black text-[#122D30]/40 uppercase tracking-widest">
+                  <p className="text-[10px] font-black text-[#1D6315]/40 uppercase tracking-widest">
                     Ingested Curriculum
                   </p>
                 </div>
               </div>
 
-              <button aria-label="Close"
+              <button
+                aria-label="Close"
                 onClick={closePdfViewer}
                 title="Close"
-                className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#075E63]/5 flex-shrink-0 w-9 h-9 text-[#122D30]/50"
+                className="flex items-center justify-center rounded-xl transition-colors hover:bg-[#287624]/5 flex-shrink-0 w-9 h-9 text-[#1D6315]/50"
               >
                 <X size={16} />
               </button>
             </div>
 
             {/* Body */}
-            <div className="flex-1 flex flex-col min-h-0 bg-[#F6F7F2]">
+            <div className="flex-1 flex flex-col min-h-0 bg-[#F7F4EA]">
               {isViewerLoading && (
                 <div className="flex flex-col items-center justify-center flex-1 gap-3">
                   <div
                     className="rounded-full animate-spin"
-                    style={{ width: 28, height: 28, border: "3px solid #DCEBE7", borderTopColor: "#122D30" }}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      border: "3px solid #E8F0CC",
+                      borderTopColor: "#1D6315",
+                    }}
                   />
-                  <p className="text-xs font-bold text-[#122D30]/50">Fetching document…</p>
+                  <p className="text-xs font-bold text-[#1D6315]/50">
+                    Fetching document…
+                  </p>
                 </div>
               )}
 
@@ -92,8 +106,12 @@ export function IngestedPdfViewer() {
                   <div className="flex items-center justify-center rounded-full bg-red-50 w-12 h-12">
                     <AlertTriangle size={20} className="text-red-500" />
                   </div>
-                  <p className="text-sm font-bold text-[#122D30]">Couldn&apos;t load PDF</p>
-                  <p className="text-xs font-medium text-[#122D30]/50 max-w-sm">{viewerError}</p>
+                  <p className="text-sm font-bold text-[#1D6315]">
+                    Couldn&apos;t load PDF
+                  </p>
+                  <p className="text-xs font-medium text-[#1D6315]/50 max-w-sm">
+                    {viewerError}
+                  </p>
                 </div>
               )}
 

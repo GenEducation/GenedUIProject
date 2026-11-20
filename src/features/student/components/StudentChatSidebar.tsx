@@ -13,7 +13,7 @@ import { STRINGS } from "../constants/strings";
 import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { getSubjectConfig } from "@/constants/subjectConfig";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
 /* Sourced from STUDENT_COLORS (see theme/colors.ts) */
 const C = {
@@ -146,7 +146,7 @@ function ProfilePopup({
           {displayName}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 4 }}>
-          <span style={{ fontSize: 11, color: "rgba(205,222,218,0.6)" }}>Grade {profile?.grade ?? "—"}</span>
+          <span style={{ fontSize: 11, color: "rgba(226,236,205,0.6)" }}>Grade {profile?.grade ?? "—"}</span>
           {profile?.plan && (
             <span style={{
               padding: "1px 8px", borderRadius: 6, fontSize: 9, fontWeight: 800,
@@ -166,7 +166,7 @@ function ProfilePopup({
             key={item.label}
             onClick={() => { router.push(item.path); onClose(); }}
             className="w-full flex items-center justify-center gap-2 rounded-xl border-none cursor-pointer transition-all"
-            style={{ padding: "9px 14px", background: "transparent", color: "rgba(205,222,218,0.8)", fontSize: 13, fontWeight: 700 }}
+            style={{ padding: "9px 14px", background: "transparent", color: "rgba(226,236,205,0.8)", fontSize: 13, fontWeight: 700 }}
             onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"}
             onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "transparent"}
           >
@@ -318,7 +318,7 @@ export const StudentChatSidebar = React.memo(({
               {/* Inverted to white — the colored logo read at poor contrast
                   on this dark sidebar ground (matches StudentHomeSidebar's
                   own inverted treatment). */}
-              <GenEdLogo height={40} onDark priority />
+              <ZooviLogo height={40} onDark priority />
             </button>
           </div>
 
@@ -483,7 +483,7 @@ export const StudentChatSidebar = React.memo(({
                     )}
                   </div>
                   {/* Row 2: grade */}
-                  <div style={{ fontSize: 11, color: "rgba(205,222,218,0.5)", fontWeight: 600, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: "rgba(226,236,205,0.5)", fontWeight: 600, marginTop: 2 }}>
                     Grade {studentProfile?.grade ?? "—"}
                   </div>
                 </div>

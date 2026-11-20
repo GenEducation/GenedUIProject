@@ -6,8 +6,8 @@
  * fixing a word fixes it everywhere.
  */
 export const STRINGS = {
-  brand: "GenEd",
-  tutorName: "Nia",
+  brand: "Zoovi",
+  tutorName: "Zoovi",
 
   nav: {
     home: "Home",

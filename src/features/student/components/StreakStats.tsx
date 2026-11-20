@@ -1,9 +1,10 @@
 "use client";
 
-import { BookOpenCheck, Clock3, Flame, Star, type LucideIcon } from "lucide-react";
+import { Flame, Star, type LucideIcon } from "lucide-react";
 
 import { STUDENT_COLORS } from "../theme/colors";
 import { STRINGS } from "../constants/strings";
+import { CHAPTERS_ART, LONGEST_ART, STREAK_ART, TIME_ART } from "../theme/progressArt";
 
 /**
  * Shared streak/session stat display. Previously StudentHome.tsx,
@@ -105,35 +106,66 @@ export function StreakStats({
 
   const showTime = totalMinutes !== undefined;
   const showChapters = chapters !== undefined;
-  type Card = { key: string; Icon: LucideIcon; label: string; parts: { n: number; u: string }[] | null; of?: number };
-  const streaks: Card[] = STATS.map((s) => ({
-    key: s.key,
-    Icon: s.Icon,
-    label: s.label,
-    // "1 Day", "0 Days", "4 Days".
-    parts: [{ n: data?.[s.key] ?? 0, u: (data?.[s.key] ?? 0) === 1 ? s.unit : `${s.unit}s` }],
-  }));
+  type Card = {
+    key: string;
+    label: string;
+    parts: { n: number; u: string }[] | null;
+    of?: number;
+    /** The card's 3D model and a line saying what the number means. */
+    art: string;
+    caption: string;
+  };
+  const current = data?.currentStreak ?? 0;
+  const best = data?.longestStreak ?? 0;
+  const days = (n: number) => [{ n, u: n === 1 ? "Day" : "Days" }];
   const cards: Card[] = [
-    streaks[0],
+    {
+      key: "currentStreak",
+      label: STRINGS.streak.dayStreak,
+      parts: days(current),
+      art: STREAK_ART,
+      caption: "Days in a row you've learned. Keep it going!",
+    },
     ...(showChapters
       ? [{
           key: "chaptersCompleted",
-          Icon: BookOpenCheck,
           label: STRINGS.streak.chaptersCompleted,
           parts: chapters == null ? null : [{ n: chapters.completed, u: "" }],
           of: chapters?.total,
+          art: CHAPTERS_ART,
+          caption: "Chapters you've finished",
         }]
       : []),
-    ...streaks.slice(1),
+    {
+      key: "longestStreak",
+      label: STRINGS.streak.longestStreak,
+      parts: days(best),
+      art: LONGEST_ART,
+      caption: "Your record run of days",
+    },
     ...(showTime
       ? [{
           key: "timeSpent",
-          Icon: Clock3,
           label: STRINGS.streak.timeSpent,
           parts: totalMinutes == null ? null : studyTimeParts(totalMinutes),
+          art: TIME_ART,
+          caption: "Time spent learning",
         }]
       : []),
   ];
+
+  const cardStyle: React.CSSProperties = {
+    background: STUDENT_COLORS.card,
+    border: `1px solid ${STUDENT_COLORS.border}`,
+    padding: "0 clamp(12px, 1.4vw, 18px) clamp(14px, 1.6vw, 18px)",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+  };
+  /** The picture's patch of light: a soft-surface glow the island sits in. */
+  const well: React.CSSProperties = {
+    width: "clamp(104px, 11vw, 150px)",
+    aspectRatio: "1 / 1",
+    background: `radial-gradient(58% 48% at 50% 56%, ${STUDENT_COLORS.softSurface}, transparent 72%)`,
+  };
 
   return (
     <div
@@ -141,91 +173,49 @@ export function StreakStats({
       style={{ gap: "clamp(8px, 1.2vw, 14px)" }}
     >
       {isLoading
-        ? cards.map((c) => c.key).map((n) => (
-            <div
-              key={n}
-              className="rounded-2xl animate-pulse"
-              style={{
-                background: STUDENT_COLORS.card,
-                border: `1px solid ${STUDENT_COLORS.border}`,
-                padding: "clamp(14px, 1.6vw, 20px)",
-              }}
-            >
-              <div className="flex items-start justify-between" style={{ gap: 10 }}>
-                <div className="rounded" style={{ background: STUDENT_COLORS.border + "40", height: 11, width: 84 }} />
-                <div
-                  className="rounded-lg flex-shrink-0"
-                  style={{ background: STUDENT_COLORS.border + "50", width: 28, height: 28 }}
-                />
-              </div>
-              <div className="rounded mt-3" style={{ background: STUDENT_COLORS.border + "60", height: 22, width: 68 }} />
+        ? cards.map((c) => (
+            <div key={c.key} className="rounded-[22px] animate-pulse flex flex-col items-center" style={cardStyle}>
+              <div className="rounded-full" style={{ ...well, background: STUDENT_COLORS.border + "30", transform: "scale(0.7)" }} />
+              <div className="rounded" style={{ background: STUDENT_COLORS.border + "60", height: 22, width: 68 }} />
+              <div className="rounded mt-2" style={{ background: STUDENT_COLORS.border + "40", height: 11, width: 84 }} />
             </div>
           ))
-        : cards.map((s) => {
-            return (
+        : cards.map((s) => (
+            <div key={s.key} className="rounded-[22px] flex flex-col items-center text-center min-w-0" style={cardStyle}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 512px WebP, served as is */}
+              <img src={s.art} alt="" aria-hidden="true" width={512} height={512} draggable={false} className="select-none" style={{ ...well, objectFit: "contain", marginBottom: -4 }} />
+
+              {/* Value, with its unit carried in the value as the design does */}
               <div
-                key={s.key}
-                className="rounded-2xl"
+                className="font-extrabold leading-none"
                 style={{
-                  background: STUDENT_COLORS.card,
-                  border: `1px solid ${STUDENT_COLORS.border}`,
-                  padding: "clamp(14px, 1.6vw, 20px)",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                  color: STUDENT_COLORS.text,
+                  fontFamily: "var(--font-display)",
+                  fontSize: "clamp(22px, 2.4vw, 30px)",
                 }}
               >
-                {/* Label left, icon well right */}
-                <div className="flex items-start justify-between" style={{ gap: 10 }}>
-                  <span
-                    className="font-medium"
-                    style={{
-                      color: STUDENT_COLORS.textMuted,
-                      fontSize: "clamp(11px, 1.05vw, 13px)",
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {s.label}
-                  </span>
-                  <span
-                    className="rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{
-                      // Soft-surface well, teal glyph — calm chrome; citron is
-                      // kept for the screen's one key moment.
-                      background: STUDENT_COLORS.softSurface,
-                      width: "clamp(26px, 2.4vw, 32px)",
-                      height: "clamp(26px, 2.4vw, 32px)",
-                      color: STUDENT_COLORS.primary,
-                    }}
-                  >
-                    <s.Icon size={16} strokeWidth={2.2} />
-                  </span>
-                </div>
-
-                {/* Value, with its unit carried in the value as the design does */}
-                <div
-                  className="font-extrabold leading-none mt-2.5"
-                  style={{
-                    color: STUDENT_COLORS.text,
-                    fontFamily: "var(--font-display)",
-                    fontSize: "clamp(19px, 2.1vw, 26px)",
-                  }}
-                >
-                  {s.parts === null
-                    ? "—"
-                    : s.parts.map((p, i) => (
-                        <span key={i} style={{ marginLeft: i ? 6 : 0 }}>
-                          {p.n}
-                          {p.u && (
-                            <span style={{ fontSize: "0.72em", marginLeft: p.u.length > 1 ? 5 : 1 }}>{p.u}</span>
-                          )}
-                        </span>
-                      ))}
-                  {s.parts !== null && s.of != null && (
-                    <span style={{ fontSize: "0.72em", marginLeft: 5, color: STUDENT_COLORS.textMuted }}>/ {s.of}</span>
-                  )}
-                </div>
+                {s.parts === null
+                  ? "—"
+                  : s.parts.map((p, i) => (
+                      <span key={i} style={{ marginLeft: i ? 6 : 0 }}>
+                        {p.n}
+                        {p.u && (
+                          <span style={{ fontSize: "0.6em", marginLeft: p.u.length > 1 ? 4 : 1 }}>{p.u}</span>
+                        )}
+                      </span>
+                    ))}
+                {s.parts !== null && s.of != null && (
+                  <span style={{ fontSize: "0.6em", marginLeft: 5, color: STUDENT_COLORS.textMuted }}>/ {s.of}</span>
+                )}
               </div>
-            );
-          })}
+              <div className="font-bold mt-1.5" style={{ color: STUDENT_COLORS.textMid, fontSize: "clamp(12px, 1.1vw, 14px)" }}>
+                {s.label}
+              </div>
+              <div className="mt-0.5" style={{ color: STUDENT_COLORS.textMuted, fontSize: "clamp(10px, 0.95vw, 12px)", lineHeight: 1.35, maxWidth: "24ch" }}>
+                {s.caption}
+              </div>
+            </div>
+          ))}
     </div>
   );
 }

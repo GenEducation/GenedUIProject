@@ -83,9 +83,9 @@ function ParentSettingsHarness() {
   return (
     <div style={PORTAL_THEME} className="relative isolate min-h-screen bg-[var(--pp-bg)] font-[family-name:var(--font-display)] text-[var(--pp-ink)]">
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 right-[8%] h-[460px] w-[460px] rounded-full bg-[#9FE3C4]/45 blur-[90px]" />
-        <div className="absolute left-[-120px] top-[38%] h-[380px] w-[380px] rounded-full bg-[#D7EA7C]/35 blur-[90px]" />
-        <div className="absolute bottom-[-140px] right-[30%] h-[420px] w-[420px] rounded-full bg-[#BBD7FF]/40 blur-[100px]" />
+        <div className="absolute -top-40 right-[8%] h-[460px] w-[460px] rounded-full bg-[#C9E88A]/45 blur-[90px]" />
+        <div className="absolute left-[-120px] top-[38%] h-[380px] w-[380px] rounded-full bg-[#D4E98A]/35 blur-[90px]" />
+        <div className="absolute bottom-[-140px] right-[30%] h-[420px] w-[420px] rounded-full bg-[#FBEA9A]/40 blur-[100px]" />
       </div>
       <nav className="flex gap-2 px-4 pt-4 text-[12px] font-semibold lg:px-8">
         {["full", "new", "welcome"].map((s) => (

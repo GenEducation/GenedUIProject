@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import "@/app/pre-order/pre-order.css";
 import { DeviceScrollScene } from "@/features/preorder/components/DeviceScrollScene";
 import { PreorderModal } from "@/features/preorder/components/PreorderModal";
@@ -65,8 +65,8 @@ export function DeskbotPreorderPage() {
       {/* ── STICKY HEADER — persistent Pre-order CTA ── */}
       <header className="po-header">
         <div className="po-wrap">
-          <Link href="/" className="po-logo" aria-label="GenEd home">
-            <GenEdLogo height={44} priority />
+          <Link href="/" className="po-logo" aria-label="Zoovi home">
+            <ZooviLogo height={44} priority />
           </Link>
           <div className="po-header-cta">
             <Link href="/" className="po-back">
@@ -176,7 +176,7 @@ export function DeskbotPreorderPage() {
             Give your child a device that <em>only</em> teaches.
           </h2>
           <p>
-            Reserve your GenEd Deskbot now. It takes a minute, a refundable
+            Reserve your Zoovi Deskbot now. It takes a minute, a refundable
             ₹500 deposit, and puts you first in line.
           </p>
           <button
@@ -228,7 +228,7 @@ export function DeskbotPreorderPage() {
               className="w-full h-full rounded-lg"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
-              title="Meet the GenEd Device"
+              title="Meet the Zoovi Device"
             />
           </div>
         </div>

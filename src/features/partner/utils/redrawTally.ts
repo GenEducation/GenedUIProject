@@ -1,6 +1,7 @@
 import type { RedrawState, VisualRedrawTally } from "../types/visuals";
 
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+const plural = (n: number, one: string, many = `${one}s`) =>
+  `${n} ${n === 1 ? one : many}`;
 
 /** Copy for each redraw state, as the partner reads it. */
 export const REDRAW_STATE_LABEL: Record<RedrawState, string> = {
@@ -33,7 +34,9 @@ export function redrawFailureText(failure: string | null): string {
  * The publish warning's sentence: "6 redraws still running, 3 waiting for
  * review". Empty when nothing is open.
  */
-export function openRedrawsText(counts: Pick<VisualRedrawTally, "queued" | "drawing" | "ready">): string {
+export function openRedrawsText(
+  counts: Pick<VisualRedrawTally, "queued" | "drawing" | "ready">,
+): string {
   const running = counts.queued + counts.drawing;
   const parts: string[] = [];
   if (running) parts.push(`${plural(running, "redraw")} still running`);
@@ -42,11 +45,22 @@ export function openRedrawsText(counts: Pick<VisualRedrawTally, "queued" | "draw
 }
 
 /** The counts a 409 `redraws_open` carries, when `details` is one. */
-export function openRedrawsFrom(details: Record<string, unknown> | undefined): VisualRedrawTally | null {
+export function openRedrawsFrom(
+  details: Record<string, unknown> | undefined,
+): VisualRedrawTally | null {
   if (!details || details.reason !== "redraws_open") return null;
-  const n = (k: string) => (typeof details[k] === "number" ? (details[k] as number) : 0);
+  const n = (k: string) =>
+    typeof details[k] === "number" ? (details[k] as number) : 0;
   const queued = n("queued");
   const drawing = n("drawing");
   const ready = n("ready");
-  return { queued, drawing, ready, reviewed: 0, failed: 0, total: queued + drawing + ready, open: queued + drawing + ready };
+  return {
+    queued,
+    drawing,
+    ready,
+    reviewed: 0,
+    failed: 0,
+    total: queued + drawing + ready,
+    open: queued + drawing + ready,
+  };
 }

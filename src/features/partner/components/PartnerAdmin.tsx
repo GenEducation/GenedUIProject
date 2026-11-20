@@ -9,7 +9,7 @@ import { CurriculumIngestion } from "./CurriculumIngestion";
 import { AnimatePresence, motion } from "framer-motion";
 import { NotificationBell } from "@/components/NotificationBell";
 import { User } from "lucide-react";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import { usePartnerStore, type Subject } from "../store/usePartnerStore";
 import { LabSetup } from "@/features/lab/components/LabSetup";
 import { FEATURES } from "@/constants/features";
@@ -34,34 +34,49 @@ export function PartnerAdmin() {
   const showUploadModal = usePartnerStore((state) => state.showUploadModal);
   // The chapter an "Upload again" came from, to prefill the form; null for a fresh upload.
   const [uploadPrefill, setUploadPrefill] = useState<Subject | null>(null);
-  const setShowUploadModal = usePartnerStore((state) => state.setShowUploadModal);
+  const setShowUploadModal = usePartnerStore(
+    (state) => state.setShowUploadModal,
+  );
 
-  const rawPartnerId = typeof window !== 'undefined' ? localStorage.getItem("gened_partner_id") : null;
+  const rawPartnerId =
+    typeof window !== "undefined"
+      ? localStorage.getItem("gened_partner_id")
+      : null;
   const partnerId = rawPartnerId?.replace(/['"]+/g, "");
 
   return (
-    <div className="portal-legacy-type flex h-screen bg-[#F6F7F2] overflow-hidden">
+    <div className="portal-legacy-type flex h-screen bg-[#F7F4EA] overflow-hidden">
       {/* Navigation Sidebar */}
       <SideBar
         activeView={activeView}
         onViewChange={(view) =>
-          router.push(view === "analytics" ? "/partner" : view === "subjects" ? "/partner/subjects" : "/partner/labs")
+          router.push(
+            view === "analytics"
+              ? "/partner"
+              : view === "subjects"
+                ? "/partner/subjects"
+                : "/partner/labs",
+          )
         }
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#F6F7F2]">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-[#F7F4EA]">
         {/* Top Navbar */}
-        <header className="relative h-16 md:h-[88px] shrink-0 border-b border-[#122D30]/5 bg-white/40 flex items-center justify-between gap-3 px-4 md:px-8 lg:px-12 z-50 transition-all">
+        <header className="relative h-16 md:h-[88px] shrink-0 border-b border-[#1D6315]/5 bg-white/40 flex items-center justify-between gap-3 px-4 md:px-8 lg:px-12 z-50 transition-all">
           <div className="flex-1 min-w-0">
-             {/* On a phone the centred logo has the bar to itself; the rail's highlighted icon says which page this is. */}
-             <h2 className="hidden sm:block truncate text-lg md:text-xl font-black text-[#122D30] tracking-tight">
-               {activeView === "subjects" ? "Subjects" : activeView === "labs" ? "Lab Mode" : "Analytics"}
-             </h2>
+            {/* On a phone the centred logo has the bar to itself; the rail's highlighted icon says which page this is. */}
+            <h2 className="hidden sm:block truncate text-lg md:text-xl font-black text-[#1D6315] tracking-tight">
+              {activeView === "subjects"
+                ? "Subjects"
+                : activeView === "labs"
+                  ? "Lab Mode"
+                  : "Analytics"}
+            </h2>
           </div>
           {/* Below lg the sidebar is a rail without the logo: the logo sits in the middle of this bar instead. */}
           <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:hidden">
-            <GenEdLogo height={30} className="md:h-9 md:w-auto" />
+            <ZooviLogo height={30} className="md:h-9 md:w-auto" />
           </div>
           <div className="flex items-center gap-4">
             {partnerId && <NotificationBell userId={partnerId} align="right" />}
@@ -79,7 +94,12 @@ export function PartnerAdmin() {
                 exit={{ opacity: 0, y: -10 }}
                 className="flex-1 flex flex-col h-full"
               >
-                <SubjectRegistry onUploadClick={(prefill) => { setUploadPrefill(prefill ?? null); setShowUploadModal(true); }} />
+                <SubjectRegistry
+                  onUploadClick={(prefill) => {
+                    setUploadPrefill(prefill ?? null);
+                    setShowUploadModal(true);
+                  }}
+                />
               </motion.div>
             ) : activeView === "labs" ? (
               <motion.div
@@ -108,7 +128,10 @@ export function PartnerAdmin() {
         {/* Modals */}
         <AnimatePresence>
           {showUploadModal && (
-            <CurriculumIngestion prefill={uploadPrefill} onClose={() => setShowUploadModal(false)} />
+            <CurriculumIngestion
+              prefill={uploadPrefill}
+              onClose={() => setShowUploadModal(false)}
+            />
           )}
         </AnimatePresence>
       </main>

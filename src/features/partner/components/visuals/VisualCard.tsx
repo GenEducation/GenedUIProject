@@ -12,7 +12,12 @@ interface VisualCardProps {
   onImageExpired: () => void;
 }
 
-export function VisualCard({ visual, index, onOpen, onImageExpired }: VisualCardProps) {
+export function VisualCard({
+  visual,
+  index,
+  onOpen,
+  onImageExpired,
+}: VisualCardProps) {
   const flagged = visual.critique?.passes === false;
 
   return (
@@ -26,10 +31,14 @@ export function VisualCard({ visual, index, onOpen, onImageExpired }: VisualCard
         type="button"
         onClick={() => onOpen(visual.id)}
         aria-label={`Open ${visual.title}`}
-        className="group w-full text-left bg-white rounded-2xl border border-[#122D30]/5 overflow-hidden transition-all hover:border-[#122D30]/15 hover:shadow-[0_10px_30px_rgba(18,45,48,0.08)] hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#122D30]/40"
+        className="group w-full text-left bg-white rounded-2xl border border-[#1D6315]/5 overflow-hidden transition-all hover:border-[#1D6315]/15 hover:shadow-[0_10px_30px_rgba(29,99,21,0.08)] hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D6315]/40"
       >
         <div className="relative">
-          <VisualImage imageUrl={visual.image_url} alt={visual.title} onExpired={onImageExpired} />
+          <VisualImage
+            imageUrl={visual.image_url}
+            alt={visual.title}
+            onExpired={onImageExpired}
+          />
           <div className="absolute top-2 left-2 flex flex-wrap gap-1.5">
             {flagged && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[9px] font-black uppercase tracking-widest">
@@ -37,18 +46,19 @@ export function VisualCard({ visual, index, onOpen, onImageExpired }: VisualCard
               </span>
             )}
             {visual.parent_id && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#DCEBE7] text-[#122D30] border border-[#122D30]/10 text-[9px] font-black uppercase tracking-widest">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E8F0CC] text-[#1D6315] border border-[#1D6315]/10 text-[9px] font-black uppercase tracking-widest">
                 <RefreshCcw size={10} /> New version
               </span>
             )}
           </div>
         </div>
-        <div className="px-4 py-3 border-t border-[#122D30]/5">
-          <h4 className="text-sm font-bold text-[#122D30] leading-snug line-clamp-2 group-hover:translate-x-0.5 transition-transform">
+        <div className="px-4 py-3 border-t border-[#1D6315]/5">
+          <h4 className="text-sm font-bold text-[#1D6315] leading-snug line-clamp-2 group-hover:translate-x-0.5 transition-transform">
             {visual.title}
           </h4>
-          <p className="mt-1 text-[10px] font-bold text-[#122D30]/45 uppercase tracking-wider truncate">
-            <span className="capitalize">{visual.subject}</span> · Grade {visual.grade} · {visual.chapter}
+          <p className="mt-1 text-[10px] font-bold text-[#1D6315]/45 uppercase tracking-wider truncate">
+            <span className="capitalize">{visual.subject}</span> · Grade{" "}
+            {visual.grade} · {visual.chapter}
           </p>
         </div>
       </button>

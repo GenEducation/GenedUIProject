@@ -210,9 +210,9 @@ export function StudyTimeCard({
           value={period}
           onChange={onPeriodChange}
           options={PERIODS.map((p) => ({ value: p.value, label: p.label }))}
-          accentColor="#075E63"
+          accentColor="#287624"
           panelWidth={170}
-          buttonStyle={{ borderColor: "#075E63", color: "#0E7C55", fontWeight: 600, borderRadius: 10 }}
+          buttonStyle={{ borderColor: "#287624", color: "#22661F", fontWeight: 600, borderRadius: 10 }}
         />
       </div>
     </CardShell>

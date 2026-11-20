@@ -66,7 +66,7 @@ export function LessonShell({ p, done, advanceAt, voiceAt, clock, board, chat, f
       {/* eslint-disable @next/next/no-img-element -- static mock art */}
       <div className="gc-app gc-lesson">
         <header className="gc-l-head">
-          <img src="/brand/gened-logo.png" alt="" className="gc-l-logo" />
+          <img src="/brand/zoovi-logo.png" alt="" className="gc-l-logo" />
           <nav className="gc-l-crumb">
             <span>{CHAPTER.subject}</span>
             <ChevronRight size="1.05em" aria-hidden />
@@ -203,10 +203,10 @@ function RailSteps({ done }: { done: number }) {
 function ModeSwitch({ p, voiceAt }: { p: Progress; voiceAt?: Range }) {
   const on = useRange(p, voiceAt ?? [2, 3]);
   const x = useTransform(on, (t) => `${t * 100}%`);
-  const chatColor = useTransform(on, [0, 1], ["#FFFFFF", "rgba(18,45,48,0.66)"]);
-  const voiceColor = useTransform(on, [0, 1], ["rgba(18,45,48,0.66)", "#FFFFFF"]);
-  const chatDisc = useTransform(on, [0, 1], ["#D9F279", "#FFFFFF"]);
-  const voiceDisc = useTransform(on, [0, 1], ["#FFFFFF", "#D9F279"]);
+  const chatColor = useTransform(on, [0, 1], ["#FFFFFF", "rgba(29,99,21,0.66)"]);
+  const voiceColor = useTransform(on, [0, 1], ["rgba(29,99,21,0.66)", "#FFFFFF"]);
+  const chatDisc = useTransform(on, [0, 1], ["#A6CF08", "#FFFFFF"]);
+  const voiceDisc = useTransform(on, [0, 1], ["#FFFFFF", "#A6CF08"]);
   return (
     <div className="gc-l-mode">
       <motion.span className="gc-l-mode-hl" style={{ x }} />

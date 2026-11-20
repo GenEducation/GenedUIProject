@@ -29,7 +29,7 @@ export interface SignUpFields {
    * with that same address and confirm.
    */
   parent_otp_code?: string;
-  /** A school to request on sign-up; the membership starts PENDING until that school approves. Omit to join GenEd. */
+  /** A school to request on sign-up; the membership starts PENDING until that school approves. Omit to join Zoovi. */
   partner_id?: string;
 }
 

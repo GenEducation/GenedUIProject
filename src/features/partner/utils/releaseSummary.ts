@@ -16,17 +16,41 @@ export interface KindInfo {
 }
 
 const KINDS: Record<string, KindInfo> = {
-  component: { label: "Concepts", hint: "What the chapter teaches, each with its definition and learning outcomes." },
+  component: {
+    label: "Concepts",
+    hint: "What the chapter teaches, each with its definition and learning outcomes.",
+  },
   item: { label: "Questions", hint: "Practice questions with their answers." },
-  lesson_node: { label: "Lesson steps", hint: "The steps a student works through, in order." },
-  misconception: { label: "Common mistakes", hint: "Mistakes the tutor watches for." },
-  figure_group: { label: "Figures", hint: "Textbook figures and where they are shown." },
+  lesson_node: {
+    label: "Lesson steps",
+    hint: "The steps a student works through, in order.",
+  },
+  misconception: {
+    label: "Common mistakes",
+    hint: "Mistakes the tutor watches for.",
+  },
+  figure_group: {
+    label: "Figures",
+    hint: "Textbook figures and where they are shown.",
+  },
   asset: { label: "Images", hint: "Images cropped from the textbook." },
   tool: { label: "Tools", hint: "Interactive tools used in the lesson." },
-  chapter_plan: { label: "Lesson plan", hint: "The order of the lesson and the outcomes it covers." },
-  source_section: { label: "Textbook sections", hint: "The sections read from the PDF." },
-  source_manifest: { label: "Book details", hint: "Which book, edition and chapter this is." },
-  graph_and_recovery: { label: "Links between concepts", hint: "Which concepts come before others, and how to recover." },
+  chapter_plan: {
+    label: "Lesson plan",
+    hint: "The order of the lesson and the outcomes it covers.",
+  },
+  source_section: {
+    label: "Textbook sections",
+    hint: "The sections read from the PDF.",
+  },
+  source_manifest: {
+    label: "Book details",
+    hint: "Which book, edition and chapter this is.",
+  },
+  graph_and_recovery: {
+    label: "Links between concepts",
+    hint: "Which concepts come before others, and how to recover.",
+  },
   teaching_only: {
     label: "Taught with open questions only",
     hint: "No question in this chapter can be checked automatically. Accept it to publish the chapter for teaching and discussion; nothing in it measures mastery.",
@@ -41,45 +65,75 @@ export const kindOf = (kind: string) => kind.split(":")[0];
 export const kindInfo = (kind: string): KindInfo =>
   KINDS[kindOf(kind)] ?? { label: kindOf(kind).replace(/_/g, " "), hint: "" };
 
-const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+const str = (v: unknown) =>
+  typeof v === "string" && v.trim() ? v.trim() : null;
 const list = (v: unknown) => (Array.isArray(v) ? v : []);
 
 /** A proposal's title and, when there is one, a line of detail. */
-export function summarize(p: ReleaseProposal): { title: string; detail: string | null } {
+export function summarize(p: ReleaseProposal): {
+  title: string;
+  detail: string | null;
+} {
   const c = valueOf(p);
   switch (kindOf(p.kind)) {
     case "component":
       return { title: str(c.title) ?? "Concept", detail: str(c.definition) };
     case "item": {
       const options = list(c.options)
-        .map((o) => (typeof o === "string" ? o : str((o as Record<string, unknown>)?.text) ?? str((o as Record<string, unknown>)?.label)))
+        .map((o) =>
+          typeof o === "string"
+            ? o
+            : (str((o as Record<string, unknown>)?.text) ??
+              str((o as Record<string, unknown>)?.label)),
+        )
         .filter(Boolean);
-      return { title: str(c.prompt) ?? "Question", detail: options.length ? `Options: ${options.join(" · ")}` : null };
+      return {
+        title: str(c.prompt) ?? "Question",
+        detail: options.length ? `Options: ${options.join(" · ")}` : null,
+      };
     }
     case "lesson_node":
       return {
         title: str(c.title) ?? "Lesson step",
-        detail: [str(c.type), typeof c.est_minutes === "number" ? `${c.est_minutes} min` : null].filter(Boolean).join(" · ") || null,
+        detail:
+          [
+            str(c.type),
+            typeof c.est_minutes === "number" ? `${c.est_minutes} min` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || null,
       };
     case "misconception":
-      return { title: str(c.definition) ?? str(c.code) ?? "Common mistake", detail: str(c.code) };
+      return {
+        title: str(c.definition) ?? str(c.code) ?? "Common mistake",
+        detail: str(c.code),
+      };
     case "chapter_plan": {
       const steps = list(c.node_ids).length;
       const los = list(c.lo_codes).map(String);
       return {
-        title: `Chapter ${c.chapter_ordinal ?? ""}: ${steps} lesson step${steps === 1 ? "" : "s"}`.trim(),
+        title:
+          `Chapter ${c.chapter_ordinal ?? ""}: ${steps} lesson step${steps === 1 ? "" : "s"}`.trim(),
         detail: los.length ? `Covers ${los.join(", ")}` : null,
       };
     }
     case "source_section":
       return {
         title: str(c.title) ?? "Section",
-        detail: c.page_start ? `Pages ${c.page_start}${c.page_end && c.page_end !== c.page_start ? `–${c.page_end}` : ""}` : null,
+        detail: c.page_start
+          ? `Pages ${c.page_start}${c.page_end && c.page_end !== c.page_start ? `–${c.page_end}` : ""}`
+          : null,
       };
     case "source_manifest":
       return {
-        title: [str(c.book_title), str(c.edition_label)].filter(Boolean).join(" · ") || "Book",
-        detail: [str(c.subject), c.grade ? `Grade ${c.grade}` : null, str(c.board)].filter(Boolean).join(" · ") || null,
+        title:
+          [str(c.book_title), str(c.edition_label)]
+            .filter(Boolean)
+            .join(" · ") || "Book",
+        detail:
+          [str(c.subject), c.grade ? `Grade ${c.grade}` : null, str(c.board)]
+            .filter(Boolean)
+            .join(" · ") || null,
       };
     case "graph_and_recovery":
       return {
@@ -88,17 +142,26 @@ export function summarize(p: ReleaseProposal): { title: string; detail: string |
       };
     default:
       return {
-        title: str(c.title) ?? str(c.caption) ?? str(c.name) ?? str(c.role) ?? kindInfo(p.kind).label,
+        title:
+          str(c.title) ??
+          str(c.caption) ??
+          str(c.name) ??
+          str(c.role) ??
+          kindInfo(p.kind).label,
         detail: str(c.description) ?? str(c.kind),
       };
   }
 }
 
 /** Proposals grouped by kind, in reading order. */
-export function groupByKind(proposals: ReleaseProposal[]): { kind: string; info: KindInfo; proposals: ReleaseProposal[] }[] {
+export function groupByKind(
+  proposals: ReleaseProposal[],
+): { kind: string; info: KindInfo; proposals: ReleaseProposal[] }[] {
   const groups = new Map<string, ReleaseProposal[]>();
-  for (const p of proposals) groups.set(kindOf(p.kind), [...(groups.get(kindOf(p.kind)) ?? []), p]);
-  const rank = (k: string) => (KIND_ORDER.includes(k) ? KIND_ORDER.indexOf(k) : KIND_ORDER.length);
+  for (const p of proposals)
+    groups.set(kindOf(p.kind), [...(groups.get(kindOf(p.kind)) ?? []), p]);
+  const rank = (k: string) =>
+    KIND_ORDER.includes(k) ? KIND_ORDER.indexOf(k) : KIND_ORDER.length;
   return [...groups.entries()]
     .sort(([a], [b]) => rank(a) - rank(b))
     .map(([kind, ps]) => ({ kind, info: kindInfo(kind), proposals: ps }));

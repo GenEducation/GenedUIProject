@@ -10,4 +10,4 @@ export const SECONDARY_ACTION =
   "inline-flex h-10 items-center gap-2 rounded-[10px] border-[1.5px] border-[var(--btn-neutral-border)] bg-white px-4 text-[13.5px] font-bold text-ink transition-colors hover:bg-[var(--btn-neutral-hover)]";
 
 /** Ink-tinted resting shadow every admin card shares. */
-export const CARD_SHADOW = "shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)]";
+export const CARD_SHADOW = "shadow-[0_1px_2px_rgba(29,99,21,.06),0_1px_3px_rgba(29,99,21,.05)]";

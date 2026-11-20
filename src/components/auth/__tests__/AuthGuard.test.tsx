@@ -52,7 +52,7 @@ describe("AuthGuard — unauthenticated", () => {
       expect(routerMock.replace).toHaveBeenCalledWith("/?redirect=%2Fstudent%2Fanalytics"),
     );
     expect(screen.queryByText(SECRET)).not.toBeInTheDocument();
-    // the GenEd loading screen, not the old pulsing logo and spinner
+    // the Zoovi loading screen, not the old pulsing logo and spinner
     expect(screen.getByRole("status", { name: "Loading" })).toBeInTheDocument();
     expect(document.querySelector(".animate-spin")).toBeNull();
   });

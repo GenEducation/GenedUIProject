@@ -1,7 +1,7 @@
 // The printable report card (ReportCardPrint). One stylesheet, class-prefixed `rcp-`, injected beside the portal styles.
 // Colours are the screen card's palette; page breaks keep a chapter row, a heading and a note together on one page.
 export const RC_PRINT_REPORT_STYLES = `
-  .rcp { --ink:#122D30; --soft:#5E7477; --line:#E1EAE6; --mint:#DCEBE7; --brand:#075E63; --citron:#D9F279; --wash:#F7F9F5;
+  .rcp { --ink:#1D6315; --soft:#5A6E52; --line:#E6EDD3; --mint:#E8F0CC; --brand:#287624; --citron:#A6CF08; --wash:#F7F9F5;
     --good:#2F7D4F; --warn:#B4531A; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: var(--ink); font-size: 12px; line-height: 1.45;
     -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
   .rcp h1, .rcp h2, .rcp h3, .rcp h4, .rcp p, .rcp ul { margin: 0; }

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import { makeVisual, visualsFixture } from "@/test/msw/handlers/visuals";
 import { REGEN_POLL_MS, useVisualDetail } from "../useVisualDetail";
@@ -10,7 +11,13 @@ function rejectedWithQueuedRegen() {
   return makeVisual({
     id: "vis-rej",
     state: "rejected",
-    decision: { decision: "reject", reason_codes: ["unclear"], note: null, actor_role: "PARTNER", decided_at: "2026-01-02T00:00:00Z" },
+    decision: {
+      decision: "reject",
+      reason_codes: ["unclear"],
+      note: null,
+      actor_role: "PARTNER",
+      decided_at: "2026-01-02T00:00:00Z",
+    },
     regeneration: {
       id: "regen-1",
       state: "queued",
@@ -30,7 +37,11 @@ beforeEach(() => {
   visualsFixture.reset(() => [rejectedWithQueuedRegen()]);
   reads = 0;
   server.events.on("request:start", ({ request }) => {
-    if (request.method === "GET" && request.url.startsWith(`${BASE}/v1/visuals/candidates/vis-rej`)) reads += 1;
+    if (
+      request.method === "GET" &&
+      request.url.startsWith(`${BASE}/v1/visuals/candidates/vis-rej`)
+    )
+      reads += 1;
   });
 });
 
@@ -45,15 +56,23 @@ describe("useVisualDetail — regeneration polling", () => {
   it("polls queued → claimed → done, then stops", async () => {
     const { result } = renderHook(() => useVisualDetail("vis-rej"));
 
-    await waitFor(() => expect(result.current.detail?.regeneration?.state).toBe("queued"));
+    await waitFor(() =>
+      expect(result.current.detail?.regeneration?.state).toBe("queued"),
+    );
     expect(result.current.polling).toBe(true);
 
     await tick();
-    await waitFor(() => expect(result.current.detail?.regeneration?.state).toBe("claimed"));
+    await waitFor(() =>
+      expect(result.current.detail?.regeneration?.state).toBe("claimed"),
+    );
 
     await tick();
-    await waitFor(() => expect(result.current.detail?.regeneration?.state).toBe("done"));
-    expect(result.current.detail?.regeneration?.result_candidate_id).toBeTruthy();
+    await waitFor(() =>
+      expect(result.current.detail?.regeneration?.state).toBe("done"),
+    );
+    expect(
+      result.current.detail?.regeneration?.result_candidate_id,
+    ).toBeTruthy();
     expect(result.current.polling).toBe(false);
 
     const readsAtDone = reads;
@@ -69,5 +88,34 @@ describe("useVisualDetail — regeneration polling", () => {
     const before = reads;
     await tick();
     expect(reads).toBe(before);
+  });
+});
+
+describe("useVisualDetail — no visual and failures", () => {
+  it("does nothing until a visual is chosen", async () => {
+    const { result } = renderHook(() => useVisualDetail(null));
+    await act(() => vi.advanceTimersByTimeAsync(50));
+    expect(result.current).toMatchObject({ detail: null, loading: false, error: null, polling: false });
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(reads).toBe(0);
+  });
+
+  it("shows the server's message when the visual can't be read, then recovers on reload", async () => {
+    server.use(
+      http.get(`${BASE}/v1/visuals/candidates/:id`, () =>
+        HttpResponse.json({ message: "SYNTHETIC visual unavailable" }, { status: 503 }), { once: true }),
+    );
+    const { result } = renderHook(() => useVisualDetail("vis-rej"));
+    await waitFor(() => expect(result.current.error).toMatch(/SYNTHETIC visual unavailable/));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.detail).toBeNull();
+
+    await act(async () => {
+      await result.current.reload();
+    });
+    expect(result.current.error).toBeNull();
+    expect(result.current.detail?.id).toBe("vis-rej");
   });
 });

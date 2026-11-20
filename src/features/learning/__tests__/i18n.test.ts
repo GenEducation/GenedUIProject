@@ -4,9 +4,9 @@ import { uiText, type UiKey } from "../i18n";
 
 const KEYS: UiKey[] = [
   "checkpoint", "quickCheck", "yourAnswer", "checkAnswer", "hint", "calculator", "typeInChat", "gettingReady", "correct", "notQuite",
-  "unreadable", "lookingAtIt", "moveOn", "nextStep", "talkItThrough", "repliesCount", "roundTricky", "tryNew", "keepGoing", "tutor",
+  "unreadable", "lookingAtIt", "moveOn", "nextStep", "roundTricky", "tryNew", "keepGoing", "tutor",
   "listening", "muted", "hearing", "connecting", "reconnecting", "speaking", "thinking", "voiceOff", "modePush", "tapOrHold",
-  "unmuteToSpeak", "listeningRelease", "listeningTap", "end", "backToTyping", "sessionTime", "chapterTime", "stepsDone", "revisiting", "muteMic", "unmuteMic",
+  "unmuteToSpeak", "listeningRelease", "listeningTap", "end", "backToTyping", "sessionTime", "chapterTime", "stepsDone", "lessonLanguage", "revisiting", "muteMic", "unmuteMic",
 ];
 
 describe("the lesson screen's own words", () => {
@@ -24,8 +24,8 @@ describe("the lesson screen's own words", () => {
   it("fills the names and numbers, in any language", () => {
     expect(uiText("en", "speaking", { name: "Nia" })).toBe("Nia is speaking");
     expect(uiText("hi", "speaking", { name: "Nia" })).toContain("Nia");
-    expect(uiText("ta", "repliesCount", { n: 1, m: 2 })).toMatch(/1/);
-    expect(uiText("ta", "repliesCount", { n: 1, m: 2 })).toMatch(/2/);
+    expect(uiText("ta", "atPosition", { item: "X", n: 1, m: 2 })).toMatch(/1/);
+    expect(uiText("ta", "atPosition", { item: "X", n: 1, m: 2 })).toMatch(/2/);
   });
 
   it("is English for an unknown or missing language", () => {

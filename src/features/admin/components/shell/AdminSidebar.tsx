@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { LogOut } from "lucide-react";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import { NAV_GROUPS, isActiveHref } from "../../adminNav";
 import { MAINTENANCE_COPY, isMaintenanceRoute } from "../../maintenance";
 
@@ -38,14 +38,14 @@ export function AdminSidebar({ pathname, onGated, onLogout, mode, onNavigate }: 
           {mode === "rail" ? (
             <>
               <span className="block lg:hidden">
-                <GenEdLogo variant="mark" height={36} />
+                <ZooviLogo variant="mark" height={36} />
               </span>
               <span className="hidden lg:block">
-                <GenEdLogo height={44} priority />
+                <ZooviLogo height={44} priority />
               </span>
             </>
           ) : (
-            <GenEdLogo height={40} />
+            <ZooviLogo height={40} />
           )}
         </div>
 
@@ -78,7 +78,7 @@ export function AdminSidebar({ pathname, onGated, onLogout, mode, onNavigate }: 
                 const Icon = item.icon;
                 const cls = `group flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-all duration-200 ${justify} ${
                   active
-                    ? "bg-white text-ink shadow-[0_4px_20px_rgba(18,45,48,.08)]"
+                    ? "bg-white text-ink shadow-[0_4px_20px_rgba(29,99,21,.08)]"
                     : "text-muted hover:bg-white/70 hover:text-ink"
                 }`;
                 const body = (

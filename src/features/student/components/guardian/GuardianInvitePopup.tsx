@@ -27,7 +27,7 @@ function snoozed(studentId: string): boolean {
 
 /**
  * After onboarding (named, placement done or not offered, tour over), a student
- * whose verified parent email has no GenEd account yet is told so, kindly, once:
+ * whose verified parent email has no Zoovi account yet is told so, kindly, once:
  * they can carry on learning, their parent must create their own account with
  * that same email, and the accounts connect automatically once the parent
  * confirms. It offers to send the invitation again and a button to the parent sign-up form.
@@ -141,11 +141,11 @@ export function GuardianInvitePopup() {
           <Users size={26} strokeWidth={1.9} />
         </span>
         <h2 id={titleId} className="mt-5 pr-10 text-[24px] font-extrabold leading-tight text-[var(--ink)]">
-          Invite your parent to GenEd
+          Invite your parent to Zoovi
         </h2>
         <p className="mt-2 text-[14.5px] leading-relaxed text-[var(--text-mid)]">
-          There&apos;s no GenEd parent account for <strong className="font-bold text-[var(--ink)] [overflow-wrap:anywhere]">{email}</strong>{" "}
-          yet. You can keep using GenEd right now; you don&apos;t need to wait for them.
+          There&apos;s no Zoovi parent account for <strong className="font-bold text-[var(--ink)] [overflow-wrap:anywhere]">{email}</strong>{" "}
+          yet. You can keep using Zoovi right now; you don&apos;t need to wait for them.
         </p>
 
         {/* What happens next, with the step already behind them ticked off. */}

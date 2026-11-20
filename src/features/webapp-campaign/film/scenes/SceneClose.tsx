@@ -14,7 +14,7 @@ export function SceneClose({ p }: { p: Progress }) {
       <div className="gc-title-copy">
         <Reveal p={p} at={[0, 0.14]} y={0.6} scale={0.92}>
           {/* eslint-disable-next-line @next/next/no-img-element -- static brand art in the film */}
-          <img src="/brand/gened-logo.png" alt="GenEd" className="gc-film-logo" />
+          <img src="/brand/zoovi-logo.png" alt="Zoovi" className="gc-film-logo" />
         </Reveal>
         <Reveal p={p} at={[0.04, 0.2]} y={1.2}>
           <h2 className="gc-title-xl">Their journey.</h2>

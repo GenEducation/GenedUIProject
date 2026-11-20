@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTutorialStore } from "@/features/tutorial/store/useTutorialStore";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { getStudentDisplayName, titleCase } from "@/features/student/utils/displayName";
 
@@ -26,7 +26,7 @@ export const TutorialVideoModal: React.FC = () => {
   const studentProfile = useStudentStore((s) => s.studentProfile);
   const avatarId = useStudentStore((s) => s.avatarId);
   const tourParams = new URLSearchParams({
-    tutor: titleCase(studentProfile?.ai_name?.trim() || "Nia"),
+    tutor: titleCase(studentProfile?.ai_name?.trim() || "Zoovi"),
     avatar: avatarId,
     ...(studentProfile?.name?.trim() ? { name: getStudentDisplayName(studentProfile) } : {}),
   });
@@ -81,14 +81,14 @@ export const TutorialVideoModal: React.FC = () => {
               {/* ── Header ── */}
               <div
                 className="flex items-center justify-between shrink-0 px-5 py-3"
-                style={{ background: "#122D30" }}
+                style={{ background: "#1D6315" }}
               >
                 {/* Left: logo + badge */}
                 <div className="flex items-center gap-2.5">
-                  <GenEdLogo height={34} onDark />
+                  <ZooviLogo height={34} onDark />
                   <span
                     className="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
-                    style={{ background: "#D9F279", color: "#122D30" }}
+                    style={{ background: "#A6CF08", color: "#1D6315" }}
                   >
                     Quick Tour
                   </span>
@@ -97,7 +97,7 @@ export const TutorialVideoModal: React.FC = () => {
                 {/* Right: hint + close */}
                 <div className="flex items-center gap-3">
                   <span className="hidden sm:block text-[11px] font-medium" style={{ color: "rgba(200,209,220,0.5)" }}>
-                    See how GenEd works in about 2 minutes
+                    See how Zoovi works in about 2 minutes
                   </span>
                   <button
                     onClick={skipTutorial}
@@ -133,7 +133,7 @@ export const TutorialVideoModal: React.FC = () => {
                   >
                     <div
                       className="w-12 h-12 rounded-2xl animate-pulse"
-                      style={{ background: "rgba(7,94,99,0.25)" }}
+                      style={{ background: "rgba(40,118,36,0.25)" }}
                     />
                     <p
                       className="text-sm font-medium"
@@ -146,7 +146,7 @@ export const TutorialVideoModal: React.FC = () => {
 
                 <iframe
                   src={`/tutorial-walkthrough.html?${tourParams}`}
-                  title="GenEd Walkthrough Tour"
+                  title="Zoovi Walkthrough Tour"
                   className="block w-full h-full border-0"
                   onLoad={() => setIframeReady(true)}
                 />

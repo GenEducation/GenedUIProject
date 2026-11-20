@@ -39,7 +39,7 @@ export function UnlinkConfirmationModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-[100] bg-[#122D30]/45 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] bg-[#1D6315]/45 backdrop-blur-sm"
           />
 
           <div className="pointer-events-none fixed inset-0 z-[101] flex items-center justify-center p-4">
@@ -51,7 +51,7 @@ export function UnlinkConfirmationModal({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ type: "spring", stiffness: 420, damping: 32 }}
-              className="pointer-events-auto relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/80 bg-[#F5FAF9] p-6 shadow-[0_40px_90px_-30px_rgba(18,45,48,0.55)] sm:p-7"
+              className="pointer-events-auto relative w-full max-w-[420px] overflow-hidden rounded-[28px] border border-white/80 bg-[#F8F9EF] p-6 shadow-[0_40px_90px_-30px_rgba(29,99,21,0.55)] sm:p-7"
             >
               {/* Button sets its own position, so the wrapper places it */}
               <div className="absolute right-4 top-4">
@@ -64,10 +64,10 @@ export function UnlinkConfirmationModal({
                 <UserMinus size={26} strokeWidth={2.3} />
               </span>
 
-              <h3 id={titleId} className="mt-5 text-[22px] font-extrabold leading-tight tracking-[-0.01em] text-[#122D30]">
+              <h3 id={titleId} className="mt-5 text-[22px] font-extrabold leading-tight tracking-[-0.01em] text-[#1D6315]">
                 Remove <span>{studentName}</span>?
               </h3>
-              <p className="mt-2 text-[14px] leading-relaxed text-[#5E7477]">
+              <p className="mt-2 text-[14px] leading-relaxed text-[#5A6E52]">
                 You&apos;ll stop seeing their progress, reports and chats straight away. To reconnect later, they&apos;ll need to send you a new invite.
               </p>
 

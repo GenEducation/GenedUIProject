@@ -128,9 +128,9 @@ describe("GuardianInvitePopup — after onboarding", () => {
   it("tells a student whose verified parent email has no account yet how they connect", async () => {
     status(NO_ACCOUNT);
     render(<GuardianInvitePopup />);
-    const dialog = await screen.findByRole("dialog", { name: "Invite your parent to GenEd" });
-    expect(dialog).toHaveTextContent("There's no GenEd parent account for mum@example.com yet");
-    expect(dialog).toHaveTextContent("You can keep using GenEd right now");
+    const dialog = await screen.findByRole("dialog", { name: "Invite your parent to Zoovi" });
+    expect(dialog).toHaveTextContent("There's no Zoovi parent account for mum@example.com yet");
+    expect(dialog).toHaveTextContent("You can keep using Zoovi right now");
     expect(dialog).toHaveTextContent("They create a parent account with mum@example.com");
     expect(dialog).toHaveTextContent("your accounts connect automatically");
     // No raw URL in the popup: a button opens the parent sign-up form.

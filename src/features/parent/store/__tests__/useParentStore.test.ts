@@ -1,3 +1,4 @@
+import { useLoaderStore } from "@/stores/useLoaderStore";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 import { autoResetStore } from "@/test/helpers/resetStores";
@@ -199,17 +200,23 @@ describe("useParentStore — view setters", () => {
 });
 
 describe("useParentStore.logoutParent", () => {
-  it("clears auth localStorage + state and redirects home", () => {
+  it("clears auth localStorage + state and redirects home behind the loader", () => {
     const loc = installLocationStub();
     localStorage.setItem("gened_auth_token", "x");
     useParentStore.setState({ linkedStudents: [linked("s1", "APPROVED")], selectedStudentId: "s1" });
 
+    vi.useFakeTimers();
     useParentStore.getState().logoutParent();
 
     expect(localStorage.getItem("gened_auth_token")).toBeNull();
     expect(useParentStore.getState().parentProfile).toBeNull();
     expect(useParentStore.getState().linkedStudents).toEqual([]);
     expect(useParentStore.getState().selectedStudentId).toBeNull();
+    // The study-deck loader plays first; the page leaves a beat later.
+    expect(useLoaderStore.getState().isVisible).toBe(true);
+    expect(loc.href).not.toBe("/");
+    vi.advanceTimersByTime(500);
+    vi.useRealTimers();
     expect(loc.href).toBe("/");
   });
 });

@@ -19,15 +19,106 @@ const EN = {
   hint: "Hint",
   calculator: "Calculator",
   typeInChat: "Type your answer to this one in the chat.",
+  chooseAll: "Choose all that apply.",
+  yourOrder: "Your order, first to last",
+  moveUp: "Move {item} up",
+  moveDown: "Move {item} down",
+  atPosition: "{item}: place {n} of {m}",
+  matchItem: "Match {item}",
+  chooseMatch: "Choose…",
+  placeOnLine: "Place the point on the line.",
+  yourPoint: "Your point: {n}",
+  notPlaced: "Not placed yet",
+  smaller: "Smaller",
+  larger: "Larger",
+  orTypeNumber: "Or type the number",
+  tilesBank: "Tiles",
+  groupFor: "Group for {item}",
+  blankN: "Blank {n}",
+  blankEmpty: "empty",
+  wordBank: "Word bank",
+  fillBlank: "Put {item} in blank {n}",
+  spokenHelp: "Press Start, say your answer, then press Done. Your voice is listened to, not kept.",
+  spokenStart: "Start answering",
+  spokenAgain: "Answer again",
+  spokenDone: "Done",
+  spokenStarting: "Getting ready…",
+  spokenRecording: "Listening… press Done when you have finished.",
+  spokenChecking: "Checking your answer…",
+  spokenHeard: "I heard: {text}",
+  spokenNoMic: "This browser can't use the microphone, so this question can't be answered here.",
+  spoken_say_it_again: "I couldn't hear that clearly. Please say it again.",
+  spoken_make_it_shorter: "That was a long one. Try a shorter answer.",
+  spoken_busy: "Lots of answers are being checked. Try again in a moment.",
+  spoken_mic_denied: "The microphone is turned off for this page.",
+  spoken_no_device: "I can't find a microphone.",
+  spoken_mic_busy: "Another app is using the microphone. Close it and try again.",
+  spoken_connection_lost: "The connection dropped. Nothing was lost: try again.",
+  spoken_service: "Listening stopped. Please try again.",
+  spoken_try_again_in_a_moment: "Something went wrong on our side. Try again in a moment.",
+  writtenAnswer: "Your answer",
+  writtenHelp: "Write your answer, then press Ctrl+Enter or the button to send it.",
+  writtenCount: "{n} of {m} characters",
+  writtenSend: "Send answer",
+  writtenChecking: "Checking your answer…",
+  writtenRetryNow: "Try again",
+  writtenFailed: "Your answer couldn't be sent. Nothing was lost: try again.",
+  writtenBusy: "Lots of answers are being checked. Try again in a moment.",
+  writtenProbeLabel: "Your reply to the question above",
+  writtenShown: "You showed: {text}",
+  writtenNext: "To go further: {text}",
+  writtenNotRated: "This one couldn't be rated this time. It wasn't counted against you: you can answer again.",
+  write_a_little_more: "Write a little more, then send it again.",
+  make_it_shorter: "Make it a little shorter, then send it again.",
+  use_your_own_words: "Say it in your own words.",
+  use_the_task_language: "Write it in the language of the question.",
+  try_again_in_a_moment: "Something went wrong on our side. Try again in a moment.",
+  write_or_say_something: "Write your answer first.",
+  clearBlank: "Clear blank {n}",
+  tilesAnswer: "Your expression",
+  tilesEmpty: "Tap tiles to build your answer.",
+  addTile: "Add {item}",
+  removeTile: "Remove {item}",
+  undoTile: "Undo",
+  clearTiles: "Clear",
   gettingReady: "Your tutor is still getting this question ready. Try your answer again in a moment.",
+  chooseOne: "Choose one answer.",
+  chooseAtLeastOne: "Choose at least one answer.",
+  chosenCount: "{n} chosen",
+  matchedProgress: "{n} of {m} matched",
+  sortedProgress: "{n} of {m} sorted",
+  filledProgress: "{n} of {m} blanks filled",
+  orderHint: "Put them in order, then check.",
+  placeFirst: "Place your point first.",
+  tilesFirst: "Add tiles to build your answer.",
+  typeFirst: "Type your answer first.",
+  writtenNeedMore: "Write at least {n} more characters.",
+  tryChange: "Not quite yet. Change your answer and check it again.",
+  matchPick: "Tap an item",
+  matchWith: "Now tap the match for {item}",
+  allMatched: "All matched. Tap an item to change it.",
+  notMatched: "not matched yet",
+  matchedWith: "{item}, matched with {other}",
+  pairMade: "{item} matched with {other}",
+  pairCleared: "{item} is not matched now",
+  toSort: "To sort",
+  allSorted: "All sorted. Tap one to move it.",
+  putHere: "Put here",
+  putIn: "Put {item} in {group}",
+  putDone: "{item} is in {group}",
+  entryIn: "{item}, in {group}",
+  boxEmpty: "Nothing here yet",
+  dropHere: "Drop it here",
+  putBack: "{item} is back in the tray",
+  outOfRange: "Pick a number from {min} to {max}.",
+  notANumber: "That isn't a number yet.",
+  spokenTime: "Recording for {n} seconds",
   correct: "That's right!",
   notQuite: "Not quite. Your tutor will help.",
   unreadable: "Your tutor couldn't read that answer. Try writing it another way.",
   lookingAtIt: "Your tutor will look at this one.",
   moveOn: "Got it? Move on when you're ready.",
   nextStep: "Next step",
-  talkItThrough: "Talk it through with your tutor to unlock the next step.",
-  repliesCount: "Replies that count: {n} of {m}",
   roundTricky: "That round was tricky. What next?",
   tryNew: "Try a new question",
   keepGoing: "Keep going",
@@ -52,16 +143,37 @@ const EN = {
   sessionTime: "Session time",
   chapterTime: "Chapter time",
   stepsDone: "Steps done",
+  lessonLanguage: "Lesson language",
   /** The plan's own steps are all done and the learner is on a revisit step (`active_node.reason` "revisit_…"). */
   revisiting: "Revisiting skills",
   /** The learner chose to go over a section again (`active_node.reason` "revisit_review"). */
   reviewingSection: "Revisiting a section",
+  feedbackLocked: "Listen to your tutor's feedback first.",
+  chapterPosition: "Part {n} of {total} of the chapter",
+  toRevisit: "{n} to come back to",
+  questionLocked: "Listen to your tutor first. Then this question opens again.",
+  questionRetry: "One more try at this one.",
+  questionSetAside: "We'll come back to this one.",
+  questionReturns: "This one is back. Have another go.",
+  questionGuided: "Let's work it through together. Enter the answer when you're ready, if you like.",
+  ideasProgress: "{n} of {total} ideas",
+  owedIdeas: "{n} we'll come back to",
+  activityDone: "Activity done ✓",
+  activityTryAgain: "Try again",
+  comeBackLater: "You've finished this chapter, except for a few ideas. Come back later and we'll try them again.",
+  fromYourBook: "From your book",
+  bookAudioFailed: "The book audio couldn't be loaded. You can read it here.",
+  listenToBook: "Listen to this part of your book",
 } as const;
 
 export type UiKey = keyof typeof EN;
 type Table = Partial<Record<UiKey, string>>;
 
 const HI: Table = {
+  feedbackLocked: "पहले अपने शिक्षक की बात सुनें।",
+  chapterPosition: "अध्याय का भाग {n} / {total}",
+  toRevisit: "{n} बाद में दोबारा",
+  fromYourBook: "आपकी किताब से",
   checkpoint: "चेकपॉइंट",
   quickCheck: "झटपट जाँच",
   yourAnswer: "आपका उत्तर",
@@ -76,8 +188,6 @@ const HI: Table = {
   lookingAtIt: "आपके ट्यूटर इसे देखेंगे।",
   moveOn: "समझ आ गया? तैयार हों तो आगे बढ़ें।",
   nextStep: "अगला चरण",
-  talkItThrough: "अगला चरण खोलने के लिए अपने ट्यूटर से बात करें।",
-  repliesCount: "गिने जाने वाले जवाब: {m} में से {n}",
   roundTricky: "यह दौर थोड़ा कठिन था। अब क्या करें?",
   tryNew: "नया सवाल आज़माएँ",
   keepGoing: "आगे बढ़ते रहें",
@@ -102,6 +212,7 @@ const HI: Table = {
   sessionTime: "सत्र का समय",
   chapterTime: "अध्याय का समय",
   stepsDone: "पूरे हुए चरण",
+  lessonLanguage: "पाठ की भाषा",
   revisiting: "कौशल दोहरा रहे हैं",
 };
 
@@ -120,8 +231,6 @@ const HI_LATN: Table = {
   lookingAtIt: "Aapke tutor ise dekhenge.",
   moveOn: "Samajh aa gaya? Taiyaar hon to aage badhein.",
   nextStep: "Agla step",
-  talkItThrough: "Agla step kholne ke liye apne tutor se baat karein.",
-  repliesCount: "Ginne wale jawab: {m} mein se {n}",
   roundTricky: "Yeh round thoda mushkil tha. Ab kya karein?",
   tryNew: "Naya sawaal try karein",
   keepGoing: "Aage badhte rahein",
@@ -146,6 +255,7 @@ const HI_LATN: Table = {
   sessionTime: "Session ka samay",
   chapterTime: "Chapter ka samay",
   stepsDone: "Poore hue steps",
+  lessonLanguage: "Lesson ki bhasha",
   revisiting: "Skills dohra rahe hain",
 };
 
@@ -164,8 +274,6 @@ const MR: Table = {
   lookingAtIt: "तुमचे ट्यूटर हे पाहतील.",
   moveOn: "समजले का? तयार असाल तर पुढे जा.",
   nextStep: "पुढचा टप्पा",
-  talkItThrough: "पुढचा टप्पा उघडण्यासाठी तुमच्या ट्यूटरशी बोला.",
-  repliesCount: "गणले जाणारे उत्तर: {m} पैकी {n}",
   roundTricky: "ही फेरी थोडी अवघड होती. आता काय करायचे?",
   tryNew: "नवा प्रश्न करून पहा",
   keepGoing: "पुढे चालू ठेवा",
@@ -190,6 +298,7 @@ const MR: Table = {
   sessionTime: "सत्राची वेळ",
   chapterTime: "प्रकरणाची वेळ",
   stepsDone: "पूर्ण झालेले टप्पे",
+  lessonLanguage: "पाठाची भाषा",
   revisiting: "कौशल्यांची उजळणी",
 };
 
@@ -208,8 +317,6 @@ const PA: Table = {
   lookingAtIt: "ਤੁਹਾਡੇ ਟਿਊਟਰ ਇਸ ਨੂੰ ਵੇਖਣਗੇ।",
   moveOn: "ਸਮਝ ਆ ਗਿਆ? ਤਿਆਰ ਹੋਵੋ ਤਾਂ ਅੱਗੇ ਵਧੋ।",
   nextStep: "ਅਗਲਾ ਕਦਮ",
-  talkItThrough: "ਅਗਲਾ ਕਦਮ ਖੋਲ੍ਹਣ ਲਈ ਆਪਣੇ ਟਿਊਟਰ ਨਾਲ ਗੱਲ ਕਰੋ।",
-  repliesCount: "ਗਿਣੇ ਜਾਣ ਵਾਲੇ ਜਵਾਬ: {m} ਵਿੱਚੋਂ {n}",
   roundTricky: "ਇਹ ਦੌਰ ਕੁਝ ਔਖਾ ਸੀ। ਹੁਣ ਕੀ ਕਰੀਏ?",
   tryNew: "ਨਵਾਂ ਸਵਾਲ ਅਜ਼ਮਾਓ",
   keepGoing: "ਅੱਗੇ ਵਧਦੇ ਰਹੋ",
@@ -234,6 +341,7 @@ const PA: Table = {
   sessionTime: "ਸੈਸ਼ਨ ਦਾ ਸਮਾਂ",
   chapterTime: "ਅਧਿਆਇ ਦਾ ਸਮਾਂ",
   stepsDone: "ਪੂਰੇ ਹੋਏ ਕਦਮ",
+  lessonLanguage: "ਪਾਠ ਦੀ ਭਾਸ਼ਾ",
   revisiting: "ਹੁਨਰ ਦੁਹਰਾ ਰਹੇ ਹਾਂ",
 };
 
@@ -252,8 +360,6 @@ const TA: Table = {
   lookingAtIt: "உங்கள் ஆசிரியர் இதைப் பார்ப்பார்.",
   moveOn: "புரிந்ததா? தயாரானதும் அடுத்ததற்குச் செல்லுங்கள்.",
   nextStep: "அடுத்த படி",
-  talkItThrough: "அடுத்த படியைத் திறக்க உங்கள் ஆசிரியருடன் பேசுங்கள்.",
-  repliesCount: "கணக்கிடப்படும் பதில்கள்: {m} இல் {n}",
   roundTricky: "இந்தச் சுற்று கொஞ்சம் கடினமாக இருந்தது. அடுத்து என்ன?",
   tryNew: "புதிய கேள்வியை முயலுங்கள்",
   keepGoing: "தொடருங்கள்",
@@ -278,6 +384,7 @@ const TA: Table = {
   sessionTime: "அமர்வு நேரம்",
   chapterTime: "அத்தியாய நேரம்",
   stepsDone: "முடிந்த படிகள்",
+  lessonLanguage: "பாட மொழி",
   revisiting: "திறன்களை மீண்டும் பார்க்கிறோம்",
 };
 
@@ -296,8 +403,6 @@ const TE: Table = {
   lookingAtIt: "మీ ట్యూటర్ దీన్ని చూస్తారు.",
   moveOn: "అర్థమైందా? సిద్ధంగా ఉంటే ముందుకు వెళ్ళండి.",
   nextStep: "తదుపరి దశ",
-  talkItThrough: "తదుపరి దశను తెరవడానికి మీ ట్యూటర్‌తో మాట్లాడండి.",
-  repliesCount: "లెక్కించే సమాధానాలు: {m} లో {n}",
   roundTricky: "ఈ రౌండ్ కొంచెం కష్టంగా ఉంది. ఇప్పుడు ఏం చేద్దాం?",
   tryNew: "కొత్త ప్రశ్న ప్రయత్నించండి",
   keepGoing: "కొనసాగండి",
@@ -322,6 +427,7 @@ const TE: Table = {
   sessionTime: "సెషన్ సమయం",
   chapterTime: "అధ్యాయం సమయం",
   stepsDone: "పూర్తైన దశలు",
+  lessonLanguage: "పాఠం భాష",
   revisiting: "నైపుణ్యాలను మళ్లీ చూస్తున్నాం",
 };
 
@@ -340,8 +446,6 @@ const KN: Table = {
   lookingAtIt: "ನಿಮ್ಮ ಟ್ಯೂಟರ್ ಇದನ್ನು ನೋಡುತ್ತಾರೆ.",
   moveOn: "ಅರ್ಥವಾಯಿತೇ? ಸಿದ್ಧರಾದಾಗ ಮುಂದೆ ಹೋಗಿ.",
   nextStep: "ಮುಂದಿನ ಹಂತ",
-  talkItThrough: "ಮುಂದಿನ ಹಂತ ತೆರೆಯಲು ನಿಮ್ಮ ಟ್ಯೂಟರ್ ಜೊತೆ ಮಾತನಾಡಿ.",
-  repliesCount: "ಲೆಕ್ಕಕ್ಕೆ ಬರುವ ಉತ್ತರಗಳು: {m} ರಲ್ಲಿ {n}",
   roundTricky: "ಈ ಸುತ್ತು ಸ್ವಲ್ಪ ಕಷ್ಟವಾಗಿತ್ತು. ಈಗ ಏನು ಮಾಡೋಣ?",
   tryNew: "ಹೊಸ ಪ್ರಶ್ನೆ ಪ್ರಯತ್ನಿಸಿ",
   keepGoing: "ಮುಂದುವರಿಸಿ",
@@ -366,6 +470,7 @@ const KN: Table = {
   sessionTime: "ಅಧಿವೇಶನದ ಸಮಯ",
   chapterTime: "ಅಧ್ಯಾಯದ ಸಮಯ",
   stepsDone: "ಮುಗಿದ ಹಂತಗಳು",
+  lessonLanguage: "ಪಾಠದ ಭಾಷೆ",
   revisiting: "ಕೌಶಲಗಳನ್ನು ಮತ್ತೆ ನೋಡುತ್ತಿದ್ದೇವೆ",
 };
 
@@ -379,14 +484,15 @@ export function uiText(language: string | null | undefined, key: UiKey, vars: Re
 }
 
 /**
- * The session language the learner has chosen (the voice picker's choice), else their profile preference, else none. The same
- * value is sent on every typed turn (backend ADR 0037), so the tutor's words and the card's words agree.
+ * The lesson's one session language: the language picked in the lesson's selector, else this learner's own last choice on this
+ * browser, else their profile preference, else English. The same value is sent on every typed turn (backend ADR 0037) and opens
+ * the voice session, so the tutor's words, its voice and the card's words agree.
  */
-export function useSessionLanguage(): SessionLanguage | null {
+export function useSessionLanguage(): SessionLanguage {
   const chosen = useLessonStore((s) => s.sessionLanguage);
+  const learnerId = useStudentStore((s) => s.studentProfile?.user_id);
   const preferred = useStudentStore((s) => s.studentProfile?.preferred_language);
-  // The picker saves its choice to storage and to the store, so `chosen` changes whenever the stored choice does.
-  return useMemo(() => resolveSessionLanguage(chosen, preferred), [chosen, preferred]);
+  return useMemo(() => resolveSessionLanguage(chosen, learnerId, preferred), [chosen, learnerId, preferred]);
 }
 
 /** `t(key, vars)`: the lesson screen's words in the session language. */

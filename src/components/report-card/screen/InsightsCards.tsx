@@ -24,7 +24,7 @@ export function KeyInsightsCard() {
   const note = data?.insight ?? null;
   const subtitle = data?.refreshing
     ? <span role="status">Updating…</span>
-    : note ? `By GenEd AI · updated ${relativeDay(note.generated_at).toLowerCase()}` : "A short summary of how things are going";
+    : note ? `By Zoovi AI · updated ${relativeDay(note.generated_at).toLowerCase()}` : "A short summary of how things are going";
 
   return (
     <section aria-labelledby="rc-insights-title" className={`${CARD} p-5`}>

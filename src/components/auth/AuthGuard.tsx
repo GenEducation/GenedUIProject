@@ -7,6 +7,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useLoaderStore } from "@/stores/useLoaderStore";
+import { waitForPageVisuals } from "@/components/shared/loaders/waitForPageVisuals";
 import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
 import { adminReferenceBase } from "@/features/admin/adminApiRouting";
 import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
@@ -134,17 +135,26 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
       if (requiredRole === "parent") return;
 
       // This route is now authorized and rendering — it's the destination of
-      // any post-auth handoff, so it owns tearing the overlay down. A short
-      // delay lets the first paint land before the loader fades out.
-      const timeout = setTimeout(() => {
-        const loader = useLoaderStore.getState();
+      // any post-auth handoff, so it owns telling the overlay it may go.
+      const loader = useLoaderStore.getState();
+      if (loader.variant === "parent") {
         // The logo-toss loader (partners) leaves on its own fade once told the
-        // destination is ready; the journey loader is simply stopped.
-        if (loader.variant === "parent") loader.finishLoading();
-        else loader.stopLoading();
-      }, 500);
+        // destination is ready. A short delay lets the first paint land.
+        const timeout = setTimeout(() => useLoaderStore.getState().finishLoading(), 500);
+        return () => clearTimeout(timeout);
+      }
 
-      return () => clearTimeout(timeout);
+      // The study deck keeps playing until this page's on-screen images (the
+      // dashboard's 3D renders) have loaded, then finishes its own cycle.
+      if (!loader.isVisible) return;
+      let cancelled = false;
+      void waitForPageVisuals().then(() => {
+        const current = useLoaderStore.getState();
+        if (!cancelled && current.isVisible && current.variant !== "parent") current.finishLoading();
+      });
+      return () => {
+        cancelled = true;
+      };
     } catch {
       // Corrupt localStorage — clear and re-login
       Sentry.setUser(null);

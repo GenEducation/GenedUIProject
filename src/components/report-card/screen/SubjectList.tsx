@@ -64,12 +64,12 @@ function SubjectRow({
       onClick={() => onSelect(s.subject)}
       aria-pressed={active}
       aria-label={`${s.subject}: ${s.bandLabel}, ${s.measured ? `${s.mastery}% mastery` : "mastery not measured yet"}, ${s.coverage}% coverage`}
-      className={`group relative block w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-26px_rgba(18,45,48,0.5)] ${FOCUS_RING}`}
+      className={`group relative block w-full overflow-hidden rounded-2xl border text-left transition-[transform,box-shadow,border-color] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_18px_36px_-26px_rgba(29,99,21,0.5)] ${FOCUS_RING}`}
       style={{
         // A neutral card: the band colour lives only on the mastery marks (glyph, chip, bar, ring). Selection is the brand's.
         background: active ? "var(--rs-surface-2)" : "#fff",
         borderColor: active ? "var(--rs-brand)" : "var(--rs-line)",
-        boxShadow: active ? "0 0 0 1px var(--rs-brand), 0 18px 36px -26px rgba(18,45,48,0.5)" : undefined,
+        boxShadow: active ? "0 0 0 1px var(--rs-brand), 0 18px 36px -26px rgba(29,99,21,0.5)" : undefined,
       }}
     >
       <div className="flex items-start gap-3.5 p-4 @[560px]/list:gap-4">

@@ -11,7 +11,9 @@ import { TotalEnrollmentsStat } from "./TotalEnrollmentsStat";
 
 export function EnrollmentAdmin() {
   const selectedStudent = usePartnerStore((state) => state.selectedStudent);
-  const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
+  const setSelectedStudent = usePartnerStore(
+    (state) => state.setSelectedStudent,
+  );
   const approveRequest = usePartnerStore((state) => state.approveRequest);
   const rejectRequest = usePartnerStore((state) => state.rejectRequest);
   const fetchStudents = usePartnerStore((state) => state.fetchStudents);
@@ -21,7 +23,9 @@ export function EnrollmentAdmin() {
   useEffect(() => {
     let cancelled = false;
     if (!cancelled) fetchStudents();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [fetchStudents]);
 
   useEffect(() => {
@@ -29,7 +33,9 @@ export function EnrollmentAdmin() {
     if (unreadCount > 0 && !cancelled) {
       fetchStudents();
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [unreadCount, fetchStudents]);
 
   return (

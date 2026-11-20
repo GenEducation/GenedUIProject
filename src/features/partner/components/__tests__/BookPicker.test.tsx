@@ -1,23 +1,53 @@
 import { describe, it, expect, vi } from "vitest";
 import { useState } from "react";
-import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import type { PartnerBook } from "@/features/partner/types/sources";
 import { BookPicker } from "../BookPicker";
 
 /** SYNTHETIC books, as `GET /v1/sources/books` returns them (newest first). */
 const book = (title: string, edition: string, chapters = 1): PartnerBook => ({
-  book_title: title, edition_label: edition, board: "cbse", publisher: "synthetic_press", subject: "Mathematics",
-  grade: 6, chapters, last_used_at: "2026-01-01T00:00:00Z",
+  book_title: title,
+  edition_label: edition,
+  board: "cbse",
+  publisher: "synthetic_press",
+  subject: "Mathematics",
+  grade: 6,
+  chapters,
+  last_used_at: "2026-01-01T00:00:00Z",
 });
-const BOOKS = [book("SYNTHETIC Algebra", "SYNTHETIC 2025", 3), book("SYNTHETIC Geometry", "SYNTHETIC 2024")];
+const BOOKS = [
+  book("SYNTHETIC Algebra", "SYNTHETIC 2025", 3),
+  book("SYNTHETIC Geometry", "SYNTHETIC 2024"),
+];
 
-function Harness({ books = BOOKS, onPick = vi.fn() }: { books?: PartnerBook[]; onPick?: (b: PartnerBook) => void }) {
+function Harness({
+  books = BOOKS,
+  onPick = vi.fn(),
+}: {
+  books?: PartnerBook[];
+  onPick?: (b: PartnerBook) => void;
+}) {
   const [value, setValue] = useState("");
   return (
     <>
       <label htmlFor="b">Book Title</label>
-      <BookPicker id="b" value={value} onChange={setValue} books={books} className=""
-        onPick={(b) => { setValue(b.book_title); onPick(b); }} />
+      <BookPicker
+        id="b"
+        value={value}
+        onChange={setValue}
+        books={books}
+        className=""
+        onPick={(b) => {
+          setValue(b.book_title);
+          onPick(b);
+        }}
+      />
     </>
   );
 }
@@ -33,7 +63,9 @@ describe("BookPicker", () => {
       "SYNTHETIC AlgebraSYNTHETIC 2025Grade 6·3 chapters",
       "SYNTHETIC GeometrySYNTHETIC 2024Grade 6·1 chapter",
     ]);
-    expect(screen.getByText("Pick one of your 2 books, or type a new title.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Pick one of your 2 books, or type a new title."),
+    ).toBeInTheDocument();
   });
 
   it("ends the list with filing a typed new name as a new book, and says so under the box", async () => {
@@ -41,7 +73,9 @@ describe("BookPicker", () => {
     render(<Harness onPick={onPick} />);
     fireEvent.change(box(), { target: { value: "SYNTHETIC Alg 2" } });
     const options = within(screen.getByRole("listbox")).getAllByRole("option");
-    expect(options.map((o) => o.textContent)).toEqual(["File as a new book: “SYNTHETIC Alg 2”"]);
+    expect(options.map((o) => o.textContent)).toEqual([
+      "File as a new book: “SYNTHETIC Alg 2”",
+    ]);
     fireEvent.click(options[0]);
     expect(onPick).not.toHaveBeenCalled();
     expect(box()).toHaveValue("SYNTHETIC Alg 2");
@@ -52,10 +86,18 @@ describe("BookPicker", () => {
   it("says a picked book adds to that book, and reopens on the chevron", async () => {
     render(<Harness />);
     fireEvent.focus(box());
-    fireEvent.click(within(screen.getByRole("listbox")).getAllByRole("option")[0]);
-    expect(screen.getByText("Adds to a book you filed before · SYNTHETIC 2025 · 3 chapters")).toBeInTheDocument();
+    fireEvent.click(
+      within(screen.getByRole("listbox")).getAllByRole("option")[0],
+    );
+    expect(
+      screen.getByText(
+        "Adds to a book you filed before · SYNTHETIC 2025 · 3 chapters",
+      ),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Show your books" }));
-    const chosen = within(screen.getByRole("listbox")).getByRole("option", { selected: true });
+    const chosen = within(screen.getByRole("listbox")).getByRole("option", {
+      selected: true,
+    });
     expect(chosen).toHaveTextContent("SYNTHETIC Algebra");
   });
 
@@ -75,7 +117,11 @@ describe("BookPicker", () => {
   });
 
   it("matches by words, so a near-identical name shows the books it would duplicate", async () => {
-    const books = [book("SYNTHETIC Prakash-2", "SYNTHETIC 2026"), book("SYNTHETIC Prakash Part 2", "SYNTHETIC 2024"), book("SYNTHETIC Prakash Part 1", "SYNTHETIC 2024")];
+    const books = [
+      book("SYNTHETIC Prakash-2", "SYNTHETIC 2026"),
+      book("SYNTHETIC Prakash Part 2", "SYNTHETIC 2024"),
+      book("SYNTHETIC Prakash Part 1", "SYNTHETIC 2024"),
+    ];
     render(<Harness books={books} />);
     fireEvent.change(box(), { target: { value: "synthetic prakash 2" } });
     const options = within(screen.getByRole("listbox")).getAllByRole("option");

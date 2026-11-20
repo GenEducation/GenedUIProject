@@ -100,7 +100,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
             value={localTranscript}
             onChange={(e) => setLocalTranscript(e.target.value)}
             placeholder="Type your answer here..."
-            className="flex-1 px-4 py-3 bg-[#F6F7F2] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
+            className="flex-1 px-4 py-3 bg-[#F7F4EA] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
           />
           <button
             onClick={handleSubmit}
@@ -138,7 +138,7 @@ export function ActivityRenderer({ action, isCompleted = false }: ActivityRender
             value={localTranscript}
             onChange={(e) => setLocalTranscript(e.target.value)}
             placeholder="Spell the words..."
-            className="w-full px-4 py-3 bg-[#F6F7F2] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
+            className="w-full px-4 py-3 bg-[#F7F4EA] rounded-xl border border-[var(--primary-ink)]/10 text-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--primary-ring)]"
           />
           <button
             onClick={handleSubmit}

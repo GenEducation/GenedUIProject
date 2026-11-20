@@ -128,7 +128,7 @@ export function GuardianConfirmation({
     <>
       <h2 className="text-[18px] font-bold text-[var(--pp-ink)]">Are you {name}&apos;s parent or guardian?</h2>
       <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--pp-ink-soft)]">
-        {name} gave your email address as their parent&apos;s or guardian&apos;s on GenEd. By confirming, you state that
+        {name} gave your email address as their parent&apos;s or guardian&apos;s on Zoovi. By confirming, you state that
         you are {name}&apos;s parent or legal guardian, and your accounts connect: you&apos;ll see their progress, reports
         and learning conversations here. You can remove the connection in Settings at any time.
       </p>

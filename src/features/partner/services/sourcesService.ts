@@ -2,6 +2,9 @@ import { authFetch } from "@/utils/authFetch";
 import type {
   AuthoredQuestions,
   AuthoringResponse,
+  BankPackage,
+  BankQuestionContent,
+  RejectionReason,
   ChapterCorrection,
   ExcludedPagesDecision,
   LearningOutcome,
@@ -15,6 +18,7 @@ import type {
   SourceListParams,
   SourceListResponse,
   SourceView,
+  ActivityReview,
 } from "../types/sources";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
@@ -43,6 +47,29 @@ const sourcePath = (id: string) => `${SOURCES_BASE}/${encodeURIComponent(id)}`;
  * wrong with an upload; a 409 says why a start/cancel/delete doesn't fit).
  */
 export const sourcesService = {
+  activityReviews: async (id: string): Promise<ActivityReview[]> =>
+    (
+      await authFetch(
+        `${API_BASE_URL}/v1/activity-reviews/${encodeURIComponent(id)}`,
+      )
+    ).json(),
+
+  overrideActivityVerdict: async (
+    sourceId: string,
+    evaluationId: string,
+    objective: number,
+    verdict: "met" | "not_met" | "not_judged",
+    reason: string,
+  ): Promise<void> => {
+    await authFetch(
+      `${API_BASE_URL}/v1/activity-reviews/${encodeURIComponent(sourceId)}/${encodeURIComponent(evaluationId)}/override`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objective, verdict, reason }),
+      },
+    );
+  },
   list: async (params?: SourceListParams): Promise<SourceListResponse> => {
     const response = await authFetch(`${SOURCES_BASE}${toQuery(params)}`);
     return response.json();
@@ -67,25 +94,41 @@ export const sourcesService = {
       form.append(key, String(input[key]));
     }
     input.lo_codes.forEach((code) => form.append("lo_codes", code));
-    (input.full_coverage_codes ?? []).forEach((code) => form.append("full_coverage_codes", code));
-    const response = await authFetch(SOURCES_BASE, { method: "POST", body: form });
+    (input.full_coverage_codes ?? []).forEach((code) =>
+      form.append("full_coverage_codes", code),
+    );
+    const response = await authFetch(SOURCES_BASE, {
+      method: "POST",
+      body: form,
+    });
     return response.json();
   },
 
   /** Queue a run; the worker picks it up. */
   start: async (id: string): Promise<SourceView> => {
-    const response = await authFetch(`${sourcePath(id)}/ingestions`, { method: "POST" });
+    const response = await authFetch(`${sourcePath(id)}/ingestions`, {
+      method: "POST",
+    });
     return response.json();
   },
 
   /** Correct the chapter's book, edition, number or title; the chapter can then run again. */
-  correctChapter: async (id: string, place: ChapterCorrection): Promise<SourceView> => {
-    const response = await authFetch(`${sourcePath(id)}/chapter`, { method: "PUT", body: JSON.stringify(place) });
+  correctChapter: async (
+    id: string,
+    place: ChapterCorrection,
+  ): Promise<SourceView> => {
+    const response = await authFetch(`${sourcePath(id)}/chapter`, {
+      method: "PUT",
+      body: JSON.stringify(place),
+    });
     return response.json();
   },
 
   /** Set the chapter's learning outcomes (any non-empty set of its board, subject and grade); it can then run again. */
-  correctOutcomes: async (id: string, loCodes: string[]): Promise<SourceView> => {
+  correctOutcomes: async (
+    id: string,
+    loCodes: string[],
+  ): Promise<SourceView> => {
     const response = await authFetch(`${sourcePath(id)}/outcomes`, {
       method: "PUT",
       body: JSON.stringify({ lo_codes: loCodes }),
@@ -95,13 +138,18 @@ export const sourcesService = {
 
   /** Take a queued run off the queue (a running one can't be stopped). */
   cancel: async (id: string): Promise<SourceView> => {
-    const response = await authFetch(`${sourcePath(id)}/ingestions`, { method: "DELETE" });
+    const response = await authFetch(`${sourcePath(id)}/ingestions`, {
+      method: "DELETE",
+    });
     return response.json();
   },
 
   /** Confirm the pages left out at upload as the solutions, or include them (the chapter runs again). 409 when
    * nothing is waiting for an answer or the chapter is still running. */
-  decideExcludedPages: async (id: string, decision: ExcludedPagesDecision): Promise<SourceView> => {
+  decideExcludedPages: async (
+    id: string,
+    decision: ExcludedPagesDecision,
+  ): Promise<SourceView> => {
     const response = await authFetch(`${sourcePath(id)}/excluded-pages`, {
       method: "PUT",
       body: JSON.stringify({ decision }),
@@ -120,7 +168,10 @@ export const sourcesService = {
   },
 
   /** Record answers (merged with any already recorded). 422 carries a plain-language reason. */
-  answerQuestions: async (id: string, decisions: Record<string, RecordedAnswer>): Promise<QuestionsResponse> => {
+  answerQuestions: async (
+    id: string,
+    decisions: Record<string, RecordedAnswer>,
+  ): Promise<QuestionsResponse> => {
     const response = await authFetch(`${sourcePath(id)}/reconciliation`, {
       method: "PUT",
       body: JSON.stringify({ decisions }),
@@ -141,7 +192,10 @@ export const sourcesService = {
   },
 
   /** Record decisions on the newest release; each is recorded or refused on its own (a stale hash is refused). */
-  decideRelease: async (id: string, decisions: ReleaseDecision[]): Promise<ReleaseDecisionResult[]> => {
+  decideRelease: async (
+    id: string,
+    decisions: ReleaseDecision[],
+  ): Promise<ReleaseDecisionResult[]> => {
     const response = await authFetch(`${sourcePath(id)}/release/decisions`, {
       method: "POST",
       body: JSON.stringify({ decisions }),
@@ -177,16 +231,113 @@ export const sourcesService = {
   },
 
   /** Replace the partner's keys and questions; a 422 says which one doesn't fit. Then run the chapter again. */
-  saveAuthoring: async (id: string, authored: AuthoredQuestions): Promise<AuthoringResponse> => {
-    const response = await authFetch(`${sourcePath(id)}/authoring`, { method: "PUT", body: JSON.stringify(authored) });
+  saveAuthoring: async (
+    id: string,
+    authored: AuthoredQuestions,
+  ): Promise<AuthoringResponse> => {
+    const response = await authFetch(`${sourcePath(id)}/authoring`, {
+      method: "PUT",
+      body: JSON.stringify(authored),
+    });
     return response.json();
   },
 
-  /** Ask for AI-drafted questions; poll `authoring` until `suggestions.state` is `ready` or `failed`. */
-  suggestQuestions: async (id: string): Promise<AuthoringResponse> => {
-    const response = await authFetch(`${sourcePath(id)}/authoring/suggestions`, { method: "POST" });
-    return response.json();
-  },
+  /** The chapter's AI-prepared assessment package (backend ADR 0047). */
+  bank: async (id: string): Promise<BankPackage> =>
+    (await authFetch(`${sourcePath(id)}/bank`)).json(),
+
+  acceptQuestion: async (
+    id: string,
+    questionId: string,
+    version: number,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions/${questionId}/accept`, {
+        method: "POST",
+        body: JSON.stringify({ version }),
+      })
+    ).json(),
+
+  rejectQuestion: async (
+    id: string,
+    questionId: string,
+    version: number,
+    reason: RejectionReason,
+    note?: string,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions/${questionId}/reject`, {
+        method: "POST",
+        body: JSON.stringify({ version, reason, note: note || null }),
+      })
+    ).json(),
+
+  editQuestion: async (
+    id: string,
+    questionId: string,
+    version: number,
+    question: BankQuestionContent,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions/${questionId}`, {
+        method: "PUT",
+        body: JSON.stringify({ version, question }),
+      })
+    ).json(),
+
+  acceptQuestions: async (
+    id: string,
+    items: { question_id: string; version: number }[],
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/accept`, {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      })
+    ).json(),
+
+  /** Keep a concept Zoovi put on hold (ADR 0049); its objectives then need questions like any other. */
+  keepConcept: async (id: string, conceptKey: string): Promise<BankPackage> =>
+    (
+      await authFetch(
+        `${sourcePath(id)}/bank/concepts/${encodeURIComponent(conceptKey)}/keep`,
+        { method: "POST" },
+      )
+    ).json(),
+
+  /** Add the partner's own question or activity to the chapter's bank, for one objective (ADR 0049). */
+  createQuestion: async (
+    id: string,
+    question: BankQuestionContent,
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/questions`, {
+        method: "POST",
+        body: JSON.stringify({ question }),
+      })
+    ).json(),
+
+  /** Ask for more questions for one part of the chapter, with optional short hints (a context or style). */
+  refillPart: async (
+    id: string,
+    sectionKey: string,
+    hints: string[] = [],
+  ): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/refill`, {
+        method: "POST",
+        body: JSON.stringify({ section_key: sectionKey, hints }),
+      })
+    ).json(),
+
+  /** Approve the accepted questions: the chapter runs again with them, and its release is reviewed as before. */
+  approveBank: async (id: string, version: string): Promise<BankPackage> =>
+    (
+      await authFetch(`${sourcePath(id)}/bank/approve`, {
+        method: "POST",
+        body: JSON.stringify({ version }),
+      })
+    ).json(),
 
   /** The uploaded PDF, as a Blob for an object URL (the route needs auth, so no plain link). */
   pdfBlob: async (id: string): Promise<Blob> => {
@@ -194,8 +345,14 @@ export const sourcesService = {
     return response.blob();
   },
 
-  learningOutcomes: async (board: string, subject: string, grade: number): Promise<LearningOutcome[]> => {
-    const response = await authFetch(`${SOURCES_BASE}/learning-outcomes${toQuery({ board, subject, grade })}`);
+  learningOutcomes: async (
+    board: string,
+    subject: string,
+    grade: number,
+  ): Promise<LearningOutcome[]> => {
+    const response = await authFetch(
+      `${SOURCES_BASE}/learning-outcomes${toQuery({ board, subject, grade })}`,
+    );
     return response.json();
   },
 
@@ -204,14 +361,18 @@ export const sourcesService = {
    * `subject` (exact catalogue name) and `grade` narrow it. Never another
    * partner's books: the backend scopes it to the signed-in partner.
    */
-  books: async (params: { subject?: string; grade?: number } = {}): Promise<PartnerBook[]> => {
+  books: async (
+    params: { subject?: string; grade?: number } = {},
+  ): Promise<PartnerBook[]> => {
     const response = await authFetch(`${SOURCES_BASE}/books${toQuery(params)}`);
     return response.json();
   },
 
   /** Strand codes the subject's published components already use. */
   strands: async (subject: string): Promise<string[]> => {
-    const response = await authFetch(`${SOURCES_BASE}/strands${toQuery({ subject })}`);
+    const response = await authFetch(
+      `${SOURCES_BASE}/strands${toQuery({ subject })}`,
+    );
     return response.json();
   },
 };

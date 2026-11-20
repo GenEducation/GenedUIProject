@@ -3,12 +3,12 @@ import { authFetch } from "@/utils/authFetch";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 
 /**
- * A GenEd bot paired to a student with the device code (backend ADR 0043). It stays connected while a student
+ * A Zoovi bot paired to a student with the device code (backend ADR 0043). It stays connected while a student
  * uses it; after 30 days without use, or once removed here, it shows a new pairing code by itself.
  */
 export interface PairedBot {
   id: string;
-  /** "GenEd bot ·8CEA": the last 4 characters of the id the bot reported. */
+  /** "Zoovi bot ·8CEA": the last 4 characters of the id the bot reported. */
   label: string;
   paired_at: string;
   /** When a student last used it: the wake word, a touch on its face, or a voice session. */

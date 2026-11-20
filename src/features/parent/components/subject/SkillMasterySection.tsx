@@ -59,7 +59,7 @@ export function SkillMasterySection({
                   type="button"
                   aria-pressed={active}
                   onClick={() => setFilter(active ? "all" : b.key)}
-                  className={`group relative overflow-hidden rounded-2xl border p-3 text-left transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-green)] sm:p-4 ${active ? "shadow-[0_12px_26px_-18px_rgba(19,41,61,0.45)]" : ""}`}
+                  className={`group relative overflow-hidden rounded-2xl border p-3 text-left transition-[transform,box-shadow] duration-200 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-green)] sm:p-4 ${active ? "shadow-[0_12px_26px_-18px_rgba(29,72,21,0.45)]" : ""}`}
                   style={{
                     background: active ? tone.tint : `linear-gradient(180deg, ${tone.wash[0]}, ${tone.wash[1]})`,
                     borderColor: active ? tone.accent : tone.edge,

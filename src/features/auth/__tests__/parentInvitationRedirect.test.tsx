@@ -115,15 +115,13 @@ describe("a parent's invitation link survives landing → log in / sign up", () 
     return () => vi.unstubAllGlobals();
   });
 
-  it("the landing page's Log in and Get started carry the invitation on", async () => {
+  it("the landing page's Log in carries the invitation on", async () => {
     window.history.pushState({}, "", `/?redirect=${encoded}`);
     render(<HomePage />);
-    await waitFor(() =>
-      expect(screen.getAllByRole("link", { name: "Log in" })[0]).toHaveAttribute("href", `/login?redirect=${encoded}`),
-    );
-    for (const link of screen.getAllByRole("link", { name: /get started/i })) {
-      expect(link).toHaveAttribute("href", `/register?redirect=${encoded}`);
-    }
+    await waitFor(() => {
+      const logins = screen.getAllByRole("link", { name: "Log in" });
+      for (const link of logins) expect(link).toHaveAttribute("href", `/login?redirect=${encoded}`);
+    });
   });
 
   it("the landing page drops a redirect to another site", async () => {

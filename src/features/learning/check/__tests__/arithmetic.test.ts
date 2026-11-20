@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { calculation, evaluateArithmetic } from "../arithmetic";
+import { calculation, evaluateArithmetic, numericAnswerToSend } from "../arithmetic";
 
 describe("arithmetic", () => {
   it("works out a typed sum", () => {
@@ -30,5 +30,20 @@ describe("arithmetic", () => {
     expect(calculation("5 / 0")).toBeNull();
     expect(calculation("x + 2")).toBeNull();
     expect(evaluateArithmetic("alert(1)")).toBeNull();
+  });
+});
+
+describe("numericAnswerToSend", () => {
+  it("sends a plain fraction as typed, never as its rounded decimal", () => {
+    expect(numericAnswerToSend("1/3", calculation("1/3"))).toBe("1/3");
+    expect(numericAnswerToSend(" 2 / 3 ", calculation("2 / 3"))).toBe("2 / 3");
+    expect(numericAnswerToSend("1/12", calculation("1/12"))).toBe("1/12");
+    expect(numericAnswerToSend("-1/4", calculation("-1/4"))).toBe("-1/4");
+  });
+  it("still sends a calculation as its result and a plain number as typed", () => {
+    expect(numericAnswerToSend("540 * 40", calculation("540 * 40"))).toBe("21600");
+    expect(numericAnswerToSend("1/4 + 1/4", calculation("1/4 + 1/4"))).toBe("0.5");
+    expect(numericAnswerToSend("21600", calculation("21600"))).toBe("21600");
+    expect(numericAnswerToSend("3 1/2", calculation("3 1/2"))).toBe("3 1/2");
   });
 });

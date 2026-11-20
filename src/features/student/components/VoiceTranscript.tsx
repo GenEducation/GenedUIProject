@@ -40,7 +40,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto rounded-2xl border border-[#E3E8E2] bg-white/75 backdrop-blur-sm px-3 sm:px-5 py-4 shadow-[0_1px_2px_rgba(18,45,48,0.04),0_10px_30px_-18px_rgba(18,45,48,0.18)]"
+        className="flex-1 overflow-y-auto rounded-2xl border border-[#E7E2D2] bg-white/75 backdrop-blur-sm px-3 sm:px-5 py-4 shadow-[0_1px_2px_rgba(29,99,21,0.04),0_10px_30px_-18px_rgba(29,99,21,0.18)]"
         style={{ scrollbarWidth: "thin" }}
       >
         {messages.length === 0 ? (
@@ -52,7 +52,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
             >
               Listening…
             </p>
-            <p className="text-[12px]" style={{ color: "rgba(18,45,48,0.4)" }}>
+            <p className="text-[12px]" style={{ color: "rgba(29,99,21,0.4)" }}>
               Say hello to get started — your conversation appears here.
             </p>
           </div>
@@ -87,7 +87,7 @@ export function VoiceTranscript({ messages, agentName }: VoiceTranscriptProps) {
                   </span>
                   <div className="flex-1 flex flex-col gap-3">
                     {showPlainText && (
-                      <div className="text-[#122D30] voice-transcript-md">
+                      <div className="text-[#1D6315] voice-transcript-md">
                         <MarkdownRenderer content={text} />
                       </div>
                     )}

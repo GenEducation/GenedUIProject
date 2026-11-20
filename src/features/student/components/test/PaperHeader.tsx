@@ -31,7 +31,7 @@ export function PaperHeader({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-2 flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <FileText size={16} className="text-[#5FA8A3]" />
+            <FileText size={16} className="text-[#86B83A]" />
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
               Chapter Test
             </span>

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { leaveWithLoader } from "@/features/auth/leaveWithLoader";
 import { parentService, LinkedStudent } from "../services/parentService";
 import { studentService } from "../../student/services/studentService";
 import * as Sentry from "@sentry/nextjs";
@@ -209,6 +210,6 @@ export const useParentStore = create<ParentState>((set, get) => ({
       activeSessionId: null,
       activeSessionHistory: []
     });
-    window.location.href = "/";
+    leaveWithLoader("/");
   },
 }));

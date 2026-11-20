@@ -63,9 +63,9 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
       style={{
         // Read-aloud (the student's turn to read) sits on the tutor surface;
         // listen-and-repeat (Aanya reads first) on warm paper with a teal edge.
-        background: mode === "READ_ALOUD" ? "#EAF2EF" : "#FBFBF8",
-        border: mode === "READ_ALOUD" ? "1px solid rgba(7,94,99,0.12)" : "1px solid #E4E9E3",
-        boxShadow: isPlaying ? "0 0 0 3px rgba(7,94,99,0.14)" : "none",
+        background: mode === "READ_ALOUD" ? "#EFF4DF" : "#FBF9F2",
+        border: mode === "READ_ALOUD" ? "1px solid rgba(40,118,36,0.12)" : "1px solid #E8E3D3",
+        boxShadow: isPlaying ? "0 0 0 3px rgba(40,118,36,0.14)" : "none",
         transition: "box-shadow 0.25s ease",
         borderRadius: 18,
         padding: "18px 20px",
@@ -110,14 +110,14 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
               width: 36, height: 36, borderRadius: "50%", border: "none",
               display: "flex", alignItems: "center", justifyContent: "center",
               cursor: isLoading ? "default" : "pointer",
-              background: isPlaying || isPaused ? "var(--tutor)" : "#DCEBE7",
+              background: isPlaying || isPaused ? "var(--tutor)" : "#E8F0CC",
               color: isPlaying || isPaused ? "#fff" : "var(--tutor)",
               transition: "all 0.2s",
               flexShrink: 0,
               // While Aanya is speaking the button wears the citron "live" ring.
               boxShadow: isPlaying
-                ? "0 0 0 3px var(--accent), 0 2px 8px rgba(7,94,99,0.18)"
-                : "0 2px 8px rgba(7,94,99,0.18)",
+                ? "0 0 0 3px var(--accent), 0 2px 8px rgba(40,118,36,0.18)"
+                : "0 2px 8px rgba(40,118,36,0.18)",
             }}
           >
             {isLoading
@@ -132,7 +132,7 @@ export const KaraokeRenderer = ({ text, directiveId, mode, isStreaming, index, a
 
       <div
         className="whitespace-pre-wrap leading-relaxed"
-        style={{ fontSize: 16, color: "#122D30", fontFamily: "var(--font-body)", fontWeight: 500, paddingLeft: 4 }}
+        style={{ fontSize: 16, color: "#1D6315", fontFamily: "var(--font-body)", fontWeight: 500, paddingLeft: 4 }}
       >
         {displayedText}
       </div>

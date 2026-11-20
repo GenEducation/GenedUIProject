@@ -45,8 +45,9 @@ export interface PartnerStudentProfile {
   updated_at?: string | null;
 }
 
-const isCounts = (row: PartnerStudentRow | PartnerStudentsCounts): row is PartnerStudentsCounts =>
-  "pending_count" in row;
+const isCounts = (
+  row: PartnerStudentRow | PartnerStudentsCounts,
+): row is PartnerStudentsCounts => "pending_count" in row;
 
 /**
  * A school's students (gened_schools routes). Every route needs the PARTNER
@@ -56,9 +57,17 @@ const isCounts = (row: PartnerStudentRow | PartnerStudentsCounts): row is Partne
  */
 export const partnerStudentsService = {
   /** The school's students and the counts row, split apart. */
-  students: async (partnerId: string): Promise<{ rows: PartnerStudentRow[]; counts: PartnerStudentsCounts | null }> => {
-    const response = await authFetch(`${API_BASE_URL}/partner/students?partner_id=${encodeURIComponent(partnerId)}`);
-    const raw: Array<PartnerStudentRow | PartnerStudentsCounts> = await response.json();
+  students: async (
+    partnerId: string,
+  ): Promise<{
+    rows: PartnerStudentRow[];
+    counts: PartnerStudentsCounts | null;
+  }> => {
+    const response = await authFetch(
+      `${API_BASE_URL}/partner/students?partner_id=${encodeURIComponent(partnerId)}`,
+    );
+    const raw: Array<PartnerStudentRow | PartnerStudentsCounts> =
+      await response.json();
     return {
       rows: raw.filter((row): row is PartnerStudentRow => !isCounts(row)),
       counts: raw.find(isCounts) ?? null,
@@ -67,26 +76,41 @@ export const partnerStudentsService = {
 
   /** The approval queue: students waiting for this school to accept them. */
   requests: async (partnerId: string): Promise<PartnerRequestRow[]> => {
-    const response = await authFetch(`${API_BASE_URL}/partner/requests?partner_id=${encodeURIComponent(partnerId)}`);
+    const response = await authFetch(
+      `${API_BASE_URL}/partner/requests?partner_id=${encodeURIComponent(partnerId)}`,
+    );
     return response.json();
   },
 
-  profile: async (partnerId: string, studentId: string): Promise<PartnerStudentProfile | null> => {
+  profile: async (
+    partnerId: string,
+    studentId: string,
+  ): Promise<PartnerStudentProfile | null> => {
     const response = await authFetch(
       `${API_BASE_URL}/partner/students/${encodeURIComponent(studentId)}?partner_id=${encodeURIComponent(partnerId)}`,
     );
     return response.json();
   },
 
-  setStatus: async (partnerId: string, studentId: string, status: PartnerDecision): Promise<{ message: string }> => {
+  setStatus: async (
+    partnerId: string,
+    studentId: string,
+    status: PartnerDecision,
+  ): Promise<{ message: string }> => {
     const query = `partner_id=${encodeURIComponent(partnerId)}&status=${status}`;
-    const response = await authFetch(`${API_BASE_URL}/partner/students/${encodeURIComponent(studentId)}/status?${query}`, {
-      method: "PATCH",
-    });
+    const response = await authFetch(
+      `${API_BASE_URL}/partner/students/${encodeURIComponent(studentId)}/status?${query}`,
+      {
+        method: "PATCH",
+      },
+    );
     return response.json();
   },
 
-  remove: async (partnerId: string, studentId: string): Promise<{ message: string }> => {
+  remove: async (
+    partnerId: string,
+    studentId: string,
+  ): Promise<{ message: string }> => {
     const response = await authFetch(
       `${API_BASE_URL}/partner/students/${encodeURIComponent(studentId)}?partner_id=${encodeURIComponent(partnerId)}`,
       { method: "DELETE" },

@@ -132,7 +132,7 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
                 value={aiName}
                 onChange={(e) => setAiName(e.target.value)}
                 type="text"
-                placeholder="Nia"
+                placeholder="Zoovi"
                 className={INPUT}
               />
             </Field>

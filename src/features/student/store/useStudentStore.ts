@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { leaveWithLoader } from "@/features/auth/leaveWithLoader";
 import { FEATURES } from "@/constants/features";
 import * as Sentry from "@sentry/nextjs";
 import {
@@ -628,7 +629,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       comprehensionResults: {},
       interactiveResults: {},
     });
-    window.location.href = "/";
+    leaveWithLoader("/");
   },
   activeActivity: null,
   setProfileOpen: (open) => set({ isProfileOpen: open }),
@@ -829,7 +830,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
 
   // `/student/partners` already lists every real school with this student's
   // status, which is exactly what the "Connect to a school" list needs; the
-  // global `/partners` would also offer the GenEd placeholder.
+  // global `/partners` would also offer the Zoovi placeholder.
   fetchAvailablePartners: async () => {
     await get().fetchEnrolledPartners();
   },
@@ -922,7 +923,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
         partnerRequestMessage:
           link?.status === "APPROVED"
             ? "You're connected to your parent or guardian."
-            : "Request sent. Your parent or guardian needs to confirm it in their GenEd account.",
+            : "Request sent. Your parent or guardian needs to confirm it in their Zoovi account.",
       });
     } catch (error) {
       console.error("Link Parent Error:", asError(error).request_id, asError(error).message ?? error);

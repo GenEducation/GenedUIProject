@@ -141,7 +141,7 @@ export function BulkImportModal({ role, context, contextLabel, onClose, onDone }
         onClick={() => inputRef.current?.click()}
         className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-paper px-4 py-7 text-center transition-colors hover:border-emerald/40 hover:bg-emerald-50/50"
       >
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-emerald shadow-[0_1px_2px_rgba(18,45,48,.06)]">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-emerald shadow-[0_1px_2px_rgba(29,99,21,.06)]">
           {file ? <FileSpreadsheet size={20} /> : <Upload size={20} />}
         </span>
         <span className="text-sm font-bold text-ink">{file ? file.name : "Choose a spreadsheet"}</span>

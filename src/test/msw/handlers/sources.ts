@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import type {
   AuthoredQuestions,
   AuthoringResponse,
+  BankPackage,
   LearningOutcome,
   PartnerBook,
   QuestionsResponse,
@@ -20,13 +21,25 @@ const SOURCES = `${BASE}/v1/sources`;
  * the learning-outcome codes mirror the shape of the taxonomy's, not its text.
  */
 export const SYNTHETIC_OUTCOMES: LearningOutcome[] = [
-  { code: "G6-MATH-LO1.1.1", name: "SYNTHETIC outcome one", competency_code: "G6-MATH-C1.1", competency_name: "SYNTHETIC competency A" },
-  { code: "G6-MATH-LO1.2.1", name: "SYNTHETIC outcome two", competency_code: "G6-MATH-C1.2", competency_name: "Fractions & decimals" },
+  {
+    code: "G6-MATH-LO1.1.1",
+    name: "SYNTHETIC outcome one",
+    competency_code: "G6-MATH-C1.1",
+    competency_name: "SYNTHETIC competency A",
+  },
+  {
+    code: "G6-MATH-LO1.2.1",
+    name: "SYNTHETIC outcome two",
+    competency_code: "G6-MATH-C1.2",
+    competency_name: "Fractions & decimals",
+  },
 ];
 
 /** A third outcome of the same subject and grade, for the tests of choosing outcomes a chapter was not uploaded with. */
 export const SYNTHETIC_OTHER_OUTCOME: LearningOutcome = {
-  code: "G6-MATH-LO1.3.1", name: "SYNTHETIC outcome three", competency_code: "G6-MATH-C1.3",
+  code: "G6-MATH-LO1.3.1",
+  name: "SYNTHETIC outcome three",
+  competency_code: "G6-MATH-C1.3",
   competency_name: "SYNTHETIC competency C",
 };
 
@@ -34,7 +47,9 @@ let seq = 0;
 
 export function makeSource(overrides: Partial<SourceView> = {}): SourceView {
   seq += 1;
-  const id = overrides.source_id ?? `synthetic-press-synthetic-book-6-ch${seq}-${String(seq).padStart(10, "0")}`;
+  const id =
+    overrides.source_id ??
+    `synthetic-press-synthetic-book-6-ch${seq}-${String(seq).padStart(10, "0")}`;
   return {
     source_id: id,
     board: "CBSE",
@@ -43,7 +58,12 @@ export function makeSource(overrides: Partial<SourceView> = {}): SourceView {
     grade: 6,
     book_title: "SYNTHETIC Book",
     edition_label: "SYNTHETIC TEST DATA",
-    chapter: { ordinal: seq, title: `SYNTHETIC chapter ${seq}`, first_pdf_page: 1, last_pdf_page: 3 },
+    chapter: {
+      ordinal: seq,
+      title: `SYNTHETIC chapter ${seq}`,
+      first_pdf_page: 1,
+      last_pdf_page: 3,
+    },
     pdf_file_name: "synthetic.pdf",
     page_count: 3,
     strand: "synthetic_strand",
@@ -70,7 +90,12 @@ const questions = new Map<string, QuestionsResponse>();
 const releases = new Map<string, SourceRelease>();
 const authoring = new Map<string, AuthoringResponse>();
 /** Drafts the fake worker returns for the next suggestions request (they arrive on the next GET). */
-const pendingDrafts = new Map<string, AuthoringResponse["authored"]["added"]>();
+const banks = new Map<string, BankPackage>();
+/** Like core: any change to the accepted questions voids the last approval (it no longer matches). */
+const voidApproval = (b: BankPackage) => {
+  if (b.approval)
+    b.approval = { ...b.approval, approved: false, coverage_ready: false };
+};
 /** The last authored questions PUT, for asserting what the screen sent. */
 export let lastAuthored: AuthoredQuestions | null = null;
 /** The last release decisions POST, for asserting what the screen sent. */
@@ -89,7 +114,7 @@ export const sourcesFixture = {
     questions.clear();
     releases.clear();
     authoring.clear();
-    pendingDrafts.clear();
+    banks.clear();
     lastAuthored = null;
     lastReleaseDecisions = null;
     lastAnswers = null;
@@ -109,7 +134,12 @@ export const sourcesFixture = {
   setQuestions: (id: string, q: QuestionsResponse) => {
     questions.set(id, q);
     const s = store.get(id);
-    if (s) store.set(id, { ...s, state: "review_needed", questions: q.questions.length });
+    if (s)
+      store.set(id, {
+        ...s,
+        state: "review_needed",
+        questions: q.questions.length,
+      });
   },
   /** Give a source a staged release, as the worker does when a run ends ready. */
   /** Make a source a run that found too few questions the partner can complete (ADR 0036), as the worker does. */
@@ -123,16 +153,21 @@ export const sourcesFixture = {
         has_authoring: true,
         outcome: {
           next_step: "add_questions",
-          findings: [{ check: "single_component_share", count: 1, owner: "partner" }],
+          findings: [
+            { check: "single_component_share", count: 1, owner: "partner" },
+          ],
           can_run_again: false,
           run_again_blocked: "same_result",
         },
       });
     }
   },
-  /** The drafts the fake worker writes for the next suggestions request. */
-  setDrafts: (id: string, drafts: AuthoringResponse["authored"]["added"]) => void pendingDrafts.set(id, drafts),
-  setRelease: (id: string, release: SourceRelease) => void releases.set(id, structuredClone(release)),
+  /** The chapter's AI-prepared package, as core would serve it (backend ADR 0047). */
+  setBank: (id: string, bank: BankPackage) =>
+    void banks.set(id, structuredClone(bank)),
+  getBank: (id: string) => banks.get(id),
+  setRelease: (id: string, release: SourceRelease) =>
+    void releases.set(id, structuredClone(release)),
   getRelease: (id: string) => releases.get(id),
   /** Give a source a review report (and `has_report: true`), as the worker does when a run finishes. */
   setReport: (id: string, markdown: string) => {
@@ -143,16 +178,44 @@ export const sourcesFixture = {
 };
 
 const conflict = (message: string) =>
-  HttpResponse.json({ error_code: "HTTP_409", message, request_id: "req-synthetic" }, { status: 409 });
-const notFound = () => HttpResponse.json({ message: "This chapter was not found." }, { status: 404 });
+  HttpResponse.json(
+    { error_code: "HTTP_409", message, request_id: "req-synthetic" },
+    { status: 409 },
+  );
+const notFound = () =>
+  HttpResponse.json(
+    { message: "This chapter was not found." },
+    { status: 404 },
+  );
 
 const SINGLE_FIELDS = [
-  "board", "publisher", "subject", "grade", "book_title", "edition_label", "chapter_ordinal", "chapter_title",
-  "first_pdf_page", "last_pdf_page", "strand",
+  "board",
+  "publisher",
+  "subject",
+  "grade",
+  "book_title",
+  "edition_label",
+  "chapter_ordinal",
+  "chapter_title",
+  "first_pdf_page",
+  "last_pdf_page",
+  "strand",
 ] as const;
 
-const STARTABLE = new Set<SourceState>(["registered", "review_needed", "invalid", "ready", "failed"]);
-const DELETABLE = new Set<SourceState>(["registered", "review_needed", "invalid", "ready", "failed"]);
+const STARTABLE = new Set<SourceState>([
+  "registered",
+  "review_needed",
+  "invalid",
+  "ready",
+  "failed",
+]);
+const DELETABLE = new Set<SourceState>([
+  "registered",
+  "review_needed",
+  "invalid",
+  "ready",
+  "failed",
+]);
 
 export const sourcesHandlers = [
   http.get(`${SOURCES}/learning-outcomes`, ({ request }) => {
@@ -166,7 +229,9 @@ export const sourcesHandlers = [
   http.get(`${SOURCES}/books`, ({ request }) => {
     const q = new URL(request.url).searchParams;
     const books = new Map<string, PartnerBook>();
-    const newestFirst = [...store.values()].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    const newestFirst = [...store.values()].sort((a, b) =>
+      a.created_at < b.created_at ? 1 : -1,
+    );
     for (const s of newestFirst) {
       if (q.get("subject") && s.subject !== q.get("subject")) continue;
       if (q.get("grade") && s.grade !== Number(q.get("grade"))) continue;
@@ -175,8 +240,14 @@ export const sourcesHandlers = [
       if (found) found.chapters += 1;
       else
         books.set(key, {
-          book_title: s.book_title, edition_label: s.edition_label, board: s.board, publisher: s.publisher,
-          subject: s.subject, grade: s.grade, chapters: 1, last_used_at: s.created_at,
+          book_title: s.book_title,
+          edition_label: s.edition_label,
+          board: s.board,
+          publisher: s.publisher,
+          subject: s.subject,
+          grade: s.grade,
+          chapters: 1,
+          last_used_at: s.created_at,
         });
     }
     return HttpResponse.json([...books.values()]);
@@ -191,9 +262,18 @@ export const sourcesHandlers = [
       .filter((s) => !q.get("state") || s.state === q.get("state"))
       .filter((s) => !q.get("subject") || s.subject === q.get("subject"))
       .filter((s) => !q.get("grade") || s.grade === Number(q.get("grade")))
-      .filter((s) => !search || `${s.book_title} ${s.chapter.title}`.toLowerCase().includes(search))
+      .filter(
+        (s) =>
+          !search ||
+          `${s.book_title} ${s.chapter.title}`.toLowerCase().includes(search),
+      )
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
-    return HttpResponse.json({ items: items.slice(offset, offset + limit), total_count: items.length, limit, offset });
+    return HttpResponse.json({
+      items: items.slice(offset, offset + limit),
+      total_count: items.length,
+      limit,
+      offset,
+    });
   }),
 
   http.post(SOURCES, async ({ request }) => {
@@ -207,7 +287,13 @@ export const sourcesHandlers = [
     fields.full_coverage_codes = form.getAll("full_coverage_codes").map(String);
     lastUpload = fields;
     if (Number(fields.last_pdf_page) > 3) {
-      return HttpResponse.json({ message: "The page range must be within 1 to 3, first page before last." }, { status: 422 });
+      return HttpResponse.json(
+        {
+          message:
+            "The page range must be within 1 to 3, first page before last.",
+        },
+        { status: 422 },
+      );
     }
     const source = makeSource({
       subject: String(fields.subject),
@@ -235,8 +321,10 @@ export const sourcesHandlers = [
     const s = store.get(String(params.id));
     if (!s) return notFound();
     // A lost run comes back as `run_again` whatever its state says (backend: a stale `running` row).
-    const lost = s.outcome?.next_step === "run_again" && s.outcome.can_run_again;
-    if (!STARTABLE.has(s.state) && !lost) return conflict(`This chapter is already ${s.state}.`);
+    const lost =
+      s.outcome?.next_step === "run_again" && s.outcome.can_run_again;
+    if (!STARTABLE.has(s.state) && !lost)
+      return conflict(`This chapter is already ${s.state}.`);
     const next = { ...s, state: "queued" as const, detail: null };
     store.set(s.source_id, next);
     return HttpResponse.json(next, { status: 202 });
@@ -245,7 +333,10 @@ export const sourcesHandlers = [
   http.delete(`${SOURCES}/:id/ingestions`, ({ params }) => {
     const s = store.get(String(params.id));
     if (!s) return notFound();
-    if (s.state !== "queued") return conflict("Only a chapter that is still waiting to start can be cancelled.");
+    if (s.state !== "queued")
+      return conflict(
+        "Only a chapter that is still waiting to start can be cancelled.",
+      );
     const next = { ...s, state: "registered" as const };
     store.set(s.source_id, next);
     return HttpResponse.json(next);
@@ -254,10 +345,16 @@ export const sourcesHandlers = [
   http.delete(`${SOURCES}/:id`, ({ params }) => {
     const s = store.get(String(params.id));
     if (!s) return notFound();
-    if (!DELETABLE.has(s.state)) return conflict(`A chapter that is ${s.state} cannot be deleted.`);
+    if (!DELETABLE.has(s.state))
+      return conflict(`A chapter that is ${s.state} cannot be deleted.`);
     // Mirrors the backend: a source a published release came from is kept, because learners study it.
-    if (s.release?.state === "published" || releases.get(s.source_id)?.release.state === "published") {
-      return conflict("A published chapter cannot be deleted: learners study it.");
+    if (
+      s.release?.state === "published" ||
+      releases.get(s.source_id)?.release.state === "published"
+    ) {
+      return conflict(
+        "A published chapter cannot be deleted: learners study it.",
+      );
     }
     store.delete(s.source_id);
     return new HttpResponse(null, { status: 204 });
@@ -268,21 +365,41 @@ export const sourcesHandlers = [
     const s = store.get(String(params.id));
     if (!s) return notFound();
     if (s.state === "queued" || s.state === "running") {
-      return conflict("This chapter is running; correct it once the run has finished.");
+      return conflict(
+        "This chapter is running; correct it once the run has finished.",
+      );
     }
     const place = (await request.json()) as {
-      book_title: string; edition_label: string; chapter_ordinal: number; chapter_title: string;
+      book_title: string;
+      edition_label: string;
+      chapter_ordinal: number;
+      chapter_title: string;
     };
     const taken = [...store.values()].find(
-      (o) => o.source_id !== s.source_id && o.book_title === place.book_title && o.chapter.ordinal === place.chapter_ordinal,
+      (o) =>
+        o.source_id !== s.source_id &&
+        o.book_title === place.book_title &&
+        o.chapter.ordinal === place.chapter_ordinal,
     );
-    if (taken) return conflict(`Chapter ${place.chapter_ordinal} of this book is already uploaded as '${taken.chapter.title}'.`);
+    if (taken)
+      return conflict(
+        `Chapter ${place.chapter_ordinal} of this book is already uploaded as '${taken.chapter.title}'.`,
+      );
     const next = {
       ...s,
       book_title: place.book_title,
       edition_label: place.edition_label,
-      chapter: { ...s.chapter, ordinal: place.chapter_ordinal, title: place.chapter_title },
-      outcome: { next_step: "start" as const, findings: [], can_run_again: true, run_again_blocked: null },
+      chapter: {
+        ...s.chapter,
+        ordinal: place.chapter_ordinal,
+        title: place.chapter_title,
+      },
+      outcome: {
+        next_step: "start" as const,
+        findings: [],
+        can_run_again: true,
+        run_again_blocked: null,
+      },
     };
     store.set(s.source_id, next);
     return HttpResponse.json(next);
@@ -293,17 +410,32 @@ export const sourcesHandlers = [
     const s = store.get(String(params.id));
     if (!s) return notFound();
     if (s.state === "queued" || s.state === "running") {
-      return conflict("This chapter is running; change its outcomes once the run has finished.");
+      return conflict(
+        "This chapter is running; change its outcomes once the run has finished.",
+      );
     }
     const { lo_codes } = (await request.json()) as { lo_codes: string[] };
     const known =
-      s.subject === "Mathematics" && s.grade === 6 ? [...SYNTHETIC_OUTCOMES, SYNTHETIC_OTHER_OUTCOME].map((o) => o.code) : [];
+      s.subject === "Mathematics" && s.grade === 6
+        ? [...SYNTHETIC_OUTCOMES, SYNTHETIC_OTHER_OUTCOME].map((o) => o.code)
+        : [];
     const unknown = lo_codes.filter((c) => !known.includes(c));
-    if (unknown.length) return conflict(`Not learning outcomes of this subject and grade: ${unknown.join(", ")}.`);
+    if (unknown.length)
+      return conflict(
+        `Not learning outcomes of this subject and grade: ${unknown.join(", ")}.`,
+      );
     const next = {
       ...s,
-      lo_codes: [...s.lo_codes.filter((c) => lo_codes.includes(c)), ...lo_codes.filter((c) => !s.lo_codes.includes(c))],
-      outcome: { next_step: "start" as const, findings: [], can_run_again: true, run_again_blocked: null },
+      lo_codes: [
+        ...s.lo_codes.filter((c) => lo_codes.includes(c)),
+        ...lo_codes.filter((c) => !s.lo_codes.includes(c)),
+      ],
+      outcome: {
+        next_step: "start" as const,
+        findings: [],
+        can_run_again: true,
+        run_again_blocked: null,
+      },
     };
     store.set(s.source_id, next);
     return HttpResponse.json(next);
@@ -314,12 +446,23 @@ export const sourcesHandlers = [
     const s = store.get(String(params.id));
     if (!s) return notFound();
     const cut = s.excluded_pages;
-    if (!cut || cut.status !== "pending") return conflict("This chapter has no left-out pages waiting for an answer.");
-    const { decision } = (await request.json()) as { decision: "confirm" | "include" };
+    if (!cut || cut.status !== "pending")
+      return conflict(
+        "This chapter has no left-out pages waiting for an answer.",
+      );
+    const { decision } = (await request.json()) as {
+      decision: "confirm" | "include";
+    };
     if (decision === "confirm") {
-      store.set(s.source_id, { ...s, excluded_pages: { ...cut, status: "confirmed" } });
+      store.set(s.source_id, {
+        ...s,
+        excluded_pages: { ...cut, status: "confirmed" },
+      });
     } else {
-      if (!STARTABLE.has(s.state)) return conflict(`The pages can be added back once this chapter is no longer ${s.state}.`);
+      if (!STARTABLE.has(s.state))
+        return conflict(
+          `The pages can be added back once this chapter is no longer ${s.state}.`,
+        );
       store.set(s.source_id, {
         ...s,
         state: "queued",
@@ -332,29 +475,73 @@ export const sourcesHandlers = [
 
   http.get(`${SOURCES}/:id/reconciliation`, ({ params }) => {
     const q = questions.get(String(params.id));
-    return q ? HttpResponse.json(q) : HttpResponse.json({ message: "This chapter has no questions waiting." }, { status: 404 });
+    return q
+      ? HttpResponse.json(q)
+      : HttpResponse.json(
+          { message: "This chapter has no questions waiting." },
+          { status: 404 },
+        );
   }),
 
   // Mirrors the backend's rules: `novel`, `same_as` an offered concept of this chapter, or `match` an offered published one.
   http.put(`${SOURCES}/:id/reconciliation`, async ({ params, request }) => {
     const q = questions.get(String(params.id));
     if (!q) return conflict("This chapter has no questions waiting.");
-    const { decisions } = (await request.json()) as { decisions: Record<string, RecordedAnswer> };
+    const { decisions } = (await request.json()) as {
+      decisions: Record<string, RecordedAnswer>;
+    };
     lastAnswers = decisions;
     for (const [key, answer] of Object.entries(decisions)) {
       const question = q.questions.find((x) => x.key === key);
-      if (!question) return HttpResponse.json({ message: `There is no question about ${key} in this chapter's last run.` }, { status: 422 });
+      if (!question)
+        return HttpResponse.json(
+          {
+            message: `There is no question about ${key} in this chapter's last run.`,
+          },
+          { status: 422 },
+        );
       if (!q.allowed_answers.includes(answer.decision)) {
-        return HttpResponse.json({ message: "That answer is not allowed here." }, { status: 422 });
+        return HttpResponse.json(
+          { message: "That answer is not allowed here." },
+          { status: 422 },
+        );
       }
-      if (answer.decision === "match" && !question.candidates.some((c) => c.where === "catalogue" && c.component_id === answer.component_id)) {
-        return HttpResponse.json({ message: `Pick one of the published concepts offered for ${question.proposal.title}.` }, { status: 422 });
+      if (
+        answer.decision === "match" &&
+        !question.candidates.some(
+          (c) =>
+            c.where === "catalogue" && c.component_id === answer.component_id,
+        )
+      ) {
+        return HttpResponse.json(
+          {
+            message: `Pick one of the published concepts offered for ${question.proposal.title}.`,
+          },
+          { status: 422 },
+        );
       }
-      if (answer.decision === "same_as" && !question.candidates.some((c) => c.where === "this_chapter" && c.proposal_key === answer.proposal_key)) {
-        return HttpResponse.json({ message: `Pick one of the concepts of this chapter offered for ${question.proposal.title}.` }, { status: 422 });
+      if (
+        answer.decision === "same_as" &&
+        !question.candidates.some(
+          (c) =>
+            c.where === "this_chapter" &&
+            c.proposal_key === answer.proposal_key,
+        )
+      ) {
+        return HttpResponse.json(
+          {
+            message: `Pick one of the concepts of this chapter offered for ${question.proposal.title}.`,
+          },
+          { status: 422 },
+        );
       }
     }
-    const next = { ...q, questions: q.questions.map((x) => (decisions[x.key] ? { ...x, answer: decisions[x.key] } : x)) };
+    const next = {
+      ...q,
+      questions: q.questions.map((x) =>
+        decisions[x.key] ? { ...x, answer: decisions[x.key] } : x,
+      ),
+    };
     questions.set(String(params.id), next);
     return HttpResponse.json(next);
   }),
@@ -362,12 +549,11 @@ export const sourcesHandlers = [
   http.get(`${SOURCES}/:id/authoring`, ({ params }) => {
     const id = String(params.id);
     const a = authoring.get(id);
-    if (!a) return HttpResponse.json({ message: "This chapter has nothing to complete." }, { status: 404 });
-    // The fake worker finishes a request between two reads.
-    if (a.suggestions && a.suggestions.state !== "ready" && a.suggestions.state !== "failed") {
-      a.suggestions = { ...a.suggestions, state: "ready", drafts: pendingDrafts.get(id) ?? [] };
-      a.can_suggest = true;
-    }
+    if (!a)
+      return HttpResponse.json(
+        { message: "This chapter has nothing to complete." },
+        { status: 404 },
+      );
     return HttpResponse.json(a);
   }),
 
@@ -380,32 +566,183 @@ export const sourcesHandlers = [
     lastAuthored = body;
     for (const key of Object.keys(body.answers)) {
       if (!a.removed.some((r) => r.item_key === key)) {
-        return HttpResponse.json({ message: "That printed question is not one this chapter's last run removed." }, { status: 422 });
+        return HttpResponse.json(
+          {
+            message:
+              "That printed question is not one this chapter's last run removed.",
+          },
+          { status: 422 },
+        );
       }
     }
     for (const q of body.added) {
-      if (a.concepts.find((c) => c.key === q.concept_key)?.section_key !== q.section_key) {
-        return HttpResponse.json({ message: "It must check a concept from its own part of the chapter." }, { status: 422 });
+      if (
+        a.concepts.find((c) => c.key === q.concept_key)?.section_key !==
+        q.section_key
+      ) {
+        return HttpResponse.json(
+          {
+            message:
+              "It must check a concept from its own part of the chapter.",
+          },
+          { status: 422 },
+        );
       }
     }
-    const next = { ...a, authored: body, authored_at: new Date().toISOString() };
+    const next = {
+      ...a,
+      authored: body,
+      authored_at: new Date().toISOString(),
+    };
     authoring.set(id, next);
     const s = store.get(id);
-    if (s?.outcome) store.set(id, { ...s, outcome: { ...s.outcome, can_run_again: true, run_again_blocked: null } });
+    if (s?.outcome)
+      store.set(id, {
+        ...s,
+        outcome: { ...s.outcome, can_run_again: true, run_again_blocked: null },
+      });
     return HttpResponse.json(next);
   }),
 
-  http.post(`${SOURCES}/:id/authoring/suggestions`, ({ params }) => {
-    const id = String(params.id);
-    const a = authoring.get(id);
-    if (!a?.can_suggest) return conflict("Suggestions are already being written.");
-    const next: AuthoringResponse = {
-      ...a,
-      can_suggest: false,
-      suggestions: { state: "requested", requested_at: new Date().toISOString(), drafts: [], detail: null },
+  // The bank mirrors core's rules: a stale version is refused; a doubted question is never bulk-accepted; an edit returns it to draft.
+  http.get(`${SOURCES}/:id/bank`, ({ params }) => {
+    const b = banks.get(String(params.id));
+    if (b) return HttpResponse.json(b);
+    if (!store.has(String(params.id))) return notFound();
+    const empty: BankPackage = {
+      version: "a".repeat(64),
+      findings: [],
+      nodes: [],
+      questions: [],
+      runs: [],
+      summary: {
+        nodes: 0,
+        questions: 0,
+        accepted: 0,
+        needs_attention: 0,
+        draft_ready_nodes: 0,
+        capability_gap_nodes: 0,
+        incomplete_nodes: 0,
+        concepts: { planned: 0, held: 0, not_planned: 0, capability_gap: 0 },
+        approved_ready_nodes: 0,
+        publishable_nodes: 0,
+        open_issues: 0,
+        authoring: null,
+      },
     };
-    authoring.set(id, next);
-    return HttpResponse.json(next, { status: 202 });
+    return HttpResponse.json(empty);
+  }),
+
+  http.post(
+    `${SOURCES}/:id/bank/questions/:qid/:decision`,
+    async ({ params, request }) => {
+      const b = banks.get(String(params.id));
+      const q = b?.questions.find((x) => x.question_id === params.qid);
+      if (!b || !q) return notFound();
+      const body = (await request.json()) as { version: number };
+      if (body.version !== q.version)
+        return conflict(
+          "This question changed since you opened it. Reload to see the latest version.",
+        );
+      q.state = params.decision === "accept" ? "accepted" : "rejected";
+      q.version += 1;
+      voidApproval(b);
+      voidApproval(b);
+      b.summary.accepted = b.questions.filter(
+        (x) => x.state === "accepted",
+      ).length;
+      return HttpResponse.json(b);
+    },
+  ),
+
+  http.put(
+    `${SOURCES}/:id/bank/questions/:qid`,
+    async ({ params, request }) => {
+      const b = banks.get(String(params.id));
+      const q = b?.questions.find((x) => x.question_id === params.qid);
+      if (!b || !q) return notFound();
+      const body = (await request.json()) as {
+        version: number;
+        question: BankPackage["questions"][number]["question"];
+      };
+      if (body.version !== q.version)
+        return conflict(
+          "This question changed since you opened it. Reload to see the latest version.",
+        );
+      Object.assign(q, {
+        question: body.question,
+        state: "draft",
+        version: q.version + 1,
+        revision: q.revision + 1,
+        verification: "unverified",
+      });
+      voidApproval(b);
+      voidApproval(b);
+      b.summary.accepted = b.questions.filter(
+        (x) => x.state === "accepted",
+      ).length;
+      return HttpResponse.json(b);
+    },
+  ),
+
+  http.post(`${SOURCES}/:id/bank/accept`, async ({ params, request }) => {
+    const b = banks.get(String(params.id));
+    if (!b) return notFound();
+    const { items } = (await request.json()) as {
+      items: { question_id: string; version: number }[];
+    };
+    const skipped: string[] = [];
+    for (const item of items) {
+      const q = b.questions.find((x) => x.question_id === item.question_id);
+      if (!q) continue;
+      if (
+        q.verification === "needs_partner_check" ||
+        q.verification === "unverified"
+      )
+        skipped.push(q.question_id);
+      else if (q.version === item.version)
+        Object.assign(q, { state: "accepted", version: q.version + 1 });
+    }
+    voidApproval(b);
+    b.summary.accepted = b.questions.filter(
+      (x) => x.state === "accepted",
+    ).length;
+    return HttpResponse.json({ ...b, skipped, stale: [] });
+  }),
+
+  http.post(`${SOURCES}/:id/bank/refill`, ({ params }) => {
+    const b = banks.get(String(params.id));
+    if (!b) return notFound();
+    b.runs = [
+      {
+        run_id: `r${b.runs.length + 1}`,
+        scope: "node",
+        section_key: null,
+        state: "queued",
+        spent_usd: 0,
+        detail: null,
+        nodes: [],
+        created_at: new Date().toISOString(),
+      },
+      ...b.runs,
+    ];
+    return HttpResponse.json(b, { status: 202 });
+  }),
+
+  http.post(`${SOURCES}/:id/bank/approve`, async ({ params, request }) => {
+    const b = banks.get(String(params.id));
+    if (!b) return notFound();
+    const body = (await request.json()) as { version: string };
+    if (body.version !== b.version)
+      return conflict("The package changed. Reload before approving.");
+    if (!b.summary.accepted)
+      return conflict("Accept at least one question first.");
+    b.approval = {
+      approved: true,
+      coverage_ready: b.summary.publishable_nodes === b.summary.nodes,
+      approved_at: new Date().toISOString(),
+    };
+    return HttpResponse.json(b, { status: 202 });
   }),
 
   http.get(`${SOURCES}/:id/release`, ({ params }) => {
@@ -413,20 +750,43 @@ export const sourcesHandlers = [
     const r = releases.get(String(params.id));
     return r
       ? HttpResponse.json(r)
-      : HttpResponse.json({ message: "This chapter has no release to review yet. A run that ends ready is sent for review automatically." }, { status: 404 });
+      : HttpResponse.json(
+          {
+            message:
+              "This chapter has no release to review yet. A run that ends ready is sent for review automatically.",
+          },
+          { status: 404 },
+        );
   }),
 
   // Mirrors the backend: each decision is recorded on its own, bound to the content hash shown.
   http.post(`${SOURCES}/:id/release/decisions`, async ({ params, request }) => {
     const r = releases.get(String(params.id));
     if (!r) return notFound();
-    const { decisions } = (await request.json()) as { decisions: ReleaseDecision[] };
+    const { decisions } = (await request.json()) as {
+      decisions: ReleaseDecision[];
+    };
     lastReleaseDecisions = decisions;
     const results = decisions.map((d) => {
       const p = r.proposals.find((x) => x.id === d.proposal_id);
-      if (!p) return { proposal_id: d.proposal_id, recorded: false, error: "not a proposal of this batch" };
-      if (p.content_hash !== d.content_hash) return { proposal_id: d.proposal_id, recorded: false, error: "content changed since it was reviewed" };
-      if (p.state !== "pending") return { proposal_id: d.proposal_id, recorded: false, error: "already decided" };
+      if (!p)
+        return {
+          proposal_id: d.proposal_id,
+          recorded: false,
+          error: "not a proposal of this batch",
+        };
+      if (p.content_hash !== d.content_hash)
+        return {
+          proposal_id: d.proposal_id,
+          recorded: false,
+          error: "content changed since it was reviewed",
+        };
+      if (p.state !== "pending")
+        return {
+          proposal_id: d.proposal_id,
+          recorded: false,
+          error: "already decided",
+        };
       p.state = d.decision === "accept" ? "accepted" : "rejected";
       return { proposal_id: d.proposal_id, recorded: true, error: null };
     });
@@ -439,10 +799,11 @@ export const sourcesHandlers = [
   http.post(`${SOURCES}/:id/release/publish`, async ({ params, request }) => {
     const r = releases.get(String(params.id));
     if (!r) return notFound();
-    const { artifact_hash, acknowledge_open_redraws } = (await request.json()) as {
-      artifact_hash: string;
-      acknowledge_open_redraws?: boolean;
-    };
+    const { artifact_hash, acknowledge_open_redraws } =
+      (await request.json()) as {
+        artifact_hash: string;
+        acknowledge_open_redraws?: boolean;
+      };
     // Mirrors the backend: open redraws ask first (409 `redraws_open`), until the partner says to publish anyway.
     const open = r.visual_review?.redraws;
     if (open && open.open > 0 && !acknowledge_open_redraws) {
@@ -451,25 +812,48 @@ export const sourcesHandlers = [
           error_code: "CORE_3106",
           message: "The request is invalid.",
           request_id: "req-synthetic",
-          details: { reason: "redraws_open", detail: "SYNTHETIC", queued: open.queued, drawing: open.drawing, ready: open.ready },
+          details: {
+            reason: "redraws_open",
+            detail: "SYNTHETIC",
+            queued: open.queued,
+            drawing: open.drawing,
+            ready: open.ready,
+          },
         },
         { status: 409 },
       );
     }
     if (r.proposals.some((p) => p.state !== "accepted")) {
-      return HttpResponse.json({ message: "every proposal needs a human acceptance before publication" }, { status: 409 });
+      return HttpResponse.json(
+        {
+          message: "every proposal needs a human acceptance before publication",
+        },
+        { status: 409 },
+      );
     }
-    if (artifact_hash !== r.release.artifact_hash) return HttpResponse.json({ message: "artifact hash mismatch" }, { status: 409 });
+    if (artifact_hash !== r.release.artifact_hash)
+      return HttpResponse.json(
+        { message: "artifact hash mismatch" },
+        { status: 409 },
+      );
     r.release.state = "published";
-    return HttpResponse.json({ batch_id: r.release.batch_id, state: "published" });
+    return HttpResponse.json({
+      batch_id: r.release.batch_id,
+      state: "published",
+    });
   }),
 
   http.get(`${SOURCES}/:id/report`, ({ params }) => {
     if (!store.has(String(params.id))) return notFound();
     const text = reports.get(String(params.id));
     return text === undefined
-      ? HttpResponse.json({ message: "This chapter has no report yet." }, { status: 404 })
-      : new HttpResponse(text, { headers: { "content-type": "text/plain; charset=utf-8" } });
+      ? HttpResponse.json(
+          { message: "This chapter has no report yet." },
+          { status: 404 },
+        )
+      : new HttpResponse(text, {
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
   }),
 
   http.get(`${SOURCES}/:id/pdf`, ({ params }) =>

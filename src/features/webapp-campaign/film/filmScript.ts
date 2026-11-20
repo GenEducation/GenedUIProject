@@ -45,5 +45,5 @@ export const SCENE_WINDOWS: SceneWindow[] = (() => {
 /** The (fictional) family the film follows. */
 export const CHILD = { name: "Aarav", fullName: "Aarav Sharma", grade: "Grade 8", board: "CBSE" };
 export const PARENT = { name: "Priya" };
-export const TUTOR = { name: "Nia" };
+export const TUTOR = { name: "Zoovi" };
 export const CHAPTER = { subject: "Mathematics", title: "Comparing Quantities", number: 8 };

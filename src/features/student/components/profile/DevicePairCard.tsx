@@ -97,7 +97,7 @@ export function DevicePairCard({ index }: { index: number }) {
     <ProfileCard index={index}>
       <CardHeading
         icon={<MonitorSmartphone size={24} strokeWidth={1.9} />}
-        title="Your GenEd bot"
+        title="Your Zoovi bot"
         description="Pair a bot with the one-time code on its screen. A bot stays connected while you use it."
       />
 

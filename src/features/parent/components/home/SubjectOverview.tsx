@@ -90,7 +90,7 @@ export function SubjectCard({ studentId, item }: { studentId: string; item: Subj
     <Link
       href={`/parent/${studentId}/subject/${encodeURIComponent(item.subject)}`}
       aria-label={`${item.subject}: ${loading ? "loading" : mastery === null ? label : `${label}, ${mastery}% mastery`}. View details`}
-      className={`group block h-full rounded-2xl border p-4 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_22px_-16px_rgba(19,41,61,0.25)] ${LIFT} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-green)]`}
+      className={`group block h-full rounded-2xl border p-4 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_22px_-16px_rgba(29,72,21,0.25)] ${LIFT} focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--pp-green)]`}
       // Tinted glass: the band's wash, slightly see-through.
       style={{ background: `linear-gradient(180deg, ${tone.wash[0]}D9, ${tone.wash[1]}B3)`, borderColor: tone.edge }}
     >

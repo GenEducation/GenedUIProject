@@ -52,7 +52,7 @@ export function TeacherChatHistoryView() {
                 >
                   {!fromStudent && (
                     <div className="mt-0.5 h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-border bg-white">
-                      <Image src="/brand/gened-star.png" alt="AI Tutor" width={40} height={40} className="h-full w-full object-contain p-[3px]" draggable={false} />
+                      <Image src="/brand/zoovi-mark.png" alt="Zoovi" width={40} height={40} className="h-full w-full object-contain p-[22%]" draggable={false} />
                     </div>
                   )}
                   {fromStudent && (
@@ -66,10 +66,10 @@ export function TeacherChatHistoryView() {
                       borderRadius: "1.75rem",
                       borderTopRightRadius: fromStudent ? 6 : undefined,
                       borderTopLeftRadius: !fromStudent ? 6 : undefined,
-                      background: fromStudent ? "#075E63" : "#FFFFFF",
-                      color: fromStudent ? "#FFFFFF" : "#122D30",
-                      border: fromStudent ? "none" : "1px solid #E3E8E2",
-                      boxShadow: fromStudent ? "0 2px 10px rgba(7,94,99,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
+                      background: fromStudent ? "#287624" : "#FFFFFF",
+                      color: fromStudent ? "#FFFFFF" : "#1D6315",
+                      border: fromStudent ? "none" : "1px solid #E7E2D2",
+                      boxShadow: fromStudent ? "0 2px 10px rgba(40,118,36,0.18)" : "0 1px 4px rgba(0,0,0,0.05)",
                     }}
                   >
                     {fromStudent ? (

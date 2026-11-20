@@ -1,13 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen } from "lucide-react";
 import { useLessonStore } from "../useLessonStore";
 import { WhiteboardCanvas } from "./WhiteboardCanvas";
 import type { Insets } from "../board/geometry";
 import { Filmstrip } from "./Filmstrip";
+import { ActivityCard, CompletedActivities, placeActivities } from "./ActivityCard";
 import { StepCard } from "./StepCard";
 import { LessonSummary } from "./LessonSummary";
 import { QuickActions } from "./QuickActions";
+import { BookPanel } from "./BookPanel";
+import { ChapterPosition, PortionAudio } from "./PortionStatus";
+import { usePortionToConfirm } from "../reading/useContentPortion";
+import { bookSections, bookTexts, opensWithStep } from "../reading/book";
 
 const NODE_TYPE_LABEL = { teach: "Learn", practice: "Practice", assess: "Check" } as const;
 
@@ -20,11 +26,13 @@ export const CARD_ZOOM_MAX = 1.5;
 const clampCardZoom = (zoom: number) => Math.min(CARD_ZOOM_MAX, Math.max(CARD_ZOOM_MIN, zoom));
 
 /**
- * The tallest the docked question card grows, whatever the question's length: 45% of the screen's height (never under
- * 240px), and never past the room between the title band and the filmstrip. A longer question scrolls inside the card,
- * its Check button staying in view.
+ * The tallest the docked question card grows, whatever the question's length: all the room between the title band and the
+ * filmstrip (at least 240px when the board has it). A longer question scrolls inside the card, its Check button staying in
+ * view. No share of the screen caps it: on a laptop that cap left the question a sliver under its own footer.
  */
-export const CARD_MAX_HEIGHT = "min(calc(100% - 12rem), max(240px, 45vh))";
+export const CARD_MAX_HEIGHT = "max(min(240px, calc(100% - 5rem)), calc(100% - 10rem))";
+/** On an empty board (no figure yet) the card sits under the title band and may run to the board's foot. */
+export const CARD_MAX_HEIGHT_CENTRED = "calc(100% - 5rem)";
 
 /** Whether the docked step holds a card: its zoom wrapper is always there, the card inside it only sometimes. */
 const holdsCard = (step: HTMLElement) => (step.firstElementChild?.childElementCount ?? 0) > 0;
@@ -34,10 +42,10 @@ function EmptyBoard() {
   return (
     <div className="flex flex-col items-center gap-3 py-10 text-center">
       <svg viewBox="0 0 160 110" aria-hidden className="h-28 w-auto">
-        <rect x="8" y="10" width="144" height="88" rx="14" fill="none" stroke="#CFD9D3" strokeWidth="2.5" strokeDasharray="7 7" />
-        <path d="M40 74 L64 44 L84 64 L98 50 L122 74 Z" fill="#DCEBE7" stroke="#075E63" strokeWidth="2.2" strokeLinejoin="round" />
-        <circle cx="112" cy="36" r="7" fill="#D9F279" stroke="#B8D63F" strokeWidth="1.5" />
-        <path d="M128 18 C129 22 130 23 134 24 C130 25 129 26 128 30 C127 26 126 25 122 24 C126 23 127 22 128 18 Z" fill="#B8D63F" />
+        <rect x="8" y="10" width="144" height="88" rx="14" fill="none" stroke="#DAD5C2" strokeWidth="2.5" strokeDasharray="7 7" />
+        <path d="M40 74 L64 44 L84 64 L98 50 L122 74 Z" fill="#E8F0CC" stroke="#287624" strokeWidth="2.2" strokeLinejoin="round" />
+        <circle cx="112" cy="36" r="7" fill="#A6CF08" stroke="#8DB000" strokeWidth="1.5" />
+        <path d="M128 18 C129 22 130 23 134 24 C130 25 129 26 128 30 C127 26 126 25 122 24 C126 23 127 22 128 18 Z" fill="#8DB000" />
       </svg>
       <p className="lesson-hand text-[22px] text-[var(--ls-ink-mid)]">Your tutor will draw here.</p>
     </div>
@@ -56,15 +64,58 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
   const node = useLessonStore((s) => s.instance?.active_node ?? null);
   const title = useLessonStore((s) => s.payload?.node.title ?? s.instance?.active_node?.title ?? null);
   const finished = useLessonStore((s) => s.instance?.state === "completed");
+  const contentSource = useLessonStore((s) => s.contentSource);
+  // Content-led, chat: the assigned portion counts as shown only once the open book paints every one of its lines.
+  const toConfirm = usePortionToConfirm();
+  const confirmShown = useLessonStore((s) => s.confirmContentShown);
+  const refreshContent = useLessonStore((s) => s.refreshContent);
+  const portionId = contentSource?.portionId ?? null;
+  // Content-led lessons (backend, owner's decision R2): the server says where each activity belongs now. Open ones show; an
+  // attempted one folds away with a way to try again; one whose book text is not taught yet, or unrelated to this step, is hidden.
+  const placement = useLessonStore((s) => s.instance?.content_progress?.activities);
+  // An attempted activity always goes below the question, whether the lesson's placement folded it or not.
+  const placed = (node ? placeActivities(node.activities, placement) : []).map((p) => ({ ...p, folded: p.folded || p.activity.attempted }));
   const hasFilmstrip = useLessonStore((s) => s.presentedFigureIds.length > 0);
 
+  // The textbook's own reading for this step (W1): open when the step is about to ask on it or holds it, closed
+  // otherwise, and the learner's choice stands until the step changes. Showing it sends nothing to the server.
+  const passages = useLessonStore((s) => s.payload?.node.passages);
+  const readingRole = useLessonStore((s) => s.payload?.node.reading_role);
+  const nodeSections = useLessonStore((s) => s.payload?.node.sections);
+  const setChatDraft = useLessonStore((s) => s.setChatDraft);
+  const sendReading = useLessonStore((s) => s.sendReading);
+  const replying = useLessonStore((s) => s.turns.some((t) => t.status === "streaming"));
+  const contentPhase = useLessonStore((s) => s.instance?.content_lesson?.phase ?? null);
+  const voice = useLessonStore((s) => !!s.voiceSessionId);
+  const nodeId = useLessonStore((s) => s.payload?.node.id ?? null);
+  const instanceId = useLessonStore((s) => s.instanceId);
+  const texts = useMemo(() => bookTexts(passages), [passages]);
+  // A chapter with no passages (maths, science) keeps its own sections behind "Show in book", closed until asked for.
+  const sections = useMemo(() => bookSections(nodeSections, texts.length > 0, readingRole), [nodeSections, texts, readingRole]);
+  // A content-led portion is book enough on its own: its lines are printed as they are when the step carries no text.
+  const hasBook = texts.length > 0 || sections.length > 0 || !!contentSource?.lines.length;
+  const opens = opensWithStep(readingRole, texts);
+  // The tutor presenting a check closes the book, which would cover the check's card; the Book button opens it again.
+  const presented = node?.check_presented ? `${node.instance_node_id}:${node.check_item_ids.find((id) => !node.answered_item_ids.includes(id)) ?? ""}` : null;
+  // A newly assigned portion opens the book too (content-led): the learner reads it there, and only there is it confirmed.
+  const [chosen, setChosen] = useState<{ nodeId: string | null; open: boolean; presented: string | null; portionId: string | null } | null>(null);
+  const bookOpen =
+    chosen !== null && chosen.nodeId === nodeId && chosen.presented === presented && chosen.portionId === portionId
+      ? chosen.open
+      : presented ? false : opens || !!portionId;
+  const setBookOpen = (open: boolean) => setChosen({ nodeId, open, presented, portionId });
+
   const stepRef = useRef<HTMLDivElement>(null);
-  // The canvas frames figures in what the overlays leave clear: the title band, the docked question card, the filmstrip.
+  const bookShown = bookOpen && hasBook && !finished;
+  // The canvas frames figures in what the overlays leave clear: the title band, the open book on the left, the docked
+  // question card on the right, the filmstrip. The book's width is the panel's own rule: min(440px, 62% of the board).
   const insets = useCallback((): Insets => {
     const step = stepRef.current;
     const stepWidth = step && step.offsetWidth > 0 && holdsCard(step) ? step.offsetWidth + 24 : 0;
-    return { top: 72, right: stepWidth, bottom: 128, left: 0 };
-  }, []);
+    const board = step?.parentElement?.offsetWidth ?? 0;
+    const book = bookShown && board > 0 ? Math.min(440, board * 0.62) + 24 : 0;
+    return { top: 72, right: stepWidth, bottom: 128, left: book };
+  }, [bookShown]);
 
   // When the docked card appears, goes or changes width, re-frame the visual in the space it leaves.
   const [stepWidth, setStepWidth] = useState(0);
@@ -78,12 +129,38 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
 
   // The question card is docked, not on the board, so it doesn't pan; its text does follow the zooms the learner makes
   // (not the board's own framing of each new figure, which would resize it at every figure), within readable bounds.
+  // A question the tutor just put on screen is the first thing in the dock: bring it into view.
+  useEffect(() => {
+    if (presented) stepRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [presented]);
+
   const [cardZoom, setCardZoom] = useState(1);
   const onUserZoom = useCallback((factor: number) => setCardZoom((zoom) => clampCardZoom(zoom * factor)), []);
 
   return (
     <section aria-label="Whiteboard" className="lesson-panel flex h-full min-h-0 flex-col overflow-hidden">
       <div className="flex items-center gap-3 px-5 pb-3 pt-4">
+        {hasBook && !finished && (
+          // eslint-disable-next-line no-restricted-syntax -- the book toggle beside the mode switch.
+          <button
+            type="button"
+            aria-pressed={bookOpen}
+            aria-description={toConfirm && !bookOpen ? "A new part of the book to read" : undefined}
+            data-new-part={toConfirm && !bookOpen ? "" : undefined}
+            onClick={() => setBookOpen(!bookOpen)}
+            className={`lesson-display relative flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[14px] font-medium ${
+              bookOpen ? "bg-[var(--ls-primary)] text-white" : "bg-[var(--ls-sage)] text-[var(--ls-primary)]"
+            } ${toConfirm && !bookOpen ? "ring-2 ring-[var(--ls-primary)] ring-offset-2 motion-safe:animate-pulse" : ""}`}
+          >
+            <BookOpen size={16} aria-hidden />
+            {texts.length > 0 || contentSource ? "Book" : "Show in book"}
+            {toConfirm && !bookOpen && (
+              <span aria-hidden className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[var(--ls-accent)] ring-2 ring-white" />
+            )}
+          </button>
+        )}
+        <ChapterPosition />
+        <PortionAudio />
         <span className="flex-1" />
         {node && (
           <span className="lesson-display hidden rounded-full bg-[var(--ls-accent)] px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--ls-primary)] sm:inline">
@@ -95,30 +172,51 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
       <div className="relative mx-4 min-h-0 flex-1 overflow-hidden rounded-[22px] border border-[var(--ls-border)]">
         {hasFilmstrip ? (
           // Every figure shown this session stays on an endless board; the camera glides to each new one.
-          <WhiteboardCanvas insets={insets} refitKey={stepWidth} onUserZoom={onUserZoom} />
+          <WhiteboardCanvas insets={insets} refitKey={`${stepWidth}:${bookShown}`} onUserZoom={onUserZoom} />
         ) : (
-          <div className="lesson-board absolute inset-0 grid place-items-center">{!finished && <EmptyBoard />}</div>
+          <div className="lesson-board absolute inset-0 grid place-items-center">{!finished && stepWidth === 0 && <EmptyBoard />}</div>
         )}
 
         {title && !finished && (
           <h1
             data-no-pan
-            className="lesson-hand lesson-underline pointer-events-none absolute left-6 top-4 z-10 max-w-[60%] truncate text-[28px] leading-tight text-[var(--ls-primary)]"
+            // Beside the open book, never under it: the title starts where the book ends.
+            className={`lesson-hand lesson-underline pointer-events-none absolute top-4 z-10 truncate text-[28px] leading-tight text-[var(--ls-primary)] transition-[left] duration-300 ${
+              bookOpen && hasBook
+                ? "left-[calc(min(440px,62%)+1.5rem)] max-w-[calc(100%-min(440px,62%)-13rem)]"
+                : "left-6 max-w-[60%]"
+            }`}
           >
             {title}
           </h1>
         )}
 
-        {/* What the learner can do now (a check, a choice, moving on), docked on the right above the canvas. */}
+        {/* What the learner can do now (a check, a choice, moving on). Beside a figure it docks on the right, leaving the figure in
+            view; on an empty board it takes the middle, wide and tall, so a long question and its options read without scrolling. */}
         <div
           ref={stepRef}
           data-no-pan
-          className="absolute bottom-32 right-4 z-10 flex w-[min(380px,46%)] flex-col overflow-y-auto overscroll-contain px-1.5 pb-3 pt-1.5 [&:not(:has(>div>*))]:hidden"
-          style={{ maxHeight: CARD_MAX_HEIGHT }}
+          className={`absolute z-10 flex flex-col overflow-y-auto overscroll-contain px-1.5 pt-1.5 [&:not(:has(>div>*))]:hidden ${
+            hasFilmstrip
+              ? "bottom-24 right-4 w-[min(480px,max(min(340px,calc(100%-2rem)),46%))]"
+              : bookOpen && hasBook
+                ? "left-[min(440px,62%)] right-0 top-16 mx-auto w-[min(680px,calc(100%-min(440px,62%)-2rem))]"
+                : "inset-x-0 top-16 mx-auto w-[min(680px,calc(100%-2rem))]"
+          }`}
+          style={{ maxHeight: hasFilmstrip ? CARD_MAX_HEIGHT : CARD_MAX_HEIGHT_CENTRED }}
         >
           {/* CSS zoom, not a transform: the card re-wraps to its dock's width instead of spilling past it. */}
-          <div data-card-zoom={cardZoom.toFixed(2)} style={{ zoom: cardZoom }}>
+          <div data-card-zoom={cardZoom.toFixed(2)} style={{ zoom: cardZoom }} className="pb-3">
+            {/* The step's activities, placed by what has been taught: one still to do comes first (the step's question waits for
+                it); the live question next; attempted ones last, as slim rows, so they never push the question out of view. */}
+            {node && placed.filter((p) => !p.folded).map(({ activity }) => (
+              <ActivityCard key={`${node.instance_node_id}:${activity.item_id}`} nodeId={node.instance_node_id} activity={activity} />
+            ))}
             <StepCard subject={subject} />
+            {node && placed.filter((p) => p.folded).map(({ activity }) => (
+              <ActivityCard key={`${node.instance_node_id}:${activity.item_id}`} nodeId={node.instance_node_id} activity={{ ...activity, attempted: true }} />
+            ))}
+            {!finished && <CompletedActivities />}
           </div>
         </div>
 
@@ -126,11 +224,31 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
           <div data-no-pan className="absolute inset-0 z-20 overflow-y-auto bg-[var(--ls-card-warm)]/85 p-5 backdrop-blur-[2px] sm:p-8">
             <div className="mx-auto max-w-[680px]">
               <LessonSummary />
+              <CompletedActivities />
             </div>
           </div>
         )}
 
-        <Filmstrip />
+        {bookOpen && hasBook && !finished && (
+          <BookPanel
+            texts={texts}
+            sections={sections}
+            instanceId={instanceId}
+            onClose={() => setBookOpen(false)}
+            onAsk={setChatDraft}
+            onReading={(intent) => void sendReading(intent)}
+            readingDisabled={replying}
+            readingRole={readingRole}
+            contentPhase={contentPhase}
+            questionOpen={!!presented || contentPhase === "question_open" || contentPhase === "feedback"}
+            voice={voice}
+            activeLines={contentSource?.lines}
+            portionId={toConfirm?.portionId}
+            onShown={toConfirm ? (id) => void confirmShown(id, "chat").catch(() => void refreshContent()) : undefined}
+          />
+        )}
+
+        <Filmstrip besideBook={bookShown} />
       </div>
 
       <QuickActions />

@@ -5,7 +5,10 @@ import type { SourceProgress, SourceState } from "../types/sources";
  * reports 100 only once the run has finished), and it is null when there's nothing to show yet: queued, or running
  * before the first report.
  */
-export function shownPercent(state: SourceState, progress: SourceProgress | null): number | null {
+export function shownPercent(
+  state: SourceState,
+  progress: SourceProgress | null,
+): number | null {
   if (state !== "running" || !progress) return null;
   const p = Number(progress.percent);
   if (!Number.isFinite(p)) return null;

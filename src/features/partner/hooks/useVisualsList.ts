@@ -40,9 +40,17 @@ export function useVisualsList(sourceId: string | null, state: CandidateState) {
         });
         if (gen !== generation.current) return;
         const last = page[page.length - 1];
-        if (last) cursor.current = { before: last.created_at, before_id: last.id };
+        if (last)
+          cursor.current = { before: last.created_at, before_id: last.id };
         setHasMore(page.length >= LIST_PAGE_SIZE);
-        setItems((prev) => (reset ? page : [...prev, ...page.filter((v) => !prev.some((p) => p.id === v.id))]));
+        setItems((prev) =>
+          reset
+            ? page
+            : [
+                ...prev,
+                ...page.filter((v) => !prev.some((p) => p.id === v.id)),
+              ],
+        );
       } catch (e) {
         if (gen !== generation.current) return;
         setError(asError(e).message || "Couldn't load visuals.");

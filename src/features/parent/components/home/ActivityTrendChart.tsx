@@ -23,7 +23,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: Tooltip
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
   return (
-    <div className="rounded-xl border border-[var(--pp-line)] bg-white px-3 py-2 shadow-[0_8px_24px_-12px_rgba(19,41,61,0.35)]">
+    <div className="rounded-xl border border-[var(--pp-line)] bg-white px-3 py-2 shadow-[0_8px_24px_-12px_rgba(29,72,21,0.35)]">
       <p className="text-[12px] font-semibold text-[var(--pp-ink)]">{formatPeriodLabel(point.period)}</p>
       <p className="mt-0.5 flex items-center gap-1.5 text-[13px] font-bold text-[var(--pp-ink)]">
         <span className="h-2 w-2 rounded-full bg-[var(--pp-green)]" />
@@ -73,8 +73,8 @@ export function ActivityTrendChart({
               <AreaChart data={series} margin={{ top: 8, right: 14, bottom: 0, left: -18 }}>
                 <defs>
                   <linearGradient id="pp-activity-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#075E63" stopOpacity={0.28} />
-                    <stop offset="100%" stopColor="#075E63" stopOpacity={0.02} />
+                    <stop offset="0%" stopColor="#287624" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="#287624" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid vertical={false} stroke="#EEF4F2" />
@@ -82,30 +82,30 @@ export function ActivityTrendChart({
                   dataKey="period"
                   tickFormatter={formatPeriodLabel}
                   interval={tickInterval}
-                  tick={{ fill: "#5E7477", fontSize: 11 }}
+                  tick={{ fill: "#5A6E52", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fill: "#5E7477", fontSize: 11 }}
+                  tick={{ fill: "#5A6E52", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   width={44}
                 />
                 <Tooltip
                   content={<ChartTooltip />}
-                  cursor={{ stroke: "#075E63", strokeDasharray: "4 4", strokeWidth: 1 }}
+                  cursor={{ stroke: "#287624", strokeDasharray: "4 4", strokeWidth: 1 }}
                 />
                 <Area
                   type="linear"
                   dataKey="minutes"
-                  stroke="#075E63"
+                  stroke="#287624"
                   strokeWidth={2}
                   fill="url(#pp-activity-fill)"
-                  dot={series.length <= 45 ? { r: 2.5, fill: "#075E63", strokeWidth: 0 } : false}
-                  activeDot={{ r: 5, fill: "#075E63", stroke: "#fff", strokeWidth: 2 }}
+                  dot={series.length <= 45 ? { r: 2.5, fill: "#287624", strokeWidth: 0 } : false}
+                  activeDot={{ r: 5, fill: "#287624", stroke: "#fff", strokeWidth: 2 }}
                   isAnimationActive={false}
                 />
               </AreaChart>

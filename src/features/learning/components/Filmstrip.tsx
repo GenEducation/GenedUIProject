@@ -11,7 +11,8 @@ import { picturesFor, useLessonStore } from "../useLessonStore";
  * ocean ring. The strip itself lets clicks through to the board; only its
  * thumbnails and arrows take them.
  */
-export function Filmstrip() {
+/** `besideBook`: the book is open on the left, so the strip centres in the board's part right of it. */
+export function Filmstrip({ besideBook = false }: { besideBook?: boolean }) {
   const ids = useLessonStore((s) => s.presentedFigureIds);
   const focused = useLessonStore((s) => s.focusedFigureId);
   const manifest = useLessonStore((s) => s.manifest);
@@ -38,7 +39,9 @@ export function Filmstrip() {
   return (
     <nav
       aria-label="Figures shown in this lesson"
-      className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-3 pb-3 pt-6"
+      className={`pointer-events-none absolute bottom-0 right-0 flex flex-col items-center gap-2 px-3 pb-3 pt-6 transition-[left] duration-300 ${
+        besideBook ? "left-[min(440px,62%)]" : "left-0"
+      }`}
     >
       <div className="flex w-full items-center justify-center gap-3">
         {/* eslint-disable-next-line no-restricted-syntax -- a round floating arrow over the board. */}

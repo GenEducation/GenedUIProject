@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 import {
-  CHECK_ITEM, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A,
+  CHECK_ITEM, CHECK_ITEM_2, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A,
   answerRequests, forbiddenRequests, lessonFixture, makeLessonInstance, replyScript, resumeRequests, turnRequests,
 } from "@/test/msw/handlers/lesson";
+import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useLessonStore } from "../useLessonStore";
 import { replyText } from "../transcript";
 
@@ -148,11 +149,16 @@ describe("useLessonStore — moving on to the next part", () => {
 });
 
 describe("useLessonStore — typed turns carry the session language", () => {
+  const asLearner = (user_id: string, preferred_language: string | null = null) =>
+    useStudentStore.setState({ studentProfile: { user_id, username: user_id, role: "student", preferred_language } as never });
+
   beforeEach(async () => {
+    localStorage.clear();
+    asLearner("learner-a");
+    useLessonStore.setState({ sessionLanguage: null });
     lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
     await store().load(LESSON_ID);
     turnRequests.length = 0;
-    localStorage.removeItem("gened_voice_language");
   });
 
   it("sends the language the learner picked on a hint", async () => {
@@ -163,20 +169,38 @@ describe("useLessonStore — typed turns carry the session language", () => {
     await settled();
   });
 
-  it("falls back to the stored voice choice, and sends none when nothing is chosen", async () => {
-    localStorage.setItem("gened_voice_language", "ta");
+  it("keeps a learner's pick for that learner across a reload, ahead of their profile", async () => {
+    asLearner("learner-a", "mr");
+    store().setSessionLanguage("ta");
+    useLessonStore.setState({ sessionLanguage: null }); // a page reload: the store starts empty
     await store().send("SYNTHETIC question");
     expect(turnRequests.at(-1)).toMatchObject({ kind: "learner_message", language: "ta" });
-    localStorage.removeItem("gened_voice_language");
+  });
+
+  it("never gives one learner's choice to another learner on the same browser", async () => {
+    store().setSessionLanguage("hi-Latn");
     useLessonStore.setState({ sessionLanguage: null });
+    asLearner("learner-b", "en");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "en" }, "learner-b's own profile, not learner-a's Hinglish");
+    asLearner("learner-c", null);
     await store().send("SYNTHETIC again");
-    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "en" }, "no choice and no profile: English");
+  });
+
+  it("ignores and removes the old browser-wide choice that leaked between learners", async () => {
+    localStorage.setItem("gened_voice_language", "hi-Latn");
+    asLearner("learner-d", "kn");
+    await store().send("SYNTHETIC question");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "kn" });
+    expect(localStorage.getItem("gened_voice_language")).toBeNull();
   });
 
   it("never sends a tag outside the eight", async () => {
-    localStorage.setItem("gened_voice_language", "fr");
+    asLearner("learner-e", "fr");
+    localStorage.setItem("gened_lesson_language:learner-e", "fr");
     await store().send("SYNTHETIC question");
-    expect(turnRequests.at(-1)).not.toHaveProperty("language");
+    expect(turnRequests.at(-1)).toMatchObject({ language: "en" });
   });
 });
 
@@ -189,5 +213,57 @@ describe("useLessonStore — a hint is only a hint turn (R-E5)", () => {
     expect(turnRequests.map((r) => r.kind)).toEqual(["hint"]);
     expect(forbiddenRequests).toEqual([]);
     await settled();
+  });
+});
+
+describe("useLessonStore — the tutor decides when the check appears; only answers move a step on (backend ADR 0045)", () => {
+  const w2 = (presented: boolean) =>
+    makeLessonInstance({
+      active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_1, check_presented: presented, done_available: false },
+    });
+
+  it("confirms no delivery and reads the lesson again after a reply while the check is not on screen", async () => {
+    lessonFixture.setInstance(w2(false));
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    turnRequests.length = 0;
+    lessonFixture.setInstance(w2(true)); // the tutor's reply presented the check on the server
+    await store().send("SYNTHETIC I think I can try it now");
+    await waitFor(() => expect(store().instance?.active_node?.check_presented).toBe(true));
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1); // presenting never moves the step on
+    expect(turnRequests.map((r) => r.kind)).toEqual(["learner_message"]);
+    await settled();
+  });
+
+  it("never reads it again once the check is on screen: the answer on its card decides", async () => {
+    lessonFixture.setInstance(w2(true));
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    lessonFixture.setInstance(makeLessonInstance({ nodes_done: 1, active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2 } }));
+    await store().send("SYNTHETIC question");
+    await settled();
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1);
+  });
+});
+
+
+describe("useLessonStore — a W2 lesson's later try asks another question", () => {
+  it("reads the step's payload again when the question on screen is not the one it carries", async () => {
+    const onScreen = (id: string) =>
+      makeLessonInstance({
+        active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_1, check_presented: true, done_available: false,
+          check_item_ids: [id], answered_item_ids: [] },
+      });
+    lessonFixture.setInstance(onScreen(CHECK_ITEM));
+    lessonFixture.setHistory([{ turn_id: "t-old", kind: "opening", status: "completed", created_at: "x", figure_group_ids: [] }]);
+    await store().load(LESSON_ID);
+    expect(store().payload?.node.check_items.map((c) => c.id)).toEqual([CHECK_ITEM]);
+    const reads = lessonFixture.payloadReads;
+    // After a wrong answer the ladder asks a different question: the view names it, and the payload is read again to draw it.
+    lessonFixture.carryInPayload(CHECK_ITEM_2);
+    lessonFixture.setInstance(onScreen(CHECK_ITEM_2));
+    await store().refreshContent(); // the lesson state as the receipt of the reply that presented it returns it
+    await waitFor(() => expect(store().payload?.node.check_items.map((c) => c.id)).toEqual([CHECK_ITEM_2]));
+    expect(lessonFixture.payloadReads).toBeGreaterThan(reads);
   });
 });

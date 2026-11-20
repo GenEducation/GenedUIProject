@@ -19,7 +19,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /* The preorder page's design tokens are scoped to `.gened-preorder`, and the
    Select panel portals to <body> — outside that scope — so the palette has to
    be passed as literal values rather than var() references. */
-const PO_GREEN = "#075E63";
+const PO_GREEN = "#287624";
 const PO_SELECT_TRIGGER_STYLE: CSSProperties = {
   background: "var(--cream)",
   border: "1px solid var(--line)",
@@ -31,7 +31,7 @@ const PO_SELECT_TRIGGER_STYLE: CSSProperties = {
 };
 const PO_SELECT_PANEL_STYLE: CSSProperties = {
   fontFamily: "Manrope, system-ui, sans-serif",
-  color: "#122D30",
+  color: "#1D6315",
 };
 
 const BUYER_TYPE_OPTIONS: SelectOption[] = [
@@ -167,7 +167,7 @@ export function PreorderModal({ isOpen, onClose }: Props) {
           contact: data.phone,
         },
         theme: {
-          color: "#075E63",
+          color: "#287624",
         },
         handler: async (response: RazorpayHandlerResponse) => {
           try {
@@ -214,7 +214,7 @@ export function PreorderModal({ isOpen, onClose }: Props) {
               className="po-modal gened-preorder"
               role="dialog"
               aria-modal="true"
-              aria-label="Pre-order the GenEd Deskbot"
+              aria-label="Pre-order the Zoovi Deskbot"
               initial={{ opacity: 0, scale: 0.94, y: 22 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 22 }}
@@ -348,7 +348,7 @@ export function PreorderModal({ isOpen, onClose }: Props) {
                         onChange={handleChange}
                       />
                       <span>
-                        I agree to be contacted about my GenEd Deskbot
+                        I agree to be contacted about my Zoovi Deskbot
                         pre-order and to the ₹500 refundable deposit.
                       </span>
                     </label>
@@ -410,7 +410,7 @@ function SuccessView({
       </p>
       <div className="po-ref">{reference}</div>
       <p className="po-success-note">
-        A GenEd account has been created for you. To sign in, use{" "}
+        A Zoovi account has been created for you. To sign in, use{" "}
         <strong>Forgot password</strong> on the login page with the email you
         used to pre-order.
       </p>

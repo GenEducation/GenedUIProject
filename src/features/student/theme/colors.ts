@@ -13,18 +13,18 @@
 export const STUDENT_COLORS = {
   // Brand — mirrors --primary / --tutor in globals.css. Raw hex here too
   // (not var()) so downstream alpha-suffix concatenation keeps working.
-  primary: "#075E63",
-  tutor: "#075E63",
-  tutorLight: "#3C8A8E",
-  tutorSoft: "#5FA8A3",
+  primary: "#287624",
+  tutor: "#287624",
+  tutorLight: "#4E9A2A",
+  tutorSoft: "#86B83A",
 
-  // Deep Ocean + Citron brand surfaces — mirror --accent / --canvas /
-  // --soft-surface. Citron is a fill only; put ink text on it, never white.
-  accent: "#D9F279",
-  accentDeep: "#B8D63F",
-  ink: "#122D30",
-  canvas: "#F6F7F2",
-  softSurface: "#DCEBE7",
+  // Zoovi brand surfaces (lime on paper) — mirror --accent / --canvas /
+  // --soft-surface. Lime is a fill only; put ink text on it, never white.
+  accent: "#A6CF08",
+  accentDeep: "#8DB000",
+  ink: "#1D6315",
+  canvas: "#F7F4EA",
+  softSurface: "#E8F0CC",
 
   // Accents
   growth: "#4E8F2F",
@@ -41,19 +41,19 @@ export const STUDENT_COLORS = {
   subjectHindi: "#7B5EA7",
 
   // Text
-  text: "#122D30",
-  textMid: "#3E5558",
-  textMuted: "#5E7477",
-  textFaint: "#C5D1CF",
+  text: "#1D6315",
+  textMid: "#3B5533",
+  textMuted: "#5A6E52",
+  textFaint: "#CDD3BF",
 
   // Surfaces
-  pageBg: "#F6F7F2",
+  pageBg: "#F7F4EA",
   card: "#FFFFFF",
-  border: "#E3E8E2",
+  border: "#E7E2D2",
 
   // Dark sidebar ground
-  sidebarBg: "#122D30",
-  sidebarText: "rgba(205,222,218,1)",
+  sidebarBg: "#1D6315",
+  sidebarText: "rgba(226,236,205,1)",
   sidebarMuted: "rgba(255,255,255,0.25)",
   sidebarActive: "#FFFFFF",
   sidebarBorder: "rgba(255,255,255,0.06)",
@@ -62,11 +62,11 @@ export const STUDENT_COLORS = {
 
   // Light sidebar ground — the redesigned StudentHomeSidebar. Kept separate
   // from the dark `sidebar*` keys above, which StudentChatSidebar still uses.
-  sidebarLightBg: "#FBFBF8",
-  sidebarLightText: "#4C6366",
-  sidebarLightActive: "#075E63",
-  sidebarLightActiveBg: "#DCEBE7",
-  sidebarLightBorder: "#E7ECE6",
-  sidebarLightHover: "#EEF4F1",
-  sidebarLightName: "#122D30",
+  sidebarLightBg: "#FBF9F2",
+  sidebarLightText: "#4F6646",
+  sidebarLightActive: "#287624",
+  sidebarLightActiveBg: "#E8F0CC",
+  sidebarLightBorder: "#E9E5D6",
+  sidebarLightHover: "#F2F5E5",
+  sidebarLightName: "#1D6315",
 } as const;

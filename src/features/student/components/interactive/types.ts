@@ -20,11 +20,11 @@ export const COLORS = {
   success: STUDENT_COLORS.tutor,
   danger: "#C2453E",
   ink: STUDENT_COLORS.ink as string,
-  muted: "#7F9295",
-  border: "#E3E8E2",
+  muted: "#7D8C73",
+  border: "#E7E2D2",
   // Neutral strokes for apparatus (scale beam, axes, angle base).
-  apparatus: "#8FA1A3",
-  cell: "#EEF4F1",
+  apparatus: "#94A28A",
+  cell: "#F2F5E5",
   // The lesson screen's tutor surface, so an activity reads as Nia's.
   panel: "#F1F7F4",
   accent: STUDENT_COLORS.accent,

@@ -58,7 +58,7 @@ export function AgentPickerModal() {
 
         {/* Search */}
         <div className="px-7 py-4 border-b border-[var(--primary-ink)]/8">
-          <div className="flex items-center gap-3 bg-[#F6F7F2] rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-3 bg-[#F7F4EA] rounded-2xl px-4 py-3">
             <Search size={16} className="text-[var(--primary-ink)]/40 flex-shrink-0" />
             <input
               autoFocus
@@ -136,7 +136,7 @@ export function AgentPickerModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-7 py-4 border-t border-[var(--primary-ink)]/8 bg-[#F6F7F2]/50">
+        <div className="px-7 py-4 border-t border-[var(--primary-ink)]/8 bg-[#F7F4EA]/50">
           <p className="text-xs text-[var(--primary-ink)]/40 text-center">
             {filtered.length} subject{filtered.length !== 1 ? "s" : ""} available
           </p>

@@ -68,7 +68,7 @@ export default function HundredChart({ directiveId, meta, disabled, readOnly }: 
             background = `${sets[0].color}33`; borderColor = sets[0].color; color = COLORS.ink;
           } else if (hasHighlights) {
             // non-member: display-only
-            background = "#FFFFFF"; color = "#C5D1CF"; borderColor = COLORS.border;
+            background = "#FFFFFF"; color = "#CDD3BF"; borderColor = COLORS.border;
           }
 
           return (

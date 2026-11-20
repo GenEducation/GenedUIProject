@@ -36,8 +36,8 @@ export function WebappCampaignPage() {
       <MetaPixel />
       <header className="gc-header">
         <div className="gc-wrap gc-header-row">
-          <Link href="/" className="gc-logo" aria-label="GenEd home">
-            <Image src="/brand/gened-logo.png" alt="GenEd" width={132} height={40} priority />
+          <Link href="/" className="gc-logo" aria-label="Zoovi home">
+            <Image src="/brand/zoovi-logo.png" alt="Zoovi" width={117} height={40} priority />
           </Link>
         </div>
       </header>

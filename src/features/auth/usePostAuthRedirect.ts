@@ -3,7 +3,9 @@ import { useLoaderStore } from "@/stores/useLoaderStore";
 
 // Overlay never hangs forever even if AuthGuard/navigation somehow never
 // resolves (e.g. an unexpected route with no AuthGuard to call stopLoading).
-const HANDOFF_WATCHDOG_MS = 12000;
+// Covers navigation, the destination's image wait (capped at 7s) and the deck's
+// own full cycle + finale.
+const HANDOFF_WATCHDOG_MS = 15000;
 
 /**
  * A post-auth destination we are willing to navigate to: an in-app path only
@@ -44,11 +46,10 @@ export function withRedirect(href: string, redirect: string | null = getRedirect
 }
 
 /**
- * Hands the loader overlay off to the destination route: marks the loader
- * complete (trophy + confetti), waits for the celebration to actually be
- * shown, then navigates while the overlay stays up covering compile/fetch
- * time. The destination's AuthGuard calls stopLoading() once it has
- * authorized and rendered, fading the overlay out from there.
+ * Hands the loader overlay off to the destination route: the loader
+ * navigates under its own cover, keeps playing while the destination
+ * compiles, fetches and loads its images, and leaves once AuthGuard calls
+ * finishLoading() and the deck has played through.
  */
 export function completeAndRedirect(router: ReturnType<typeof useRouter>, path: string): void {
   // The watchdog covers the whole hand-off — celebration, navigation and the
@@ -71,8 +72,8 @@ export function completeAndRedirect(router: ReturnType<typeof useRouter>, path: 
  * said which role it is. Sign-in can't know the role until then, so the form
  * shows its own button spinner while the request is in flight and the loader
  * starts here, already the right one — never the student loader first and the
- * parent one a moment later. Parents and partners get the GenEd logo toss;
- * everyone else gets the learning journey.
+ * parent one a moment later. Parents and partners get the Zoovi logo toss;
+ * everyone else gets the study deck.
  */
 export function startLoaderForRole(role: string, mode: "signin" | "signup"): void {
   const loader = useLoaderStore.getState();

@@ -130,7 +130,7 @@ export function StudentProfile() {
             <ProfileHero
               name={getStudentDisplayName(studentProfile)}
               gradeLine={gradeLine}
-              tutorName={titleCase(studentProfile?.ai_name || "Nia")}
+              tutorName={titleCase(studentProfile?.ai_name || "Zoovi")}
               avatarId={avatarId}
               onEditAvatar={() => setAvatarPickerOpen(true)}
               streak={studentStats?.currentStreak ?? 0}
@@ -153,7 +153,7 @@ export function StudentProfile() {
                   <CardHeading
                     icon={<UserRound size={24} strokeWidth={1.9} />}
                     title="Account"
-                    description="Watch the quick tour again, or sign out from GenEd."
+                    description="Watch the quick tour again, or sign out from Zoovi."
                   />
                 </div>
                 {/* Side by side at every width: on a phone they share the row under the text instead of stacking. */}

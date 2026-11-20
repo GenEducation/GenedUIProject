@@ -24,7 +24,7 @@ const ICON_BTN: React.CSSProperties = {
   border: "none",
   background: "transparent",
   cursor: "pointer",
-  color: "#5E7477",
+  color: "#5A6E52",
   padding: 0,
   transition: "background 0.15s",
   flexShrink: 0,
@@ -32,14 +32,14 @@ const ICON_BTN: React.CSSProperties = {
 
 const ACTIVE_BTN: React.CSSProperties = {
   ...ICON_BTN,
-  background: "#DCEBE7",
+  background: "#E8F0CC",
   color: "var(--tutor)",
 };
 
 const DIVIDER: React.CSSProperties = {
   width: 1,
   height: 16,
-  background: "#E3E8E2",
+  background: "#E7E2D2",
   flexShrink: 0,
 };
 
@@ -62,7 +62,7 @@ export function PdfToolbar({
       style={{
         padding: "4px 8px",
         background: "#FFFFFF",
-        borderBottom: "1px solid #E3E8E2",
+        borderBottom: "1px solid #E7E2D2",
         fontFamily: "var(--font-body)",
       }}
     >

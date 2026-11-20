@@ -29,15 +29,15 @@ export function ParentReportPreparing({ childName, avatar }: { childName?: strin
       <div
         role="status"
         aria-live="polite"
-        className="w-full max-w-sm rounded-2xl border border-white/70 bg-white/55 p-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_30px_-18px_rgba(19,41,61,0.28)] backdrop-blur-xl"
+        className="w-full max-w-sm rounded-2xl border border-white/70 bg-white/55 p-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_30px_-18px_rgba(29,72,21,0.28)] backdrop-blur-xl"
       >
         {avatar && (
-          <span className="mx-auto block h-16 w-16 overflow-hidden rounded-full ring-4 ring-white shadow-[0_10px_24px_-12px_rgba(19,41,61,0.5)]">
+          <span className="mx-auto block h-16 w-16 overflow-hidden rounded-full ring-4 ring-white shadow-[0_10px_24px_-12px_rgba(29,72,21,0.5)]">
             {/* eslint-disable-next-line @next/next/no-img-element -- small avatar */}
             <img src={avatar} alt="" className="h-full w-full scale-[1.035] object-cover" />
           </span>
         )}
-        <p className="mt-4 text-[17px] font-bold text-[#122D30]">
+        <p className="mt-4 text-[17px] font-bold text-[#1D6315]">
           Preparing {first ? `${first}'s` : "the"} report card
         </p>
         <ol className="mx-auto mt-5 w-fit space-y-2.5 text-left">
@@ -47,16 +47,16 @@ export function ParentReportPreparing({ childName, avatar }: { childName?: strin
               <li key={label} className="flex items-center gap-2.5 text-[14px]">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                   {state === "done" ? (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#075E63] text-white">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#287624] text-white">
                       <Check size={12} strokeWidth={3} />
                     </span>
                   ) : state === "current" ? (
-                    <span className="h-4 w-4 rounded-full border-2 border-[#CDEEDF] border-t-[#075E63] motion-safe:animate-spin" />
+                    <span className="h-4 w-4 rounded-full border-2 border-[#DDEBC1] border-t-[#287624] motion-safe:animate-spin" />
                   ) : (
                     <span className="h-2 w-2 rounded-full bg-[#C7D3D9]" />
                   )}
                 </span>
-                <span className={state === "pending" ? "text-[#5E7477]/70" : state === "current" ? "font-semibold text-[#122D30]" : "text-[#122D30]"}>
+                <span className={state === "pending" ? "text-[#5A6E52]/70" : state === "current" ? "font-semibold text-[#1D6315]" : "text-[#1D6315]"}>
                   {label}
                   {state === "current" ? "…" : ""}
                 </span>

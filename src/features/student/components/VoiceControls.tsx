@@ -22,8 +22,8 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
         style={{
           background: isMuted ? "#E8635A" : "white",
           color: isMuted ? "white" : "var(--tutor)",
-          border: `1px solid ${isMuted ? "#E8635A" : "#E3E8E2"}`,
-          boxShadow: "0 4px 12px rgba(18,45,48,0.08)",
+          border: `1px solid ${isMuted ? "#E8635A" : "#E7E2D2"}`,
+          boxShadow: "0 4px 12px rgba(29,99,21,0.08)",
         }}
         title={isMuted ? "Unmute" : "Mute"}
       >
@@ -47,8 +47,8 @@ export function VoiceControls({ onEnd }: VoiceControlsProps) {
               : "linear-gradient(135deg, var(--primary), var(--primary-hover))",
             color: pttHeld ? "var(--accent-ink)" : "white",
             boxShadow: pttHeld
-              ? "0 0 0 3px rgba(7,94,99,0.18), 0 6px 20px rgba(184,214,63,0.55)"
-              : "0 6px 20px rgba(7,94,99,0.35)",
+              ? "0 0 0 3px rgba(40,118,36,0.18), 0 6px 20px rgba(184,214,63,0.55)"
+              : "0 6px 20px rgba(40,118,36,0.35)",
             transform: pttHeld ? "scale(0.97)" : "scale(1)",
           }}
         >

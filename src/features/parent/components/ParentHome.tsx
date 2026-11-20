@@ -31,8 +31,8 @@ import { ParentReportPreparing } from "./loader/ParentReportPreparing";
 import { PortalBusyProvider, PortalProgressBar } from "./loader/PortalProgress";
 import { GlassSkeleton } from "./loader/GlassSkeleton";
 
-// The GenEd logo shared for the portal (Deep Ocean + Citron).
-const LOGO_SRC = "/brand/gened-logo-deep-ocean-transparent.png";
+// The Zoovi logo shared for the portal.
+const LOGO_SRC = "/brand/zoovi-logo.png";
 
 // Lazy-loaded: StudentReportCard is ~160KB and only shown on its own page.
 // While its code downloads, the same "preparing" state shows as once it's
@@ -368,7 +368,7 @@ export function ParentHome() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsSidebarOpen(false)}
-            className="fixed inset-0 z-40 bg-[#122D30]/30 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-[#1D6315]/30 backdrop-blur-sm lg:hidden"
           />
         )}
       </AnimatePresence>
@@ -381,7 +381,7 @@ export function ParentHome() {
       >
         <div className="flex items-center justify-between px-7 pt-7">
           {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
-          <img src={LOGO_SRC} alt="GenEd" width={354} height={140} className="h-auto w-[136px]" />
+          <img src={LOGO_SRC} alt="Zoovi" width={1063} height={365} className="h-auto w-[136px]" />
           <button
             aria-label="Close menu"
             onClick={() => setIsSidebarOpen(false)}
@@ -452,9 +452,9 @@ export function ParentHome() {
       <div className="relative isolate flex min-w-0 flex-1 flex-col">
         {/* Soft colour behind the content so the glass cards have something to frost. */}
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -top-40 right-[8%] h-[460px] w-[460px] rounded-full bg-[#9FE3C4]/45 blur-[90px]" />
-          <div className="absolute left-[-120px] top-[38%] h-[380px] w-[380px] rounded-full bg-[#D7EA7C]/35 blur-[90px]" />
-          <div className="absolute bottom-[-140px] right-[30%] h-[420px] w-[420px] rounded-full bg-[#BBD7FF]/40 blur-[100px]" />
+          <div className="absolute -top-40 right-[8%] h-[460px] w-[460px] rounded-full bg-[#C9E88A]/45 blur-[90px]" />
+          <div className="absolute left-[-120px] top-[38%] h-[380px] w-[380px] rounded-full bg-[#D4E98A]/35 blur-[90px]" />
+          <div className="absolute bottom-[-140px] right-[30%] h-[420px] w-[420px] rounded-full bg-[#FBEA9A]/40 blur-[100px]" />
         </div>
         <header className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 pt-4 lg:flex-nowrap lg:px-8 lg:pt-6">
           <div className="flex items-center gap-3 lg:hidden">
@@ -466,7 +466,7 @@ export function ParentHome() {
               <Menu size={20} />
             </button>
             {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
-            <img src={LOGO_SRC} alt="GenEd" width={354} height={140} className="h-auto w-[96px]" />
+            <img src={LOGO_SRC} alt="Zoovi" width={1063} height={365} className="h-auto w-[96px]" />
           </div>
           {/* Greeting: beside the bell on desktop, its own line on phones. The report card has no greeting, only its
               title: its own header names the child. */}
@@ -517,7 +517,7 @@ export function ParentHome() {
           <div role="note" className="mx-4 mt-3 rounded-xl border border-amber-100 bg-amber-50 px-5 py-3 text-xs font-semibold text-amber-800 lg:mx-8">
             {otherGuardianNames.join(", ")} named your email as their parent&apos;s, but{" "}
             {otherGuardianNames.length > 1 ? "they are" : "is"} already connected to another guardian account. A child
-            can have one guardian account on GenEd; that guardian can remove the connection in their Settings.
+            can have one guardian account on Zoovi; that guardian can remove the connection in their Settings.
           </div>
         )}
 

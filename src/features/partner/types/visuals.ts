@@ -56,6 +56,8 @@ export type VisualOrigin = "drawn" | "textbook_crop";
 
 export interface VisualSummary {
   id: string;
+  /** Stable across runs: `<section key>:<reading order>` for a figure. */
+  target_key?: string;
   /** `figure`: a textbook figure (redrawn, or its crop); `node`: a lesson step; `card`: the chapter cover. */
   kind: "node" | "figure" | "card";
   origin: VisualOrigin;
@@ -86,8 +88,18 @@ export interface VisualSpec {
   purpose: string;
   layout: string;
   caption: string | null;
-  objects: { id: string; what: string; colour: string; position: string; notes: string }[];
-  texts: { text: string; role: "title" | "label" | "note" | "caption"; where: string }[];
+  objects: {
+    id: string;
+    what: string;
+    colour: string;
+    position: string;
+    notes: string;
+  }[];
+  texts: {
+    text: string;
+    role: "title" | "label" | "note" | "caption";
+    where: string;
+  }[];
   /** Which `concept.passages` the picture uses. */
   source_refs: string[];
   /** What the picture should visibly show. */
@@ -151,6 +163,9 @@ export interface VisualDetail extends Omit<VisualSummary, "caption"> {
   regeneration: VisualRegenerationView | null;
   /** Oldest first. */
   family: VisualFamilyMember[];
+  /** A textbook crop a reviewer marked readable on a touch device's small screen (ADR 0052 decision 10): only then is it
+   * made into a device picture. Absent from an older backend. */
+  device_readable?: boolean;
 }
 
 export interface VisualDecisionIn {
@@ -181,6 +196,7 @@ export interface VisualRegenerateOut {
 
 export interface VisualListParams {
   state?: CandidateState;
+  kind?: "node" | "figure" | "card";
   subject?: string;
   grade?: number;
   source_id?: string;
@@ -237,7 +253,8 @@ export interface VisualTargetTally {
   reviewed: number;
 }
 
-export type RedrawState = "queued" | "drawing" | "ready" | "reviewed" | "failed";
+export type RedrawState =
+  "queued" | "drawing" | "ready" | "reviewed" | "failed";
 
 export interface VisualRedrawTally extends Record<RedrawState, number> {
   total: number;

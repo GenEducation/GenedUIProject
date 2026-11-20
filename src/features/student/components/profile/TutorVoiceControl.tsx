@@ -196,7 +196,7 @@ function extraDescription(voice: TutorVoice): string | null {
 
 /** Calm, on-brand tints so a grid of voices reads as distinct people rather than a column of identical rows. */
 const MONOGRAM_TINTS = [
-  { bg: "#DCEBE7", fg: "#075E63" },
+  { bg: "#E8F0CC", fg: "#287624" },
   { bg: "#EEF7C8", fg: "#4A5A12" },
   { bg: "#E3EEF8", fg: "#22507A" },
   { bg: "#F6E9DC", fg: "#7A4A1F" },

@@ -220,19 +220,19 @@ export const studentService = {
     return response.json();
   },
 
-  /** GET /partners: every school, GenEd included (a picker). */
+  /** GET /partners: every school, Zoovi included (a picker). */
   fetchAvailablePartners: async (): Promise<PartnerSummary[]> => {
     const response = await authFetch(`${API_BASE_URL}/partners`);
     return response.json();
   },
 
-  /** GET /student/partners: every real school (GenEd excluded) with this student's request status. */
+  /** GET /student/partners: every real school (Zoovi excluded) with this student's request status. */
   fetchStudentPartners: async (userId: string): Promise<StudentPartnerRow[]> => {
     const response = await authFetch(`${API_BASE_URL}/student/partners?student_id=${encodeURIComponent(userId)}`);
     return response.json();
   },
 
-  /** POST /student/partner: "Partner request sent" (PENDING) or "Partner added successfully" (GenEd). */
+  /** POST /student/partner: "Partner request sent" (PENDING) or "Partner added successfully" (Zoovi). */
   sendPartnerRequest: async (userId: string, partnerId: string): Promise<{ message: string }> => {
     const url = `${API_BASE_URL}/student/partner?student_id=${encodeURIComponent(userId)}&partner_id=${encodeURIComponent(partnerId)}`;
     const response = await authFetch(url, {

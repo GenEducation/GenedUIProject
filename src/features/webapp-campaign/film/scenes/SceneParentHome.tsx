@@ -61,8 +61,8 @@ const ALONG = (() => {
 
 // Sample alerts, in the portal's own severity colours and icons.
 const ALERTS = [
-  { text: "Aarav finished “Percent as a fraction” — 9 of 10 answers right.", bar: "#075E63", tint: "#DDF4E9", icon: "alert_science_badge" },
-  { text: "Mathematics mastery is up 4% this week.", bar: "#075E63", tint: "#DDF4E9", icon: "alert_science_badge" },
+  { text: "Aarav finished “Percent as a fraction” — 9 of 10 answers right.", bar: "#287624", tint: "#DDF4E9", icon: "alert_science_badge" },
+  { text: "Mathematics mastery is up 4% this week.", bar: "#287624", tint: "#DDF4E9", icon: "alert_science_badge" },
   { text: "Science: 2 chapters started — one short session would finish one.", bar: "#F5A50B", tint: "#FDF0CF", icon: "alert_hindi_clock" },
 ];
 
@@ -147,8 +147,8 @@ export function SceneParentHome({ p }: { p: Progress }) {
                 <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden>
                   <defs>
                     <linearGradient id="gc-ph-fill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0" stopColor="#075E63" stopOpacity="0.28" />
-                      <stop offset="1" stopColor="#075E63" stopOpacity="0.02" />
+                      <stop offset="0" stopColor="#287624" stopOpacity="0.28" />
+                      <stop offset="1" stopColor="#287624" stopOpacity="0.02" />
                     </linearGradient>
                   </defs>
                   {[0, 25, 50, 75].map((y) => (
@@ -222,7 +222,7 @@ function CardHead({ icon, label }: { icon: React.ReactNode; label: string }) {
 
 function ClockIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="#075E63" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="#287624" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
     </svg>

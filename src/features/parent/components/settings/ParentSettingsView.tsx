@@ -203,7 +203,7 @@ function AddChildGuide({ email }: { email?: string }) {
   return (
     <section aria-labelledby="add-title" className={`rounded-[24px] p-5 sm:p-6 ${GLASS}`}>
       <header className="flex items-start gap-3.5">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#D9F279] text-[var(--pp-ink)]">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#A6CF08] text-[var(--pp-ink)]">
           <Smartphone size={19} strokeWidth={2.2} />
         </span>
         <div className="min-w-0">
@@ -302,7 +302,7 @@ function AccountCard({ profile }: { profile?: ParentProfile | null }) {
     <section aria-labelledby="account-title" className={`rounded-[24px] p-5 ${GLASS}`}>
       <h2 id="account-title" className="sr-only">Account</h2>
       <div className="flex items-center gap-3.5">
-        <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--pp-ink)] text-[20px] font-extrabold text-[#D9F279]">
+        <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--pp-ink)] text-[20px] font-extrabold text-[#A6CF08]">
           {name.charAt(0)}
         </span>
         <div className="min-w-0">

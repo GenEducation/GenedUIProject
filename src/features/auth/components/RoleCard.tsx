@@ -45,8 +45,8 @@ export function RoleCard({
       onClick={onSelect}
       className={`group relative flex flex-col items-center p-6 rounded-2xl border-2 transition-all duration-300 ${
         selected
-          ? "border-[#075E63] bg-[#075E63]/5 shadow-lg shadow-[#075E63]/10 animate-pulse-subtle"
-          : "border-[#122D30]/10 bg-white hover:border-[#075E63]/40 hover:bg-[#075E63]/5"
+          ? "border-[#287624] bg-[#287624]/5 shadow-lg shadow-[#287624]/10 animate-pulse-subtle"
+          : "border-[#1D6315]/10 bg-white hover:border-[#287624]/40 hover:bg-[#287624]/5"
       }`}
     >
       <div className="w-full aspect-square mb-4 transition-transform duration-300 group-hover:scale-110">
@@ -69,13 +69,13 @@ export function RoleCard({
             <span
               key={i}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === index ? "w-4 bg-[#075E63]" : "w-1.5 bg-[#122D30]/15"
+                i === index ? "w-4 bg-[#287624]" : "w-1.5 bg-[#1D6315]/15"
               }`}
             />
           ))}
         </div>
       )}
-      <span className="text-sm font-bold text-[#122D30]">{label}</span>
+      <span className="text-sm font-bold text-[#1D6315]">{label}</span>
     </button>
   );
 }

@@ -101,7 +101,7 @@ describe("login flow (integration)", () => {
     );
     const { container } = renderLoginPage();
 
-    fillAndSubmit(container, "GenEd Admin");
+    fillAndSubmit(container, "Zoovi Admin");
 
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/admin"), { timeout: 4000 });
     expect(localStorage.getItem("gened_user_role")).toBe("admin");

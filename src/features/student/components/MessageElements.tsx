@@ -38,15 +38,15 @@ function FigureDescribeBlock({ figureAssetUrl, prompt, directiveId }: {
   return (
     <div className="flex flex-col items-center gap-3 w-full">
       {loading ? (
-        <div className="w-full h-32 rounded-xl animate-pulse" style={{ background: "#EAF2EF" }} />
+        <div className="w-full h-32 rounded-xl animate-pulse" style={{ background: "#EFF4DF" }} />
       ) : imageUrl ? (
-        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl" style={{ boxShadow: "0 2px 12px rgba(18,45,48,0.08)", maxHeight: "60vh", objectFit: "contain" }} />
+        <img src={imageUrl} alt="Scene" className="max-w-full rounded-xl" style={{ boxShadow: "0 2px 12px rgba(29,99,21,0.08)", maxHeight: "60vh", objectFit: "contain" }} />
       ) : (
         <div className="w-full p-3 sm:p-4 rounded-xl text-[10px] sm:text-xs font-medium text-center" style={{ background: "var(--warning-bg)", color: "var(--warning-ink)" }}>
           🖼️ Image unavailable
         </div>
       )}
-      <p style={{ fontSize: 13, fontWeight: 700, color: "#3E5558", textAlign: "center" }}>{prompt}</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: "#3B5533", textAlign: "center" }}>{prompt}</p>
     </div>
   );
 }

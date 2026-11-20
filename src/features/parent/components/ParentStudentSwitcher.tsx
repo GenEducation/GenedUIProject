@@ -182,7 +182,7 @@ export function ParentStudentSwitcher({
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
             style={{ transformOrigin: "top center" }}
-            className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-[var(--pp-line)] bg-white p-2 text-[var(--pp-ink)] shadow-[0_18px_40px_-18px_rgba(19,41,61,0.45)]"
+            className="absolute left-0 right-0 top-full z-50 mt-2 rounded-2xl border border-[var(--pp-line)] bg-white p-2 text-[var(--pp-ink)] shadow-[0_18px_40px_-18px_rgba(29,72,21,0.45)]"
           >
             <p className="px-2.5 pb-2 pt-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--pp-ink-soft)]">
               Switch to

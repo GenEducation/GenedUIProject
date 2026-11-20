@@ -10,7 +10,7 @@ interface SideBarProps {
 }
 
 import { usePartnerStore } from "../store/usePartnerStore";
-import { GenEdLogo } from "@/components/shared/GenEdLogo";
+import { ZooviLogo } from "@/components/shared/ZooviLogo";
 import { FEATURES } from "@/constants/features";
 
 /**
@@ -23,7 +23,7 @@ function readSchoolName(): string | null {
     const profile = JSON.parse(localStorage.getItem("gened_user_profile") || "{}");
     const organization = typeof profile.organization === "string" ? profile.organization.trim() : "";
     if (!organization) return null;
-    // Add "School" when the name doesn't already say it ("GenEd" → "GenEd School",
+    // Add "School" when the name doesn't already say it ("Zoovi" → "Zoovi School",
     // "Delhi Public School" stays as is).
     return /\bschool\b/i.test(organization) ? organization : `${organization} School`;
   } catch {
@@ -53,12 +53,12 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
   ];
 
   return (
-    <aside className="w-20 lg:w-64 h-screen bg-[#F6F7F2] flex flex-col p-4 lg:p-6 border-r border-gray-100 transition-all duration-300">
+    <aside className="w-20 lg:w-64 h-screen bg-[#F7F4EA] flex flex-col p-4 lg:p-6 border-r border-gray-100 transition-all duration-300">
       {/* Logo & Workspace Info: only beside the full sidebar. The collapsed rail (below lg) has no logo; the top bar
           shows the full one, centred, instead of a mark squeezed into the rail. */}
       <div className="mb-12 hidden lg:flex flex-col gap-5">
         <div className="w-full h-16 flex items-center justify-start overflow-hidden">
-          <GenEdLogo height={52} priority />
+          <ZooviLogo height={52} priority />
         </div>
         {/* The logo PNG has ~14/140 of its height as empty space before the "G" (5px at height 52), so indent
             the name by the same amount to line it up with the letters. */}
@@ -66,12 +66,12 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
           {schoolName ? (
             <h1
               title={schoolName}
-              className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-snug line-clamp-2 break-words"
+              className="text-[#1D6315] text-sm font-black uppercase tracking-widest leading-snug line-clamp-2 break-words"
             >
               {schoolName}
             </h1>
           ) : (
-            <h1 className="text-[#122D30] text-sm font-black uppercase tracking-widest leading-none">
+            <h1 className="text-[#1D6315] text-sm font-black uppercase tracking-widest leading-none">
               Partner Portal
             </h1>
           )}
@@ -91,13 +91,13 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
               className={`
                 flex items-center gap-4 p-2 lg:px-4 lg:py-3 rounded-2xl transition-all duration-300 group justify-center lg:justify-start relative
                 ${isActive 
-                  ? "bg-white text-[#122D30] shadow-[0_4px_20px_rgba(0,0,0,0.04)]" 
-                  : "text-[#122D30]/40 hover:text-[#122D30] hover:bg-white/50"}
+                  ? "bg-white text-[#1D6315] shadow-[0_4px_20px_rgba(0,0,0,0.04)]" 
+                  : "text-[#1D6315]/40 hover:text-[#1D6315] hover:bg-white/50"}
               `}
             >
               <div className={`
                 p-2 rounded-xl transition-colors shrink-0
-                ${isActive ? "bg-[#075E63] text-white" : "bg-transparent group-hover:bg-[#075E63]/5"}
+                ${isActive ? "bg-[#287624] text-white" : "bg-transparent group-hover:bg-[#287624]/5"}
               `}>
                 <Icon size={18} />
               </div>
@@ -119,7 +119,7 @@ export function SideBar({ activeView, onViewChange }: SideBarProps) {
       <div className="mt-auto pt-4">
         <button 
           onClick={logoutPartner}
-          className="w-full flex items-center gap-4 p-2 lg:px-4 lg:py-3 text-[#122D30]/40 hover:text-red-500 transition-colors group justify-center lg:justify-start"
+          className="w-full flex items-center gap-4 p-2 lg:px-4 lg:py-3 text-[#1D6315]/40 hover:text-red-500 transition-colors group justify-center lg:justify-start"
         >
           <div className="p-2 rounded-xl group-hover:bg-red-50/50 shrink-0">
             <LogOut size={18} />

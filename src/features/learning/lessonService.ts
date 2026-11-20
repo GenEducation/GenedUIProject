@@ -1,6 +1,9 @@
 import { authFetch } from "@/utils/authFetch";
 import type {
+  ActivityAttempt,
   AnswerBody,
+  WrittenBody,
+  WrittenResult,
   AnswerResult,
   DeliveryBody,
   ChapterReport,
@@ -25,7 +28,19 @@ const SSE = { accept: "text/event-stream" };
  * on any non-OK response, so nothing here checks `response.ok`. The two stream
  * calls return the raw `Response`; read it with `readSseFrames`.
  */
+type ContentReceipt = { request_id: string; expected_revision: number; channel: "chat" | "voice" };
+type Assignment = { revision: number; lesson: NonNullable<InstanceState["content_lesson"]>; source: string[] };
+
 export const lessonService = {
+  contentAssignment: async (id: string, body?: ContentReceipt): Promise<Assignment> =>
+    (await authFetch(`${instancePath(id)}/content/assignment`, body ? json(body) : undefined)).json(),
+  contentShown: async (id: string, portion: string, body: ContentReceipt): Promise<Assignment> =>
+    (await authFetch(`${instancePath(id)}/content/portions/${portion}/shown`, json(body))).json(),
+  contentTurnDelivered: async (id: string, turn: string, body: ContentReceipt & {
+    terminal_seq: number; boundary: "text_rendered" | "playback_drained" | "interrupted";
+  }): Promise<Assignment> =>
+    (await authFetch(`${instancePath(id)}/content/turns/${turn}/delivered`, json(body))).json(),
+
   instance: async (instanceId: string): Promise<InstanceState> =>
     (await authFetch(instancePath(instanceId))).json(),
 
@@ -60,6 +75,15 @@ export const lessonService = {
 
   answer: async (instanceId: string, body: AnswerBody): Promise<AnswerResult> =>
     (await authFetch(`${instancePath(instanceId)}/responses`, json(body))).json(),
+
+  activityAnswer: async (
+    instanceId: string, nodeId: string, itemId: string, body: { request_id: string; expected_revision: number; answer: string },
+  ): Promise<ActivityAttempt> =>
+    (await authFetch(`${instancePath(instanceId)}/nodes/${encodeURIComponent(nodeId)}/activities/${encodeURIComponent(itemId)}/responses`, json(body))).json(),
+
+  /** A typed answer to a rubric check: evaluated by the server's qualified evaluator and committed once (the same `request_id` returns the committed result). */
+  writtenAnswer: async (instanceId: string, body: WrittenBody): Promise<WrittenResult> =>
+    (await authFetch(`${instancePath(instanceId)}/written-responses`, json(body))).json(),
 
   /** Confirms a check was delivered in this session (shown, or its audio played to the end). An answer counts only after this. */
   checkDelivered: async (instanceId: string, itemId: string, body: DeliveryBody): Promise<void> => {

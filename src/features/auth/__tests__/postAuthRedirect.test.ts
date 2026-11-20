@@ -17,7 +17,7 @@ describe("completeAndRedirect watchdog", () => {
     completeAndRedirect(router, "/parent");
     useLoaderStore.getState().onCelebrated?.(); // navigation happened; nobody stops the loader
 
-    vi.advanceTimersByTime(12_000);
+    vi.advanceTimersByTime(15_000);
     expect(useLoaderStore.getState().isVisible).toBe(false);
   });
 
@@ -27,7 +27,7 @@ describe("completeAndRedirect watchdog", () => {
     useLoaderStore.getState().stopLoading();
     useLoaderStore.getState().startLoading({ variant: "parent" }); // e.g. a fresh login
 
-    vi.advanceTimersByTime(12_000);
+    vi.advanceTimersByTime(15_000);
     expect(useLoaderStore.getState().isVisible).toBe(true);
   });
 });

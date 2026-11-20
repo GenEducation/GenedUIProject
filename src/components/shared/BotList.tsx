@@ -23,8 +23,8 @@ export interface BotListTheme {
 }
 
 /**
- * A student's paired GenEd bots, each with a two-step Remove. Removing one disconnects it within the hour; it then
- * shows "This bot was removed from GenEd" and a new pairing code.
+ * A student's paired Zoovi bots, each with a two-step Remove. Removing one disconnects it within the hour; it then
+ * shows "This bot was removed from Zoovi" and a new pairing code.
  */
 export function BotList({
   bots,
@@ -59,7 +59,7 @@ export function BotList({
   };
 
   return (
-    <ul aria-label="Paired GenEd bots" className="space-y-2">
+    <ul aria-label="Paired Zoovi bots" className="space-y-2">
       {bots.map((bot) => (
         <li key={bot.id} className={`rounded-2xl px-3.5 py-3 ${theme.row}`}>
           <div className="flex items-center gap-3">

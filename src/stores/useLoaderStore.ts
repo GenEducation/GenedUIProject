@@ -4,12 +4,16 @@ import { create } from 'zustand';
 export type LoaderVariant = 'default' | 'parent';
 
 /** What the logo-toss loader is waiting on; drives its status line. */
-// The GenEd logo-toss loader serves parents and partners; partners have their
+// The Zoovi logo-toss loader serves parents and partners; partners have their
 // own wording.
 export type ParentLoaderStage = 'signup' | 'signin-handoff' | 'entry' | 'partner-signin' | 'partner-signup';
 
+/** Why the loader is up; sets the study deck's closing word. */
+export type LoaderReason = 'signin' | 'logout';
+
 interface StartOptions {
   variant?: LoaderVariant;
+  reason?: LoaderReason;
   stage?: ParentLoaderStage;
   // Wait this long before appearing, so a load that finishes quickly never
   // flashes a full-screen loader. Parent loader only.
@@ -27,6 +31,7 @@ interface LoaderState {
   // minimum hold. This is when the caller should actually navigate.
   onCelebrated: (() => void) | null;
   variant: LoaderVariant;
+  reason: LoaderReason;
   parentStage: ParentLoaderStage;
   // Bumped on every startLoading(), so a late timer from an earlier load
   // (e.g. the hand-off watchdog) can tell it no longer owns the loader.
@@ -59,6 +64,7 @@ export const useLoaderStore = create<LoaderState>((set) => ({
   isHandoff: false,
   onCelebrated: null,
   variant: 'default',
+  reason: 'signin',
   parentStage: 'entry',
   loadId: 0,
   appearDelayMs: 0,
@@ -69,6 +75,7 @@ export const useLoaderStore = create<LoaderState>((set) => ({
       isHandoff: false,
       onCelebrated: null,
       variant: options?.variant ?? 'default',
+      reason: options?.reason ?? 'signin',
       parentStage: options?.stage ?? 'entry',
       loadId: ++lastLoadId,
       appearDelayMs: options?.appearDelayMs ?? 0,

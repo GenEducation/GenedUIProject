@@ -16,6 +16,32 @@ export type SourceState =
   | "ready"
   | "failed";
 
+export interface ActivityEvaluationPass {
+  model_key: string;
+  model_version: string | null;
+  prompt_name: string;
+  prompt_sha256: string;
+  evaluation: {
+    on_task: boolean | null;
+    verdicts: Array<{
+      objective: number;
+      verdict: "met" | "partly" | "not_met" | "abstain";
+      quote: string;
+    }>;
+  } | null;
+}
+
+export interface ActivityReview {
+  evaluation_id: string;
+  attempt_id: string;
+  mode: "write" | "speak" | "read_aloud" | "listen";
+  answer: string;
+  evaluator: ActivityEvaluationPass;
+  verifier: ActivityEvaluationPass;
+  agreed: Array<"met" | "not_met" | "not_judged">;
+  created_at: string;
+}
+
 /** States a partner may start (or re-run) a source from. */
 export const STARTABLE_STATES: ReadonlySet<SourceState> = new Set([
   "registered",
@@ -29,21 +55,36 @@ export const STARTABLE_STATES: ReadonlySet<SourceState> = new Set([
  * States a source may be deleted in: every state but `queued` (cancel it first) and `running` (it cannot be stopped).
  * A source whose chapter was published is never deleted, whatever its state (see `deleteBlockedReason`).
  */
-export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set(["registered", "review_needed", "invalid", "ready", "failed"]);
+export const DELETABLE_STATES: ReadonlySet<SourceState> = new Set([
+  "registered",
+  "review_needed",
+  "invalid",
+  "ready",
+  "failed",
+]);
 
 /**
  * Why the server would refuse to delete this source (`DELETE /v1/sources/{id}`), or null when it would not. The server
  * also refuses a source an older, published run came from, which the list cannot see; its 409 says so.
  */
-export function deleteBlockedReason(source: { state: SourceState; release?: SourceReleaseRef | null }): string | null {
-  if (source.release?.state === "published") return "Published chapters can't be deleted: students are learning from them.";
-  if (source.state === "queued") return "Stop the queued run first, then delete the chapter.";
-  if (source.state === "running") return "A run in progress can't be stopped. Delete the chapter once it finishes.";
+export function deleteBlockedReason(source: {
+  state: SourceState;
+  release?: SourceReleaseRef | null;
+}): string | null {
+  if (source.release?.state === "published")
+    return "Published chapters can't be deleted: students are learning from them.";
+  if (source.state === "queued")
+    return "Stop the queued run first, then delete the chapter.";
+  if (source.state === "running")
+    return "A run in progress can't be stopped. Delete the chapter once it finishes.";
   return null;
 }
 
 /** States the worker is still on; the registry keeps polling while any row is in one. */
-export const ACTIVE_STATES: ReadonlySet<SourceState> = new Set(["queued", "running"]);
+export const ACTIVE_STATES: ReadonlySet<SourceState> = new Set([
+  "queued",
+  "running",
+]);
 
 /**
  * The registry's status filter, in the order a run moves through them. Worded as the rows say it (`NEXT_STEP_COPY`):
@@ -83,7 +124,10 @@ export type IngestionStage =
   | "submit";
 
 /** Each stage as a partner reads it, and what its counted units are called (if it has any). */
-export const INGESTION_STAGES: Record<IngestionStage, { label: string; unit?: string }> = {
+export const INGESTION_STAGES: Record<
+  IngestionStage,
+  { label: string; unit?: string }
+> = {
   render: { label: "Preparing the pages" },
   read_pages: { label: "Reading pages", unit: "pages" },
   components: { label: "Finding the key concepts" },
@@ -124,7 +168,11 @@ export interface SourceProgress {
   /** The chosen learning outcomes no lesson step of the run reaches: the chapter does not teach them. */
   uncovered_outcomes?: string[];
   /** The partner's last change of outcomes, after this run: what they removed and what they added. */
-  outcome_correction?: { corrected_at: string; removed: string[]; added?: string[] } | null;
+  outcome_correction?: {
+    corrected_at: string;
+    removed: string[];
+    added?: string[];
+  } | null;
 }
 
 export interface SourceRefusal {
@@ -153,6 +201,9 @@ export type NextStep =
   /** Questions need their picture, but no redraw waits for you: the drawing failed its own checks. Run again. */
   | "redraw_pictures"
   | "add_questions"
+  | "review_questions"
+  /** Partner decisions changed; rebuild from cached work and prepare the release for review. */
+  | "prepare_release"
   | "upload_pages_with_questions"
   | "upload_clearer_pdf"
   | "upload_again"
@@ -275,7 +326,6 @@ export interface SourceView {
   authored?: number;
   authored_at?: string | null;
   /** The partner's request for AI-drafted questions; null when none. */
-  suggestions?: SuggestionsState | null;
   queued_at: string | null;
   /** When the server picked up the newest run. */
   started_at?: string | null;
@@ -387,7 +437,10 @@ export type ReleaseReason =
   | "bad_order"
   | "identity_change";
 
-export const REJECT_REASONS: { code: Exclude<ReleaseReason, "accepted_as_is">; label: string }[] = [
+export const REJECT_REASONS: {
+  code: Exclude<ReleaseReason, "accepted_as_is">;
+  label: string;
+}[] = [
   { code: "incorrect_source", label: "Doesn't match the textbook" },
   { code: "wrong_lo", label: "Wrong learning outcome" },
   { code: "bad_key", label: "Wrong answer" },
@@ -433,6 +486,40 @@ export interface SourceRelease {
   live?: ReleaseSummary | null;
   /** Where the review of the chapter's visuals stands: its pictures and the redraws asked for. */
   visual_review?: VisualReviewSummary | null;
+  /** Per surface (`web`, then each device profile): can learners finish each step from the accepted questions. Informative only. */
+  readiness?: SurfaceReadiness[];
+  /** The live release per surface, from the published plan: what learners can finish now. Empty before publication. */
+  live_readiness?: LiveSurface[];
+}
+
+export interface LiveSurface {
+  surface: string;
+  ready: boolean;
+  steps_ready: number;
+  steps_total: number;
+  short_steps: string[];
+}
+
+/** A concept a step cannot complete on a surface yet. */
+export interface ConceptGap {
+  concept_key: string;
+  alternate: "needs_alternate" | "not_completable";
+  families: number;
+  strong_families: number;
+}
+
+export interface StepReadiness {
+  section_key: string;
+  title: string;
+  ready: boolean;
+  gaps: ConceptGap[];
+}
+
+/** `surface` is `web` or a device profile name. */
+export interface SurfaceReadiness {
+  surface: string;
+  ready: boolean;
+  steps: StepReadiness[];
 }
 
 export interface ReleaseDecision {
@@ -492,9 +579,25 @@ export interface PrintedAnswer {
   concept_key?: string;
 }
 
-export type AddedAnswerKind = "numeric" | "mcq" | "string_set";
+export type AddedAnswerKind =
+  | "mcq"
+  | "multi_select"
+  | "sequence"
+  | "matching"
+  | "grouping"
+  | "blanks"
+  | "numeric"
+  | "string_set"
+  | "activity";
 
-/** A question for one proposed concept: typed (`partner`) or a model draft the partner accepted (`ai_assisted`). */
+/** How a learner answers an activity (backend ADR 0048): free writing, free speech, reading a passage aloud, or answering after hearing it. */
+export type ActivityMode = "write" | "speak" | "read_aloud" | "listen";
+
+/**
+ * A question for one proposed concept, in any format (backend ADR 0045): written by the partner (`partner`) or a model draft the
+ * partner accepted, edited or not (`ai_assisted`). `replaces` names the printed question it is an edit of; `entry` places a numeric
+ * answer on a number line, so no learner types it.
+ */
 export interface AddedQuestion {
   id: string;
   section_key: string;
@@ -505,23 +608,318 @@ export interface AddedQuestion {
   options?: string[];
   correct_option_index?: number;
   accepted_answers?: string[];
+  correct_option_indexes?: number[];
+  sequence_entries?: string[];
+  correct_order?: number[];
+  match_left?: string[];
+  match_right?: string[];
+  match_pairs?: { left: number; right: number }[];
+  group_names?: string[];
+  group_entries?: string[];
+  group_of?: number[];
+  blank_answers?: string[][];
+  word_bank?: string[];
+  entry?: {
+    mode: "number_line" | "slider";
+    min: string;
+    max: string;
+    step: string;
+  };
+  replaces?: string;
+  explanation?: string;
+  /** An activity's mode (ADR 0048); only for `answer_kind: "activity"`. */
+  activity_mode?: ActivityMode;
+  /** An activity's optional criteria: what a good answer includes. Learners never see it. */
+  rubric?: string;
+  /** An activity's optional example of a good answer. Learners never see it. */
+  example_answer?: string;
+  /** A reading-aloud or listening activity's passage from the chapter: shown to read, or only played to listen to. */
+  passage?: string;
   origin: "partner" | "ai_assisted";
+}
+
+/** A question the run kept, which the partner may edit; `needs_keyboard` ones pass no step until re-presented (ADR 0045). */
+export interface PrintedQuestion {
+  item_key: string;
+  section_key: string;
+  concept_key: string | null;
+  prompt: string;
+  format: string;
+  needs_keyboard: boolean;
+  options: string[];
+  expected_numeric: string | null;
 }
 
 /** Everything the partner completed; `PUT .../authoring` replaces it. */
 export interface AuthoredQuestions {
   answers: Record<string, PrintedAnswer>;
   added: AddedQuestion[];
+  /** Printed questions (`item_key`) the partner took out of the chapter: reported as rejected. */
+  removed?: string[];
+  /** The figure a picture question is about, by its `item_key`: one of its `suggestions`. */
+  pictures?: Record<string, string>;
 }
 
-export type SuggestionsState = "requested" | "running" | "ready" | "failed";
+/** A figure of a picture question's section; `key` is the visual library's target key (`<section key>:<reading order>`). */
+export interface PictureFigure {
+  key: string;
+  page: number | null;
+  role: string;
+}
 
-export interface Suggestions {
-  state: SuggestionsState;
-  requested_at: string;
-  /** Drafts; each counts only once accepted into `added` with `origin: "ai_assisted"`. */
-  drafts: AddedQuestion[];
+/**
+ * Why a picture question is left out of the release: `not_identified` (which picture is unknown), `redraw_pending`
+ * (its picture's redraw waits for review), `no_redraw` (its picture needs none, so nothing can be shown), or
+ * `not_in_step` (a lesson step it is discussed at does not show its picture).
+ */
+export type PictureReason =
+  "not_identified" | "redraw_pending" | "no_redraw" | "not_in_step";
+
+/** A printed question that needs a picture, as the last run decided it. */
+export interface PictureQuestion {
+  item_key: string;
+  section_key: string;
+  prompt: string;
+  page: number | null;
+  status: "shown" | "held" | "removed";
+  reason: PictureReason | null;
+  figures: string[];
+  chosen: string | null;
+  /** Its section's figures, nearest page first. */
+  suggestions: PictureFigure[];
+}
+
+/** How an AI-prepared question's key was checked (backend ADR 0047): by code, by an independent solve, or not yet. */
+export type Verification =
+  "machine_verified" | "solver_agreed" | "needs_partner_check" | "unverified";
+
+export type RejectionReason =
+  | "incorrect"
+  | "ambiguous"
+  | "off_objective"
+  | "too_easy"
+  | "too_hard"
+  | "duplicate"
+  | "unclear_language"
+  | "inappropriate"
+  | "other";
+
+/** What a reviewer sees beside a bank question (backend `bank_contract.QuestionMeta`). */
+export interface BankQuestionMeta {
+  obligation_keys: string[];
+  evidence_kind: string;
+  strength: "strong" | "weak";
+  strength_reason: string;
+  family_key: string;
+  variant_of?: string | null;
+  difficulty: "easy" | "medium" | "hard";
+  prerequisites?: string[];
+  provenance:
+    | "textbook_printed"
+    | "textbook_adapted"
+    | "original_curriculum_aligned"
+    | "real_world_external";
+  source_basis: string;
+  quotes?: string[];
+  computation?: string | null;
+  distractors?: { option: string; misconception: string }[];
+  remediation?: string | null;
+  stimulus?: "none" | "passage" | "existing_figure";
+  figure_id?: string | null;
+  verification: Verification;
+  findings?: string[];
+}
+
+export interface BankQuestionContent {
+  body: AddedQuestion;
+  meta: BankQuestionMeta;
+}
+
+export interface BankQuestion {
+  question_id: string;
+  section_key: string;
+  concept_key: string;
+  state: "draft" | "accepted" | "rejected";
+  /** Every decision or edit names this; a stale one is refused (409). */
+  version: number;
+  revision: number;
+  origin: "ai" | "partner" | "imported";
+  verification: Verification;
+  question: BankQuestionContent;
+  concept_in_chapter: boolean;
+  /** Strength computed from the finished question (`evidence_tier`); the author's `meta.strength` is only a request.
+   * Absent from an older backend. */
+  tier?: EvidenceTier;
+  /** Why the question could not be built into a scoring rule, when `tier` is "none". */
+  tier_problem?: string | null;
+  requested_strength?: "strong" | "weak";
+  /** Per device profile (e.g. `gened-p4-touch-v1`): can the device show it, and if not, why. */
+  device?: Record<string, DeviceEligibility>;
+}
+
+export type EvidenceTier = "strong" | "weak" | "rubric" | "none";
+
+export interface DeviceEligibility {
+  eligible: boolean;
+  /** A device refusal code (`too_many_options`, `entry_too_long`, `format_not_declared`, ...); null when eligible. */
+  refusal: string | null;
+}
+
+/** What a concept's usable questions add up to on one surface (backend `bank_device.concept_pools`). */
+export interface ConceptPoolSurface {
+  units: number;
+  clean_path: boolean;
+  families: number;
+  strong_families: number;
+  /** resilient: completable even after a missed family; needs_alternate: completable, no spare family;
+   * not_completable: a learner cannot finish the concept here. */
+  alternate: "resilient" | "needs_alternate" | "not_completable";
+}
+
+export interface BankObligation {
+  key: string;
+  statement: string;
+  production: boolean;
+  draft_families: number;
+  approved_families: number;
+  draft_covered: boolean;
+  approved_covered: boolean;
+}
+
+/** Why a family slot is still open, from the latest authoring run (backend `node.gap_reasons`). */
+export interface BankOpenSlot {
+  slot: string;
+  category:
+    | "curriculum_issue"
+    | "unresolved_correctness"
+    | "retries_exhausted"
+    | "generation_defect";
+  detail: string;
+  last_reasons?: string[];
+}
+
+export interface BankConcept {
+  concept_key: string;
+  title: string;
+  /** planned; held by the curriculum audit; left out of the plan; or writing/speaking only (backend `bank_completeness`). */
+  status: "planned" | "held" | "not_planned" | "capability_gap";
+  why: string | null;
+  understanding: string | null;
+  misconceptions: string[];
+  obligations: BankObligation[];
+  open_slots: BankOpenSlot[];
+  /** Keyed `web` and by device profile; counts drafts and accepted questions. Absent (or null) from an older backend. */
+  pool?: Record<string, ConceptPoolSurface> | null;
+  /** The same pools counting accepted questions only: what learners get once this bank is published. */
+  pool_accepted?: Record<string, ConceptPoolSurface> | null;
+}
+
+export interface BankNode {
+  section_key: string;
+  title: string;
+  concepts: BankConcept[];
+  quarantined: string[];
+  /** Every ingested step is listed; only `ready_for_review` has every checkable objective covered. */
+  status: "ready_for_review" | "capability_gap" | "incomplete";
+  /** Verified or accepted questions from distinct families, no variants or repeats; ready needs at least `review_floor`. */
+  reviewable: number;
+  review_floor: number;
+  draft_ready: boolean;
+  approved_ready: boolean;
+  publishable: boolean;
+}
+
+export interface BankFinding {
+  concept_key: string;
+  issue: string;
+  evidence: string;
+  resolution: "corrected" | "quarantined";
+  proposed_definition?: string | null;
+  proposed_lo_code?: string | null;
+}
+
+export interface BankRun {
+  run_id: string;
+  scope: "chapter" | "node";
+  section_key: string | null;
+  state: "queued" | "running" | "ready" | "stopped" | "failed";
+  spent_usd: number;
   detail: string | null;
+  nodes: {
+    section_key: string;
+    dropped?: { prompt: string; reasons: string[] }[];
+    gaps?: string[];
+    bank_issues?: string[];
+  }[];
+  created_at: string;
+}
+
+/** `GET /v1/sources/{id}/bank`: the chapter's AI-prepared assessment package (backend ADR 0047). */
+/** One thing the partner does to unblock a lesson step (backend ADR 0049). */
+export interface StepAction {
+  kind:
+    | "decide_proposals"
+    | "keep_concept"
+    | "add_activity"
+    | "add_question"
+    | "more_questions";
+  count?: number;
+  activities?: number;
+  concept_key?: string;
+  concept?: string;
+  obligation_key?: string;
+  /** How many more questions the objective needs. */
+  needed?: number | null;
+  detail?: string;
+}
+
+/** A lesson step that blocks publication, with what the partner does about it. */
+export interface StepActions {
+  section_key: string;
+  title: string;
+  actions: StepAction[];
+}
+
+/** What the device can show, per answer format: keys like max_options, max_chars, max_entries, max_blanks, max_stem_chars. */
+export interface DeviceLimits {
+  profile: string;
+  formats: Record<string, Record<string, number>>;
+}
+
+export interface BankPackage {
+  version: string;
+  findings: BankFinding[];
+  nodes: BankNode[];
+  /** The effective device limits per answer format (backend device policy); absent from an older backend. */
+  device_limits?: DeviceLimits;
+  /** Each blocked step and its actions; absent from an older backend. */
+  actions?: StepActions[];
+  questions: BankQuestion[];
+  runs: BankRun[];
+  summary: {
+    nodes: number;
+    questions: number;
+    accepted: number;
+    needs_attention: number;
+    draft_ready_nodes: number;
+    capability_gap_nodes: number;
+    incomplete_nodes: number;
+    concepts: Record<BankConcept["status"], number>;
+    approved_ready_nodes: number;
+    publishable_nodes: number;
+    open_issues: number;
+    authoring: BankRun["state"] | null;
+  };
+  /** The latest approval: `approved` while it still matches the accepted questions and plan (a later change voids it);
+   * `coverage_ready` when it also covered every step, so the chapter's run can pass. Absent from an older backend. */
+  approval?: {
+    approved: boolean;
+    coverage_ready: boolean;
+    approved_at: string | null;
+  };
+  /** Bulk acceptance only: questions skipped because an independent check doubts them, and stale ones. */
+  skipped?: string[];
+  stale?: string[];
 }
 
 /** `GET /v1/sources/{id}/authoring`. */
@@ -529,10 +927,12 @@ export interface AuthoringResponse {
   sections: AuthoringSection[];
   concepts: AuthoringConcept[];
   removed: RemovedQuestion[];
+  /** The questions the run kept (backend ADR 0045); absent from an older backend. */
+  printed?: PrintedQuestion[];
+  /** Every printed question that needs a picture; absent from an older backend. */
+  pictures?: PictureQuestion[];
   authored: AuthoredQuestions;
   authored_at: string | null;
-  suggestions: Suggestions | null;
-  can_suggest: boolean;
 }
 
 /** `GET /v1/sources/books`: a book the partner filed chapters under, for the upload form's book picker. */

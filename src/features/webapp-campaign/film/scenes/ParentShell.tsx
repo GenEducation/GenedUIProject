@@ -37,7 +37,7 @@ export function ParentShell({
       {/* eslint-disable @next/next/no-img-element -- static mock art */}
       <div className="gc-app gc-parent">
         <aside className="gc-p-side">
-          <img src="/brand/gened-logo-deep-ocean-transparent.png" alt="" className="gc-p-logo" />
+          <img src="/brand/zoovi-logo.png" alt="" className="gc-p-logo" />
           <nav>
             {nav.map((n) => (
               <span key={n.label} className={n.label === active ? "gc-p-nav gc-p-nav-on" : "gc-p-nav"}>
@@ -82,8 +82,8 @@ export function MaskIcon({ src, color, size = "1.2em" }: { src: string; color: s
 
 /** Mastery bands, exactly as the portal and report card colour them. */
 export const BANDS = {
-  Advanced: { accent: "#075E63", ink: "#122D30", tint: "#D9F279", wash: ["#F4F9E6", "#FBFCF7"], edge: "#DDEAB4" },
-  Proficient: { accent: "#2F7A7E", ink: "#075E63", tint: "#DCEBE7", wash: ["#EEF5F3", "#FAFCFB"], edge: "#D0E3DD" },
+  Advanced: { accent: "#287624", ink: "#1D6315", tint: "#A6CF08", wash: ["#F4F9E6", "#FBFCF7"], edge: "#DDEAB4" },
+  Proficient: { accent: "#3A8A2E", ink: "#287624", tint: "#E8F0CC", wash: ["#F3F6E6", "#FAFCFB"], edge: "#D0E3DD" },
   Approaching: { accent: "#F5A50B", ink: "#B7790A", tint: "#FDEFC7", wash: ["#FFF8E8", "#FFFDF7"], edge: "#F8E7BE" },
 } as const;
 export type Band = keyof typeof BANDS;

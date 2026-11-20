@@ -168,7 +168,8 @@ describe("the answer box's calculator", () => {
     withCheck("numeric_set");
     await open(undefined, "Science");
     const box = screen.getByRole("textbox", { name: "Your answer" });
-    expect(box.getAttribute("placeholder")).toBe("Your answer");
+    // Named by a visible label, not a placeholder that disappears as they type.
+    expect(screen.getByText("Your answer", { selector: "label" })).toBeInTheDocument();
     fireEvent.change(box, { target: { value: "30 and 20" } });
     fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
     await waitFor(() => expect(answerRequests[0]).toMatchObject({ response: { kind: "text", text: "30 and 20" } }));

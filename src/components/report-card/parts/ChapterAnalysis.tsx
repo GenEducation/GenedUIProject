@@ -71,7 +71,7 @@ export function ChapterAnalysis({
                       <text x="4" y={g.y + 3} className="rc-spark-grid-label">{g.label.slice(0, 3)}</text>
                     </g>
                   ))}
-                  {arc.areaPath && <path d={arc.areaPath} fill="rgba(7,94,99,.07)" stroke="none" />}
+                  {arc.areaPath && <path d={arc.areaPath} fill="rgba(40,118,36,.07)" stroke="none" />}
                   <path d={arc.path} fill="none" stroke="var(--emerald)" strokeWidth="2.5" />
                   {arc.points.map((p, i) => (
                     <circle key={i} cx={p.x} cy={p.y} r="4" fill={SPARK_COLORS[p.level]} stroke="#fff" strokeWidth="1.5" />

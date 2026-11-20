@@ -56,38 +56,52 @@ export type SessionLanguage = (typeof SESSION_LANGUAGES)[number];
 export const isSessionLanguage = (tag: unknown): tag is SessionLanguage =>
   typeof tag === "string" && (SESSION_LANGUAGES as readonly string[]).includes(tag);
 
-const CHOICE_KEY = "gened_voice_language";
+/**
+ * The language a learner chose on this browser is kept per learner. One key shared by every learner on a browser (the old
+ * `gened_voice_language`) let one child's choice become the next child's tutor language on a shared computer, ahead of that
+ * child's own profile; it is removed and never read.
+ */
+const SHARED_KEY = "gened_voice_language";
+const choiceKey = (learnerId: string) => `gened_lesson_language:${learnerId}`;
 
-export function readLanguageChoice(): string | null {
+function forgetSharedChoice(): void {
   try {
-    return localStorage.getItem(CHOICE_KEY);
+    localStorage.removeItem(SHARED_KEY);
+  } catch {
+    /* blocked storage: there is nothing to forget */
+  }
+}
+
+/** This learner's own last choice on this browser, if it is one of the eight session languages. */
+export function readLanguageChoice(learnerId: string | null | undefined): SessionLanguage | null {
+  forgetSharedChoice();
+  if (!learnerId) return null;
+  try {
+    const tag = localStorage.getItem(choiceKey(learnerId));
+    return isSessionLanguage(tag) ? tag : null;
   } catch {
     return null;
   }
 }
 
-export function saveLanguageChoice(tag: string): void {
+export function saveLanguageChoice(learnerId: string | null | undefined, tag: SessionLanguage): void {
+  if (!learnerId) return;
   try {
-    localStorage.setItem(CHOICE_KEY, tag);
+    localStorage.setItem(choiceKey(learnerId), tag);
   } catch {
-    /* a private window or blocked storage: the choice just isn't remembered */
+    /* a private window or blocked storage: the choice lasts for this page only */
   }
-}
-
-/** The learner's profile preference, else their last choice here, else English: whichever the server offers first; never one it doesn't. */
-export function defaultLanguage(offered: VoiceLanguage[], preferred?: string | null): string | null {
-  const open = offered.filter(voiceLanguageEnabled).map((l) => l.language);
-  for (const tag of [readLanguageChoice(), preferred, "en"]) {
-    if (tag && open.includes(tag)) return tag;
-  }
-  return open[0] ?? null;
 }
 
 /**
- * The session language for typed turns and the lesson screen's words: this session's pick, else the last choice made on this
- * browser, else the profile preference; none if none is one of the eight (the turn then carries no language, as before).
+ * The session language for typed turns, the voice session and the lesson screen's words: the language picked in this lesson,
+ * else this learner's own last choice on this browser, else their profile preference, else English. Never another learner's.
  */
-export function resolveSessionLanguage(picked: string | null | undefined, preferred?: string | null): SessionLanguage | null {
-  for (const tag of [picked, readLanguageChoice(), preferred]) if (isSessionLanguage(tag)) return tag;
-  return null;
+export function resolveSessionLanguage(
+  picked: string | null | undefined,
+  learnerId: string | null | undefined,
+  preferred?: string | null,
+): SessionLanguage {
+  for (const tag of [picked, readLanguageChoice(learnerId), preferred]) if (isSessionLanguage(tag)) return tag;
+  return "en";
 }

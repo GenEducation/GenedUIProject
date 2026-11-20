@@ -2,21 +2,21 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #122D30; /* Ink */
-  --navy: #122D30;
-  --emerald: #075E63;
-  --academic-grey: #F6F7F2;
+  --foreground: #1D6315; /* Ink */
+  --navy: #1D6315;
+  --emerald: #287624;
+  --academic-grey: #F7F4EA;
 
   /* Teacher portal token layer — additive, does not alter existing tokens above. */
-  --ink: #122D30;
-  --muted: #5E7477;
-  --muted-light: #8FA1A3;
-  --border: #E3E8E2;
-  --paper: #FBFBF8;
-  --navy-700: #0B474B;
-  --navy-300: #9CC5C1;
-  --emerald-600: #064E52;
-  --emerald-50: #E8F2EF;
+  --ink: #1D6315;
+  --muted: #5A6E52;
+  --muted-light: #94A28A;
+  --border: #E7E2D2;
+  --paper: #FBF9F2;
+  --navy-700: #22661F;
+  --navy-300: #BFD88E;
+  --emerald-600: #22661F;
+  --emerald-50: #EEF4DD;
   --warning: #E8A33D;
   --warning-ink: #8a5a16;
   --warning-bg: #fff6e6;
@@ -31,11 +31,11 @@
      StudentChatSidebar.tsx / StudentProfile.tsx, which each re-declared a
      similar-but-diverging purple/blue/green palette instead of using the
      brand navy/emerald above. */
-  --primary: #075E63;        /* every primary CTA — deep ocean (= --emerald) */
-  --primary-ink: #122D30;    /* body text ink (= --navy) */
-  --tutor: #075E63;          /* Nia only: chat bubbles, voice orb, presence */
-  --tutor-light: #3C8A8E;
-  --tutor-soft: #5FA8A3;     /* secondary accent used alongside --tutor in gradients */
+  --primary: #287624;        /* every primary CTA — deep ocean (= --emerald) */
+  --primary-ink: #1D6315;    /* body text ink (= --navy) */
+  --tutor: #287624;          /* the tutor only: chat bubbles, voice orb, presence */
+  --tutor-light: #4E9A2A;
+  --tutor-soft: #86B83A;     /* secondary accent used alongside --tutor in gradients */
   --warn-2: #F0AD4E;         /* streak-at-risk / celebratory accent */
   --danger-2: #E8635A;       /* destructive actions, distinct shade from --danger */
   --growth: #4E8F2F;         /* success / PRO badge */
@@ -46,21 +46,21 @@
   --subject-social: #B0543F;
   --subject-hindi: #7B5EA7;
 
-  --text-primary: #122D30;
-  --text-mid: #3E5558;
-  --text-muted: #5E7477;
-  --text-faint: #C5D1CF;
-  --surface-page: #F6F7F2;
+  --text-primary: #1D6315;
+  --text-mid: #3B5533;
+  --text-muted: #5A6E52;
+  --text-faint: #CDD3BF;
+  --surface-page: #F7F4EA;
   --surface-card: #FFFFFF;
-  --surface-border: #E3E8E2;
-  --surface-sunken: #F6F7F2; /* recessed field bg (inputs/selects); only the 5 FIELD_CLASSNAME sites use this token today */
+  --surface-border: #E7E2D2;
+  --surface-sunken: #F7F4EA; /* recessed field bg (inputs/selects); only the 5 FIELD_CLASSNAME sites use this token today */
 
-  /* Deep Ocean + Citron brand surfaces. */
-  --accent: #D9F279;         /* citron — fills/highlights only, always under ink text */
-  --accent-deep: #B8D63F;
-  --accent-ink: #122D30;
-  --canvas: #F6F7F2;
-  --soft-surface: #DCEBE7;
+  /* Zoovi brand surfaces: the logo's lime on paper. */
+  --accent: #A6CF08;         /* citron — fills/highlights only, always under ink text */
+  --accent-deep: #8DB000;
+  --accent-ink: #1D6315;
+  --canvas: #F7F4EA;
+  --soft-surface: #E8F0CC;
 
   --radius-card: 24px; /* matches Profile's list cards, the actual majority usage — nothing consumed the old 16px value */
   --radius-control: 10px;
@@ -68,19 +68,19 @@
 
   /* --- Button system ---------------------------------------------------
      Interaction shades for the Button component. Before these existed each
-     call site invented its own hover (e.g. #053C40, `/90`, `bg-[#075E63]/10`),
+     call site invented its own hover (e.g. #1B521A, `/90`, `bg-[#287624]/10`),
      so the same action darkened by a different amount on every screen. */
-  --primary-hover: #064C50;
-  --primary-active: #053C40;
-  --primary-soft: rgba(7, 94, 99, 0.08);   /* tertiary/secondary hover wash */
-  --primary-ring: rgba(7, 94, 99, 0.32);   /* focus-visible ring */
+  --primary-hover: #22661F;
+  --primary-active: #1B521A;
+  --primary-soft: rgba(40,118,36, 0.08);   /* tertiary/secondary hover wash */
+  --primary-ring: rgba(40,118,36, 0.32);   /* focus-visible ring */
   --danger-2-hover: #d9524a;
   --danger-2-active: #c2453e;
   --danger-2-soft: rgba(232, 99, 90, 0.08);
   --danger-2-border: rgba(232, 99, 90, 0.2);
   --danger-2-on-dark: #F8A9A2;               /* lifted for dark admin/partner shells */
-  --btn-neutral-border: rgba(18, 45, 48, 0.14);
-  --btn-neutral-hover: rgba(18, 45, 48, 0.05);
+  --btn-neutral-border: rgba(29,99,21, 0.14);
+  --btn-neutral-hover: rgba(29,99,21, 0.05);
   --btn-disabled-opacity: 0.45;   /* one value, replacing opacity-30/40/50/60/70 */
   --btn-transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -104,15 +104,15 @@
   --color-emerald-50: var(--emerald-50);
   /* The rest of Tailwind's emerald scale, re-pointed at a deep-ocean ramp so
      every `*-emerald-*` utility follows the brand instead of default green. */
-  --color-emerald-100: #D3E6E2;
-  --color-emerald-200: #B0D2CC;
-  --color-emerald-300: #82B7AF;
-  --color-emerald-400: #4F9690;
-  --color-emerald-500: #1F7A7E;
-  --color-emerald-700: #064C50;
-  --color-emerald-800: #053C40;
-  --color-emerald-900: #042F32;
-  --color-emerald-950: #032528;
+  --color-emerald-100: #DDEBC1;
+  --color-emerald-200: #C5DC9A;
+  --color-emerald-300: #A6CB6A;
+  --color-emerald-400: #6AA83A;
+  --color-emerald-500: #3A8A2E;
+  --color-emerald-700: #22661F;
+  --color-emerald-800: #1B521A;
+  --color-emerald-900: #143E13;
+  --color-emerald-950: #10320F;
   --color-warning: var(--warning);
   --color-warning-ink: var(--warning-ink);
   --color-warning-bg: var(--warning-bg);
@@ -147,8 +147,9 @@
    property would compute to nothing. Declaring them here, alongside the
    variables they reference, keeps every var() resolvable. */
 body {
-  --font-display: var(--font-nunito-sans), var(--font-mukta), ui-sans-serif, system-ui;
-  --font-body: var(--font-nunito-sans), var(--font-mukta), ui-sans-serif, system-ui;
+  /* Zoovi type: Fredoka (round, like the device) for headings, Nunito for text; Mukta covers Devanagari. */
+  --font-display: var(--font-fredoka), var(--font-mukta), ui-sans-serif, system-ui;
+  --font-body: var(--font-nunito), var(--font-mukta), ui-sans-serif, system-ui;
   /* Report Card "document" typography — distinct on purpose. */
   --font-report-display: var(--font-source-serif), Georgia, serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
@@ -164,8 +165,8 @@ body {
 }
 
 .portal-legacy-type {
-  /* Intentionally empty: every portal now shares the Nunito Sans + Mukta
-     stack declared on body. Kept as a hook for portal-wide overrides. */
+  /* Intentionally empty: every portal now shares the Zoovi Fredoka + Nunito
+     (+ Mukta) stack declared on body. Kept as a hook for portal-wide overrides. */
 }
 
 /* Sidebar Transition Utilities */
@@ -174,16 +175,16 @@ body {
 }
 
 .chat-pill-shadow {
-  box-shadow: 0 4px 20px -4px rgba(18,45,48, 0.1), 0 2px 8px -2px rgba(18,45,48, 0.05);
+  box-shadow: 0 4px 20px -4px rgba(29,99,21, 0.1), 0 2px 8px -2px rgba(29,99,21, 0.05);
 }
 
 .chat-pill-focus {
-  box-shadow: 0 0 0 2px rgba(7,94,99, 0.1), 0 8px 30px -4px rgba(18,45,48, 0.15);
+  box-shadow: 0 0 0 2px rgba(40,118,36, 0.1), 0 8px 30px -4px rgba(29,99,21, 0.15);
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 600; /* Fredoka's boldest useful weight reads heavy at 700 */
 }
 
 /* Custom Scrollbar for Chrome, Safari, and Edge */
@@ -199,7 +200,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* The thumb (the part you drag) */
 ::-webkit-scrollbar-thumb {
-  background-color: #DCEBE7;
+  background-color: #E8F0CC;
   border-radius: 20px;
   /* Smooth transition for hover states */
   transition: background-color 0.2s ease;
@@ -207,13 +208,13 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Thumb hover state */
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #B0D2CC;
+  background-color: #C5DC9A;
 }
 
 /* Firefox Support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #DCEBE7 transparent;
+  scrollbar-color: #E8F0CC transparent;
 }
 
 /* ── Brand cursors ──────────────────────────────────────────────────────────
@@ -297,6 +298,13 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
 @keyframes voice-bar { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
 @media (prefers-reduced-motion: reduce) { .voice-bars > span { animation: none; transform: scaleY(0.7); } }
 
+/* Student dashboard: the continue card's 3D island drifts gently; its shadow on the card breathes with it. */
+@keyframes island-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+@keyframes island-shadow { 0%, 100% { transform: scaleX(1); opacity: .55; } 50% { transform: scaleX(.82); opacity: .35; } }
+.island-float { animation: island-float 5.5s ease-in-out infinite; will-change: transform; }
+.island-shadow { animation: island-shadow 5.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .island-float, .island-shadow { animation: none; } }
+
 /* A live dot's pulse (partner ingestion): an SVG circle grows and fades. Transforms on SVG shapes are redrawn as
    vectors each frame, so the halo stays crisp where Tailwind's animate-ping on a tiny HTML dot turned pixelated. */
 .live-pulse { transform-box: fill-box; transform-origin: center; animation: live-pulse 1.4s cubic-bezier(0, 0, 0.2, 1) infinite; }
@@ -319,11 +327,11 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
 
 /* Horizontal rails (subject carousel): a slim soft-teal thumb — present but
    quiet. (Class name kept for existing call sites.) */
-.citron-scroll { scrollbar-color: #B0D2CC transparent; }
+.citron-scroll { scrollbar-color: #C5DC9A transparent; }
 .citron-scroll::-webkit-scrollbar { height: 4px; }
 .citron-scroll::-webkit-scrollbar-track { background: transparent; }
-.citron-scroll::-webkit-scrollbar-thumb { background-color: #B0D2CC; }
-.citron-scroll::-webkit-scrollbar-thumb:hover { background-color: #82B7AF; }
+.citron-scroll::-webkit-scrollbar-thumb { background-color: #C5DC9A; }
+.citron-scroll::-webkit-scrollbar-thumb:hover { background-color: #A6CB6A; }
 
 /* Button loading spinner. Deliberately NOT Tailwind's `animate-spin`: tests
    assert on `.animate-spin` to detect a page's own loading state, and a Button
@@ -366,7 +374,7 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
 .auth-canvas {
   position: relative;
   isolation: isolate;
-  background-color: var(--surface-page, #F6F7F2);
+  background-color: var(--surface-page, #F7F4EA);
   background-image: url("/patterns/auth-doodles-v2.webp");
   background-repeat: repeat;
   background-size: 768px 512px;
@@ -484,14 +492,14 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
    scope, the same mechanism legacyBrandOverride.ts uses at the call site,
    but declared once here because every button in the flow wants it. */
 .placement-theme {
-  --pl-primary: #075E63;          /* deep ocean — headings, selected state, CTA fill */
-  --pl-primary-hover: #064C50;
-  --pl-primary-active: #053C40;
-  --pl-accent: #D9F279;           /* citron — progress fill, highlights, correct marks */
-  --pl-canvas: #F6F7F2;           /* sheet ground */
-  --pl-surface: #DCEBE7;          /* soft surface — rails, chips, answered ticks */
+  --pl-primary: #287624;          /* deep ocean — headings, selected state, CTA fill */
+  --pl-primary-hover: #22661F;
+  --pl-primary-active: #1B521A;
+  --pl-accent: #A6CF08;           /* citron — progress fill, highlights, correct marks */
+  --pl-canvas: #F7F4EA;           /* sheet ground */
+  --pl-surface: #E8F0CC;          /* soft surface — rails, chips, answered ticks */
   --pl-card: #FFFFFF;
-  --pl-ink: #122D30;              /* body text */
+  --pl-ink: #1D6315;              /* body text */
   --pl-ink-mid: rgb(18 45 48 / 0.66);
   --pl-ink-faint: rgb(18 45 48 / 0.34);
   --pl-border: rgb(7 94 99 / 0.14);
@@ -530,27 +538,33 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
    navy/emerald. Warm off-white canvas, white cards with soft hairlines, a
    sage-tinted rail; deep ocean marks what's active, citron what's earned. */
 .lesson-theme {
-  --ls-primary: #075E63;          /* deep ocean — active states, tutor, send */
-  --ls-primary-hover: #064C50;
-  --ls-primary-active: #053C40;
-  --ls-accent: #D9F279;           /* citron — highlights, progress, sparkle */
-  --ls-accent-deep: #B8D63F;
-  --ls-canvas: #F6F7F2;           /* page ground */
-  --ls-soft: #DCEBE7;             /* soft surface — learner bubbles, chips */
+  --ls-primary: #287624;          /* deep ocean — active states, tutor, send */
+  --ls-primary-hover: #22661F;
+  --ls-primary-active: #1B521A;
+  --ls-accent: #A6CF08;           /* citron — highlights, progress, sparkle */
+  --ls-accent-deep: #8DB000;
+  --ls-canvas: #F7F4EA;           /* page ground */
+  --ls-soft: #E8F0CC;             /* soft surface — learner bubbles, chips */
   --ls-sage: #EEF3EB;             /* the rail's tint */
-  --ls-tutor: #EAF2EF;            /* tutor bubbles */
+  --ls-tutor: #EFF4DF;            /* tutor bubbles */
   --ls-card: #FFFFFF;
-  --ls-card-warm: #FBFBF8;
-  --ls-ink: #122D30;              /* body text */
+  --ls-card-warm: #FBF9F2;
+  --ls-ink: #1D6315;              /* body text */
   --ls-ink-mid: rgb(18 45 48 / 0.66);
   --ls-ink-faint: rgb(18 45 48 / 0.4);
-  --ls-border: #E4E9E3;
-  --ls-border-strong: #CFD9D3;
+  --ls-border: #E8E3D3;
+  --ls-border-strong: #DAD5C2;
   --ls-primary-soft: rgb(7 94 99 / 0.07);
   --ls-primary-wash: rgb(7 94 99 / 0.14);
   --ls-ring: rgb(7 94 99 / 0.3);
   --ls-shadow: 0 1px 2px rgb(18 45 48 / 0.04), 0 10px 30px -18px rgb(18 45 48 / 0.18);
   --ls-shadow-pop: 0 10px 24px -10px rgb(7 94 99 / 0.55);
+  /* Question feedback: a sent answer that failed (danger), one to change and check again (warn, never "wrong" red). */
+  --ls-danger: #9A2E1E;
+  --ls-danger-soft: #FBEAE6;
+  --ls-warn: #8A4514;
+  --ls-warn-soft: #FBEFE6;
+  --ls-paper: #fffdf6;
   --ls-radius: 26px;
   --font-lesson-display: var(--font-fredoka), var(--font-mukta), ui-rounded, system-ui, sans-serif;
   --font-lesson-body: var(--font-nunito), var(--font-mukta), ui-rounded, system-ui, sans-serif;
@@ -693,7 +707,7 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   animation: lesson-twinkle 1.4s ease-in-out infinite;
 }
 
-/* The tutor's star-and-hat mark while it talks: a gentle breathe. */
+/* The tutor's "z" mark while it talks: a gentle breathe. */
 @keyframes lesson-breathe {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.08); }
@@ -761,7 +775,7 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   background: var(--ls-card);
   border: 1px solid var(--ls-border);
   border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(18, 45, 48, 0.06), 0 1px 3px rgba(18, 45, 48, 0.05);
+  box-shadow: 0 1px 2px rgba(29,99,21, 0.06), 0 1px 3px rgba(29,99,21, 0.05);
 }
 
 /* Recharts draws its own focus-less surfaces; keep its text on our ramp. */
@@ -784,6 +798,227 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   border-width: 1.5px;
   border-radius: 12px 4px 13px 5px / 5px 13px 4px 12px;
 }
+
+/* An answer option, chip or tile on a question card (ChoiceTile). Its state is drawn by a mark as well as a fill, never by
+   colour alone: chosen = citron fill + ocean mark; to change = warm fill + warm mark. Tap target 44px at least. */
+.lesson-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1rem;
+  text-align: left;
+  font-size: 18px;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.lesson-choice:hover {
+  background-color: var(--ls-primary-soft);
+}
+.lesson-choice[data-selected] {
+  background-color: var(--ls-accent);
+  font-weight: 700;
+  box-shadow: 2px 3px 0 rgb(18 45 48 / 0.14);
+}
+.lesson-choice[data-tone="try"] {
+  background-color: var(--ls-warn-soft);
+  border-color: var(--ls-warn);
+}
+.lesson-choice:disabled,
+.lesson-choice[aria-disabled="true"],
+.lesson-choice:has(input:disabled) {
+  cursor: default;
+  opacity: 0.55;
+}
+.lesson-choice:disabled:hover,
+.lesson-choice:has(input:disabled):hover {
+  background-color: transparent;
+}
+.lesson-choice-mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border: 2px solid var(--ls-ink);
+  background-color: var(--ls-paper);
+  color: #fff;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+.lesson-choice-mark[data-kind="radio"] {
+  border-radius: 9999px;
+}
+.lesson-choice-mark[data-kind="check"] {
+  border-radius: 6px 3px 7px 3px / 3px 7px 3px 6px;
+}
+/* A lettered mark (A, B, C…): the letter is ink until chosen, then white on ocean. */
+.lesson-choice-mark[data-label] {
+  width: 1.875rem;
+  height: 1.875rem;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ls-ink);
+}
+.lesson-choice[data-selected] > .lesson-choice-mark[data-label],
+.lesson-choice[data-tone="try"] > .lesson-choice-mark[data-label] {
+  color: #fff;
+}
+/* A chip (a word, a tile, an entry to sort): compact, rounded, the same chosen state as a choice. */
+.lesson-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 18px;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.lesson-chip:hover {
+  background-color: var(--ls-primary-soft);
+}
+.lesson-chip[aria-pressed="true"] {
+  background-color: var(--ls-accent);
+  font-weight: 700;
+  box-shadow: 0 0 0 3px var(--ls-ring);
+}
+.lesson-chip:disabled {
+  cursor: default;
+}
+/* A bank entry already used: an empty dashed slot where it was, so the bank keeps its shape. */
+.lesson-chip[data-used] {
+  border-style: dashed;
+  border-color: var(--ls-ink-faint);
+  background-color: transparent;
+  color: var(--ls-ink-faint);
+  box-shadow: none;
+}
+.lesson-chip:disabled:not([data-used]) {
+  opacity: 0.6;
+}
+/* The number line and slider (LineInput): an ink line and a 28px ocean thumb. The thumb is hidden until the learner places a value,
+   so an untouched line never looks answered. Its centre travels 14px in from each end, which the tick row matches. */
+.lesson-range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  background: transparent;
+  cursor: pointer;
+}
+.lesson-range:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.lesson-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--ls-ink);
+}
+.lesson-range::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--ls-ink);
+}
+.lesson-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin-top: -11px;
+  border-radius: 9999px;
+  border: 4px solid #fff;
+  background: var(--ls-primary);
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 2px 6px rgb(18 45 48 / 0.3);
+}
+.lesson-range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  border: 4px solid #fff;
+  background: var(--ls-primary);
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 2px 6px rgb(18 45 48 / 0.3);
+}
+.lesson-range[data-unplaced]::-webkit-slider-thumb {
+  opacity: 0;
+}
+.lesson-range[data-unplaced]::-moz-range-thumb {
+  opacity: 0;
+}
+.lesson-range:focus-visible {
+  outline: none;
+}
+.lesson-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 0 0 7px var(--ls-ring);
+}
+.lesson-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--ls-primary), 0 0 0 7px var(--ls-ring);
+}
+/* Keyboard focus on a line with no point yet: the line itself is ringed, since there is no thumb to ring. */
+.lesson-range[data-unplaced]:focus-visible::-webkit-slider-runnable-track {
+  box-shadow: 0 0 0 4px var(--ls-ring);
+}
+.lesson-range[data-unplaced]:focus-visible::-moz-range-track {
+  box-shadow: 0 0 0 4px var(--ls-ring);
+}
+/* A numbered badge tying two halves of a pair together (matching). */
+.lesson-pair-badge {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  background-color: var(--ls-primary);
+  color: #fff;
+}
+.lesson-pair-badge[data-empty] {
+  background-color: transparent;
+  border: 2px dashed var(--ls-ink-faint);
+  color: var(--ls-ink-faint);
+}
+.lesson-choice[data-selected] > .lesson-choice-mark {
+  background-color: var(--ls-primary);
+  border-color: var(--ls-primary);
+}
+.lesson-choice[data-tone="try"] > .lesson-choice-mark {
+  background-color: var(--ls-warn);
+  border-color: var(--ls-warn);
+}
+}
+
+/* A choice pops a little as it is chosen; an answer to change nudges side to side once. Both are off for reduced motion. */
+@keyframes lesson-pick {
+  0% { transform: scale(0.97); }
+  60% { transform: scale(1.015); }
+  100% { transform: none; }
+}
+@keyframes lesson-nudge {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+.lesson-choice[data-selected] {
+  animation: lesson-pick 220ms ease-out;
+}
+.lesson-nudge {
+  animation: lesson-nudge 380ms ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lesson-choice,
+  .lesson-choice-mark { transition: none; }
+  .lesson-choice[data-selected],
+  .lesson-nudge { animation: none; }
 }
 
 /* Voice lessons run in eight languages. Latin and Devanagari come from the body fonts; the other scripts fall to the
@@ -806,13 +1041,13 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
   color: inherit;
   font-size: inherit;
   outline: none;
-  --caret-color: var(--ls-primary, #075E63);
+  --caret-color: var(--ls-primary, #287624);
   --selection-background-color: rgb(7 94 99 / 0.14);
   --contains-highlight-background-color: rgb(217 242 121 / 0.35);
   /* Words typed in the field are just words: no tint behind the text run the caret is in. */
   --text-highlight-background-color: transparent;
   --highlight-text: transparent;
-  --primary: var(--ls-primary, #075E63);
+  --primary: var(--ls-primary, #287624);
   /* Words in the field use the page's own type, not MathLive's. */
   --text-font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
 }
@@ -829,31 +1064,50 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
 /* MathLive's maths keyboard (it slides up from the bottom on touch screens): the lesson's light palette, whatever the
    device's dark-mode setting, instead of MathLive's own dark theme. */
 body {
-  --keyboard-background: #F6F7F2;
-  --keyboard-border: #E3E8E2;
-  --keyboard-horizontal-rule: #E3E8E2;
-  --keyboard-accent-color: #075E63;
-  --keyboard-toolbar-text: #5E7477;
-  --keyboard-toolbar-text-active: #075E63;
+  --keyboard-background: #F7F4EA;
+  --keyboard-border: #E7E2D2;
+  --keyboard-horizontal-rule: #E7E2D2;
+  --keyboard-accent-color: #287624;
+  --keyboard-toolbar-text: #5A6E52;
+  --keyboard-toolbar-text-active: #287624;
   --keyboard-toolbar-background-hover: rgb(7 94 99 / 0.08);
   --keyboard-toolbar-background-selected: transparent;
   --keycap-background: #FFFFFF;
-  --keycap-background-hover: #EEF5F3;
-  --keycap-background-active: #DCEBE7;
-  --keycap-background-pressed: #DCEBE7;
-  --keycap-border: #E3E8E2;
-  --keycap-border-bottom: #CFD9D3;
-  --keycap-text: #122D30;
-  --keycap-text-active: #122D30;
-  --keycap-text-hover: #122D30;
-  --keycap-text-pressed: #122D30;
-  --keycap-secondary-background: #DCEBE7;
+  --keycap-background-hover: #F3F6E6;
+  --keycap-background-active: #E8F0CC;
+  --keycap-background-pressed: #E8F0CC;
+  --keycap-border: #E7E2D2;
+  --keycap-border-bottom: #DAD5C2;
+  --keycap-text: #1D6315;
+  --keycap-text-active: #1D6315;
+  --keycap-text-hover: #1D6315;
+  --keycap-text-pressed: #1D6315;
+  --keycap-secondary-background: #E8F0CC;
   --keycap-secondary-background-hover: #CBE2DC;
-  --keycap-secondary-text: #075E63;
-  --keycap-secondary-border: #CFD9D3;
+  --keycap-secondary-text: #287624;
+  --keycap-secondary-border: #DAD5C2;
   --keycap-secondary-border-bottom: #B9CCC6;
-  --keycap-primary-background: #075E63;
-  --keycap-primary-background-hover: #064E52;
+  --keycap-primary-background: #287624;
+  --keycap-primary-background-hover: #22661F;
   --keycap-primary-text: #FFFFFF;
-  --keycap-shift-color: #075E63;
+  --keycap-shift-color: #287624;
+}
+
+/* The student sidebar's open/close toggle: a quiet icon, no box until hovered or focused. */
+.sidebar-toggle {
+  background: transparent;
+  color: var(--text-muted);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.sidebar-toggle:hover { background: var(--emerald-50); color: var(--ink); }
+.sidebar-toggle:focus-visible { outline: 2px solid var(--primary-ring); outline-offset: 2px; }
+
+/* Logout → "/" reload: a canvas cover until the study-deck loader takes over
+   (see src/features/auth/leaveWithLoader.ts). Sits just under the loader. */
+html[data-loader-resume] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: var(--canvas, #F7F4EA);
 }

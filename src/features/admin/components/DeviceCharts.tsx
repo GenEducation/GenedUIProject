@@ -22,7 +22,7 @@ import { LS_COLORS } from "../analytics/colors";
  * cannot resolve a CSS var() through them.
  */
 
-const INK = "#122D30"; // --ink; see LS_COLORS for why this is not a var()
+const INK = "#1D6315"; // --ink; see LS_COLORS for why this is not a var()
 const GRID = LS_COLORS.grid;
 const AXIS_TICK = { fill: LS_COLORS.axis, fontSize: 11 };
 
@@ -33,7 +33,7 @@ const TOOLTIP_STYLE = {
     borderRadius: 10,
     fontSize: 12,
     color: INK,
-    boxShadow: "0 4px 12px rgba(18,45,48,0.08)",
+    boxShadow: "0 4px 12px rgba(29,99,21,0.08)",
   },
   itemStyle: { color: INK },
   labelStyle: { color: LS_COLORS.axis },
@@ -60,7 +60,7 @@ export function ChartCard({
   empty?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(18,45,48,.06),0_1px_3px_rgba(18,45,48,.05)] p-5">
+    <div className="rounded-2xl border border-border bg-white shadow-[0_1px_2px_rgba(29,99,21,.06),0_1px_3px_rgba(29,99,21,.05)] p-5">
       <div className="mb-4">
         <h3 className="text-sm font-semibold text-ink">{title}</h3>
         {subtitle ? <p className="mt-0.5 text-xs text-muted">{subtitle}</p> : null}

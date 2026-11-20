@@ -27,7 +27,7 @@ export default function BaseTenBlocks({ directiveId, meta, disabled, readOnly }:
     return (
       <div style={{ textAlign: "center" }}>
         <div style={{ display: "flex", gap: 3, flexWrap: "wrap", maxWidth: 100, justifyContent: "center", minHeight: 62, alignItems: "flex-end" }}>
-          {Array.from({ length: count }).map((_, i) => <div key={i} style={{ width: w, height: hgt, background: color, borderRadius: 2, boxShadow: "inset 0 0 0 1px rgba(18,45,48,0.22)" }} />)}
+          {Array.from({ length: count }).map((_, i) => <div key={i} style={{ width: w, height: hgt, background: color, borderRadius: 2, boxShadow: "inset 0 0 0 1px rgba(29,99,21,0.22)" }} />)}
         </div>
         <p style={{ margin: "4px 0 0", fontSize: 11, color: COLORS.muted }}>{label}</p>
       </div>

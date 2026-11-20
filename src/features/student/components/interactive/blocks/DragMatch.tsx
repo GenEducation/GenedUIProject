@@ -25,7 +25,7 @@ function Chip({ id, label }: Item) {
         display: "flex", alignItems: "center", gap: 6, padding: "9px 12px", borderRadius: 12,
         background: "#FFFFFF", border: `1px solid ${isDragging ? COLORS.brand : COLORS.border}`,
         cursor: "grab", fontSize: 14, fontWeight: 600, color: COLORS.ink, fontFamily: "var(--font-body)",
-        boxShadow: isDragging ? "0 6px 16px rgba(7,94,99,0.2)" : "none", touchAction: "none",
+        boxShadow: isDragging ? "0 6px 16px rgba(40,118,36,0.2)" : "none", touchAction: "none",
       }}
     >
       <GripVertical size={13} color={COLORS.muted} />

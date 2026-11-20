@@ -54,7 +54,7 @@ function Chip({
 }
 
 /**
- * The lesson's top bar: the GenEd logo, where you are (subject › chapter),
+ * The lesson's top bar: the Zoovi logo, where you are (subject › chapter),
  * the session clock and the steps done, and the student. No points chip: the
  * backend doesn't compute points, and the UI never invents numbers; steps are
  * real progress, so they take that place.
@@ -97,15 +97,15 @@ export function LessonHeader({
       )}
       <Link
         href="/student"
-        aria-label="GenEd home"
+        aria-label="Zoovi home"
         className={`shrink-0 ${gridTemplate ? "flex justify-center" : ""}`}
         style={gridTemplate ? { gridColumn: "1" } : undefined}
       >
         <Image
-          src="/brand/gened-logo.png"
-          alt="GenEd"
-          width={352}
-          height={135}
+          src="/brand/zoovi-logo.png"
+          alt="Zoovi"
+          width={1063}
+          height={365}
           priority
           className="h-10 w-auto sm:h-12 lg:h-14 xl:h-16 [@media(max-height:500px)]:h-8"
         />

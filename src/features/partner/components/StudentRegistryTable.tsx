@@ -11,7 +11,9 @@ import { asError } from "@/utils/errors";
 export function StudentRegistryTable() {
   const students = usePartnerStore((state) => state.students);
   const isLoading = usePartnerStore((state) => state.isLoading);
-  const setSelectedStudent = usePartnerStore((state) => state.setSelectedStudent);
+  const setSelectedStudent = usePartnerStore(
+    (state) => state.setSelectedStudent,
+  );
   const removeStudent = usePartnerStore((state) => state.removeStudent);
 
   const [deleteId, setDeleteId] = React.useState<string | null>(null);
@@ -26,36 +28,41 @@ export function StudentRegistryTable() {
       await removeStudent(deleteId);
       setDeleteId(null);
     } catch (err) {
-      setDeleteError(asError(err).message || "Failed to delete. Please try again.");
+      setDeleteError(
+        asError(err).message || "Failed to delete. Please try again.",
+      );
     } finally {
       setIsDeleting(false);
     }
   };
 
   return (
-    <div className="lg:col-span-8 flex flex-col bg-[#FBFCFB] rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-gray-100 shadow-xl lg:min-h-0 overflow-hidden lg:h-full">
+    <div className="lg:col-span-8 flex flex-col bg-[#FCFBF6] rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 border border-gray-100 shadow-xl lg:min-h-0 overflow-hidden lg:h-full">
       <div className="flex justify-between items-center mb-6 md:mb-10">
-        <h3 className="text-lg md:text-2xl font-black text-[#122D30]">Student Registry</h3>
+        <h3 className="text-lg md:text-2xl font-black text-[#1D6315]">
+          Student Registry
+        </h3>
       </div>
 
       <div className="flex-1 lg:overflow-y-auto scrollbar-hide pr-1 md:pr-2">
         {/* Fixed columns: the name takes what is left and truncates, so grade and actions stay on a phone screen. */}
         <table className="w-full table-fixed text-left">
           <thead>
-            <tr className="border-b border-[#122D30]/5">
-              <th className="pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#122D30]/90 uppercase tracking-widest">
+            <tr className="border-b border-[#1D6315]/5">
+              <th className="pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#1D6315]/90 uppercase tracking-widest">
                 Student Name
               </th>
-              <th className="w-16 md:w-24 pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#122D30]/90 uppercase tracking-widest">
+              <th className="w-16 md:w-24 pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#1D6315]/90 uppercase tracking-widest">
                 Grade
               </th>
-              <th className="w-14 md:w-20 pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#122D30]/90 uppercase tracking-widest text-right">
+              <th className="w-14 md:w-20 pb-4 md:pb-6 text-[9px] md:text-[10px] font-black text-[#1D6315]/90 uppercase tracking-widest text-right">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#122D30]/5">
-            {isLoading && students.length === 0 && (
+          <tbody className="divide-y divide-[#1D6315]/5">
+            {isLoading &&
+              students.length === 0 &&
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={`skel-${i}`}>
                   <td className="py-2.5 md:py-3.5">
@@ -71,8 +78,7 @@ export function StudentRegistryTable() {
                     <Skeleton className="h-8 w-8 rounded-xl ml-auto" />
                   </td>
                 </tr>
-              ))
-            )}
+              ))}
             {students.map((student) => (
               <tr
                 key={student.id}
@@ -81,19 +87,33 @@ export function StudentRegistryTable() {
               >
                 <td className="py-2.5 md:py-3.5">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center bg-[#DCEBE7]/50 text-[#122D30] text-[10px] font-bold shadow-sm">
+                    <div className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center bg-[#E8F0CC]/50 text-[#1D6315] text-[10px] font-bold shadow-sm">
                       {student.initials}
                     </div>
-                    <span className="min-w-0 truncate text-sm font-bold text-[#122D30]" title={student.name}>{student.name}</span>
+                    <span
+                      className="min-w-0 truncate text-sm font-bold text-[#1D6315]"
+                      title={student.name}
+                    >
+                      {student.name}
+                    </span>
                   </div>
                 </td>
                 <td className="py-2.5 md:py-3.5">
-                  <span className="px-2 md:px-3 py-1 bg-white text-[#122D30]/80 text-[8px] md:text-[9px] font-black uppercase tracking-widest rounded-full border border-[#122D30]/5 shadow-sm">
+                  <span className="px-2 md:px-3 py-1 bg-white text-[#1D6315]/80 text-[8px] md:text-[9px] font-black uppercase tracking-widest rounded-full border border-[#1D6315]/5 shadow-sm">
                     {student.grade}
                   </span>
                 </td>
                 <td className="py-2.5 md:py-3.5 text-right">
-                  <Button iconOnly size="sm" variant="destructive" aria-label="Delete" onClick={(e) => { e.stopPropagation(); setDeleteId(student.id); }}>
+                  <Button
+                    iconOnly
+                    size="sm"
+                    variant="destructive"
+                    aria-label="Delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteId(student.id);
+                    }}
+                  >
                     <Trash2 size={16} />
                   </Button>
                 </td>
@@ -105,7 +125,10 @@ export function StudentRegistryTable() {
 
       <DeleteConfirmationModal
         isOpen={!!deleteId}
-        onClose={() => { setDeleteId(null); setDeleteError(null); }}
+        onClose={() => {
+          setDeleteId(null);
+          setDeleteError(null);
+        }}
         onConfirm={handleDelete}
         title="Remove Student?"
         message="This will permanently revoke this student's access to your partner portal agents."

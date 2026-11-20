@@ -2,7 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, BookOpenText, Check, Crop, History, ListChecks, PenLine, SquareDashedMousePointer, Sparkles, TriangleAlert, ZoomIn, ZoomOut } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpenText,
+  Check,
+  Crop,
+  History,
+  ListChecks,
+  PenLine,
+  SquareDashedMousePointer,
+  Sparkles,
+  TriangleAlert,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useVisualDetail } from "../../hooks/useVisualDetail";
 import {
@@ -16,6 +30,7 @@ import { CropEditor } from "./CropEditor";
 import { DecisionPanel, isTypingTarget } from "./DecisionPanel";
 import { RegenerationStatus } from "./RegenerationStatus";
 import { VisualImage } from "./VisualImage";
+import { DeviceReadableMark } from "./DeviceReadableMark";
 import { Skeleton } from "../Skeleton";
 import { MarkupLayer } from "./MarkupLayer";
 import { MarkList } from "./MarkList";
@@ -36,7 +51,11 @@ interface VisualDetailPaneProps {
 
 const formatDate = (iso: string) => {
   try {
-    return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    return new Date(iso).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   } catch {
     return iso;
   }
@@ -44,7 +63,7 @@ const formatDate = (iso: string) => {
 
 const STATE_STYLE: Record<CandidateState, string> = {
   pending: "bg-amber-50 text-amber-700 border-amber-200",
-  accepted: "bg-[#DCEBE7]/60 text-[#122D30] border-[#122D30]/10",
+  accepted: "bg-[#E8F0CC]/60 text-[#1D6315] border-[#1D6315]/10",
   rejected: "bg-red-50 text-red-600 border-red-200",
 };
 
@@ -56,15 +75,23 @@ const STATE_LABEL: Record<CandidateState, string> = {
 
 export function StateChip({ state }: { state: CandidateState }) {
   return (
-    <span className={`px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${STATE_STYLE[state]}`}>
+    <span
+      className={`px-2.5 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${STATE_STYLE[state]}`}
+    >
       {STATE_LABEL[state]}
     </span>
   );
 }
 
-function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
+function SectionLabel({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#122D30]/50 uppercase tracking-widest mb-2">
+    <h5 className="flex items-center gap-2 text-[10px] font-black text-[#1D6315]/50 uppercase tracking-widest mb-2">
       {icon}
       {children}
     </h5>
@@ -73,22 +100,30 @@ function SectionLabel({ icon, children }: { icon: React.ReactNode; children: Rea
 
 function Passages({ detail }: { detail: VisualDetail }) {
   const refs = new Set(detail.spec?.source_refs ?? []);
-  const used = refs.size ? detail.concept.passages.filter((p) => refs.has(p.ref)) : detail.concept.passages;
-  const others = refs.size ? detail.concept.passages.filter((p) => !refs.has(p.ref)) : [];
+  const used = refs.size
+    ? detail.concept.passages.filter((p) => refs.has(p.ref))
+    : detail.concept.passages;
+  const others = refs.size
+    ? detail.concept.passages.filter((p) => !refs.has(p.ref))
+    : [];
 
   if (!detail.concept.passages.length) return null;
 
   return (
     <section>
-      <SectionLabel icon={<BookOpenText size={12} />}>From the textbook</SectionLabel>
+      <SectionLabel icon={<BookOpenText size={12} />}>
+        From the textbook
+      </SectionLabel>
       <div className="flex flex-col gap-2">
         {used.map((p) => (
           <blockquote
             key={p.ref}
-            className="relative rounded-xl bg-[#FBFAF5] border border-[#122D30]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#075E63]/60"
+            className="relative rounded-xl bg-[#FBFAF5] border border-[#1D6315]/5 pl-4 pr-3 py-3 before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r-full before:bg-[#287624]/60"
           >
-            <p className="text-[13px] leading-relaxed text-[#122D30]/85 whitespace-pre-line">{p.text}</p>
-            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/35">
+            <p className="text-[13px] leading-relaxed text-[#1D6315]/85 whitespace-pre-line">
+              {p.text}
+            </p>
+            <cite className="block mt-1.5 not-italic text-[9px] font-black uppercase tracking-widest text-[#1D6315]/35">
               {p.ref}
             </cite>
           </blockquote>
@@ -96,14 +131,19 @@ function Passages({ detail }: { detail: VisualDetail }) {
       </div>
       {others.length > 0 && (
         <details className="mt-2 group">
-          <summary className="cursor-pointer text-[11px] font-bold text-[#122D30]/50 hover:text-[#122D30] select-none">
+          <summary className="cursor-pointer text-[11px] font-bold text-[#1D6315]/50 hover:text-[#1D6315] select-none">
             Other passages from this concept ({others.length})
           </summary>
           <div className="mt-2 flex flex-col gap-2">
             {others.map((p) => (
-              <blockquote key={p.ref} className="rounded-xl bg-[#F6F7F2] px-3 py-2.5">
-                <p className="text-xs leading-relaxed text-[#122D30]/60 whitespace-pre-line">{p.text}</p>
-                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#122D30]/30">
+              <blockquote
+                key={p.ref}
+                className="rounded-xl bg-[#F7F4EA] px-3 py-2.5"
+              >
+                <p className="text-xs leading-relaxed text-[#1D6315]/60 whitespace-pre-line">
+                  {p.text}
+                </p>
+                <cite className="block mt-1 not-italic text-[9px] font-black uppercase tracking-widest text-[#1D6315]/30">
                   {p.ref}
                 </cite>
               </blockquote>
@@ -115,7 +155,13 @@ function Passages({ detail }: { detail: VisualDetail }) {
   );
 }
 
-function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id: string) => void }) {
+function FamilyTimeline({
+  detail,
+  onOpen,
+}: {
+  detail: VisualDetail;
+  onOpen: (id: string) => void;
+}) {
   if (detail.family.length < 2) return null;
   return (
     <section>
@@ -132,12 +178,18 @@ function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id:
                 aria-current={current ? "true" : undefined}
                 onClick={() => onOpen(member.id)}
                 className={`w-full flex items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
-                  current ? "bg-[#075E63]/5 cursor-default" : "hover:bg-[#075E63]/5"
+                  current
+                    ? "bg-[#287624]/5 cursor-default"
+                    : "hover:bg-[#287624]/5"
                 }`}
               >
-                <span className="text-xs font-black text-[#122D30] w-16 shrink-0">Version {i + 1}</span>
+                <span className="text-xs font-black text-[#1D6315] w-16 shrink-0">
+                  Version {i + 1}
+                </span>
                 <StateChip state={member.state} />
-                <span className="ml-auto text-[11px] font-bold text-[#122D30]/40">{formatDate(member.created_at)}</span>
+                <span className="ml-auto text-[11px] font-bold text-[#1D6315]/40">
+                  {formatDate(member.created_at)}
+                </span>
               </button>
             </li>
           );
@@ -147,7 +199,14 @@ function FamilyTimeline({ detail, onOpen }: { detail: VisualDetail; onOpen: (id:
   );
 }
 
-export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, onNext }: VisualDetailPaneProps) {
+export function VisualDetailPane({
+  id,
+  onBack,
+  onOpen,
+  onDecided,
+  onRecropped,
+  onNext,
+}: VisualDetailPaneProps) {
   const { detail, loading, error, reload } = useVisualDetail(id);
   const [zoomed, setZoomed] = useState(false);
   // Mark up: boxes and pins on the picture, sent as plain instructions in the redraw note (see markup.ts).
@@ -159,23 +218,34 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
   // A new version can be asked for while the visual is pending, or once rejected with none on the way.
   const canMark =
     !!detail?.image_url &&
-    (detail.state === "pending" || (detail.state === "rejected" && (!detail.regeneration || detail.regeneration.state === "failed")));
+    (detail.state === "pending" ||
+      (detail.state === "rejected" &&
+        (!detail.regeneration || detail.regeneration.state === "failed")));
 
   const addMark = (kind: Mark["kind"], box: Box) => {
     const id = `mark-${++markSeq.current}`;
     // One crop at most: a new one replaces the last.
-    setMarks((ms) => [...(kind === "crop" ? ms.filter((m) => m.kind !== "crop") : ms), { id, kind, box, part: "", instruction: "" }]);
+    setMarks((ms) => [
+      ...(kind === "crop" ? ms.filter((m) => m.kind !== "crop") : ms),
+      { id, kind, box, part: "", instruction: "" },
+    ]);
     setActiveMark(id);
   };
-  const changeMark = (id: string, patch: Partial<Pick<Mark, "part" | "instruction">>) =>
-    setMarks((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-  const removeMark = (id: string) => setMarks((ms) => ms.filter((m) => m.id !== id));
+  const changeMark = (
+    id: string,
+    patch: Partial<Pick<Mark, "part" | "instruction">>,
+  ) => setMarks((ms) => ms.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  const removeMark = (id: string) =>
+    setMarks((ms) => ms.filter((m) => m.id !== id));
   const pictureRef = useRef<HTMLDivElement>(null);
   // The open reject / new-version form's "try to send", for Enter in a mark's field.
   const sendRef = useRef<(() => void) | null>(null);
   const editMarks = () => {
     setMarking(true);
-    pictureRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    pictureRef.current?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "nearest",
+    });
   };
   // Adjust crop: cut a textbook figure again from its page (main's recrop flow, `CropEditor`).
   const [cropping, setCropping] = useState(false);
@@ -184,7 +254,14 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
   useEffect(() => {
     if (!onNext || cropping) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "ArrowRight" || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
+      if (
+        e.key !== "ArrowRight" ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        isTypingTarget(e.target)
+      )
+        return;
       e.preventDefault();
       onNext();
     };
@@ -197,9 +274,23 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
   useEffect(() => {
     if (cropping) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Enter" || e.defaultPrevented || e.isComposing || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (
+        e.key !== "Enter" ||
+        e.defaultPrevented ||
+        e.isComposing ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.altKey ||
+        e.shiftKey
+      )
+        return;
       const el = e.target as HTMLElement | null;
-      if (el?.closest?.("input, textarea, select, button, a[href], [contenteditable='true'], [role='button'], [role='option']")) return;
+      if (
+        el?.closest?.(
+          "input, textarea, select, button, a[href], [contenteditable='true'], [role='button'], [role='option']",
+        )
+      )
+        return;
       if (!sendRef.current) return;
       e.preventDefault();
       sendRef.current();
@@ -210,14 +301,24 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
 
   return (
     <div className="flex flex-col min-h-full">
-      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#122D30]/5">
-        <Button variant="tertiary" size="sm" leadingIcon={<ArrowLeft size={14} />} onClick={onBack}>
+      <div className="sticky top-0 z-10 flex items-center gap-2 px-5 md:px-7 py-3 bg-white/90 backdrop-blur border-b border-[#1D6315]/5">
+        <Button
+          variant="tertiary"
+          size="sm"
+          leadingIcon={<ArrowLeft size={14} />}
+          onClick={onBack}
+        >
           All visuals
         </Button>
         {detail && <StateChip state={detail.state} />}
         <div className="ml-auto">
           {onNext && (
-            <Button variant="tertiary" size="sm" trailingIcon={<ArrowRight size={14} />} onClick={onNext}>
+            <Button
+              variant="tertiary"
+              size="sm"
+              trailingIcon={<ArrowRight size={14} />}
+              onClick={onNext}
+            >
               Next <kbd className="ml-1 text-[10px] opacity-50">→</kbd>
             </Button>
           )}
@@ -238,7 +339,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
 
       {error && !detail && (
         <div className="flex flex-col items-center gap-3 py-16 text-center px-6">
-          <p className="text-sm font-bold text-[#122D30]">{error}</p>
+          <p className="text-sm font-bold text-[#1D6315]">{error}</p>
           <Button variant="outline" onClick={() => void reload()}>
             Try again
           </Button>
@@ -246,7 +347,11 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
       )}
 
       {detail && cropping && (
-        <CropEditor detail={detail} onCancel={() => setCropping(false)} onSaved={onRecropped} />
+        <CropEditor
+          detail={detail}
+          onCancel={() => setCropping(false)}
+          onSaved={onRecropped}
+        />
       )}
 
       {detail && !cropping && (
@@ -258,8 +363,14 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
         >
           {/* Left: the picture */}
           <div className="flex flex-col gap-4 lg:sticky lg:top-[68px] self-start w-full">
-            <div ref={pictureRef} className="relative rounded-2xl border border-[#122D30]/10 overflow-hidden bg-white">
-              <div className={zoomed ? "overflow-auto max-h-[70vh]" : ""} data-testid="visual-zoom-frame">
+            <div
+              ref={pictureRef}
+              className="relative rounded-2xl border border-[#1D6315]/10 overflow-hidden bg-white"
+            >
+              <div
+                className={zoomed ? "overflow-auto max-h-[70vh]" : ""}
+                data-testid="visual-zoom-frame"
+              >
                 <VisualImage
                   imageUrl={detail.image_url}
                   alt={detail.title}
@@ -282,12 +393,26 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
 
               {/* Mark up: pick a tool, then drag on the picture (a tap drops a pin). */}
               {canMark && marking && (
-                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/95 p-1 shadow-[0_6px_18px_-8px_rgb(18_45_48/0.45)] ring-1 ring-[#122D30]/10">
-                  <div role="radiogroup" aria-label="Mark-up tool" className="flex gap-1">
-                    {([
-                      { kind: "change", label: "Mark a change", icon: <SquareDashedMousePointer size={14} /> },
-                      { kind: "crop", label: "Crop", icon: <Crop size={14} /> },
-                    ] as const).map((t) => (
+                <div className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-white/95 p-1 shadow-[0_6px_18px_-8px_rgb(18_45_48/0.45)] ring-1 ring-[#1D6315]/10">
+                  <div
+                    role="radiogroup"
+                    aria-label="Mark-up tool"
+                    className="flex gap-1"
+                  >
+                    {(
+                      [
+                        {
+                          kind: "change",
+                          label: "Mark a change",
+                          icon: <SquareDashedMousePointer size={14} />,
+                        },
+                        {
+                          kind: "crop",
+                          label: "Crop",
+                          icon: <Crop size={14} />,
+                        },
+                      ] as const
+                    ).map((t) => (
                       <Button
                         key={t.kind}
                         size="sm"
@@ -302,7 +427,12 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
                       </Button>
                     ))}
                   </div>
-                  <Button size="sm" pill variant="outline" onClick={() => setMarking(false)}>
+                  <Button
+                    size="sm"
+                    pill
+                    variant="outline"
+                    onClick={() => setMarking(false)}
+                  >
                     Done
                   </Button>
                 </div>
@@ -335,7 +465,7 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
               )}
             </div>
             {canMark && marking && marks.length === 0 && (
-              <p className="text-xs font-bold text-[#122D30]/55">
+              <p className="text-xs font-bold text-[#1D6315]/55">
                 {tool === "crop"
                   ? "Drag over the area to keep. Everything outside it is left out of the new version."
                   : "Drag a box over the part to change, or tap to drop a pin. Add as many as you need."}
@@ -354,10 +484,17 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
             )}
             {detail.kind === "figure" && (
               <div className="flex items-center gap-3">
-                <Button variant="outline" size="sm" leadingIcon={<Crop size={14} />} onClick={() => setCropping(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  leadingIcon={<Crop size={14} />}
+                  onClick={() => setCropping(true)}
+                >
                   Adjust crop
                 </Button>
-                <p className="text-[11px] text-[#1A3D2C]/50">Cut this figure again from its textbook page.</p>
+                <p className="text-[11px] text-[#1A3D2C]/50">
+                  Cut this figure again from its textbook page.
+                </p>
               </div>
             )}
             <FamilyTimeline detail={detail} onOpen={onOpen} />
@@ -367,25 +504,38 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
           <div className="flex flex-col gap-6 min-w-0">
             <header>
               {detail.concept.section_title && (
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#122D30]/40 mb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-[#1D6315]/40 mb-1">
                   {detail.concept.section_title}
                 </p>
               )}
-              <h3 className="text-xl md:text-2xl font-black text-[#122D30] tracking-tight leading-tight">
+              <h3 className="text-xl md:text-2xl font-black text-[#1D6315] tracking-tight leading-tight">
                 {detail.concept.title}
               </h3>
               {detail.concept.definition && (
-                <p className="mt-2 text-sm leading-relaxed text-[#122D30]/70">{detail.concept.definition}</p>
+                <p className="mt-2 text-sm leading-relaxed text-[#1D6315]/70">
+                  {detail.concept.definition}
+                </p>
               )}
             </header>
 
             {detail.concept.feedback && (
-              <div className="rounded-xl bg-[#DCEBE7]/40 border border-[#122D30]/10 px-4 py-3 flex items-start gap-2.5">
-                <Sparkles size={14} className="text-[#122D30] mt-0.5 shrink-0" aria-hidden />
-                <p className="text-xs text-[#122D30]/80">
+              <div className="rounded-xl bg-[#E8F0CC]/40 border border-[#1D6315]/10 px-4 py-3 flex items-start gap-2.5">
+                <Sparkles
+                  size={14}
+                  className="text-[#1D6315] mt-0.5 shrink-0"
+                  aria-hidden
+                />
+                <p className="text-xs text-[#1D6315]/80">
                   <span className="font-black">Made again after: </span>
-                  {detail.concept.feedback.reason_codes.map((c) => REASON_LABELS[c] ?? c).join(", ")}
-                  {detail.concept.feedback.note && <> — <q>{detail.concept.feedback.note}</q></>}
+                  {detail.concept.feedback.reason_codes
+                    .map((c) => REASON_LABELS[c] ?? c)
+                    .join(", ")}
+                  {detail.concept.feedback.note && (
+                    <>
+                      {" "}
+                      — <q>{detail.concept.feedback.note}</q>
+                    </>
+                  )}
                 </p>
               </div>
             )}
@@ -394,12 +544,21 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
 
             {detail.spec && detail.spec.checklist.length > 0 && (
               <section>
-                <SectionLabel icon={<ListChecks size={12} />}>The picture should show</SectionLabel>
+                <SectionLabel icon={<ListChecks size={12} />}>
+                  The picture should show
+                </SectionLabel>
                 <ul className="flex flex-col gap-1.5">
                   {detail.spec.checklist.map((item, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-[13px] text-[#122D30]/85">
-                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#122D30]/25 flex items-center justify-center">
-                        <Check size={10} className="text-[#122D30]/30" aria-hidden />
+                    <li
+                      key={i}
+                      className="flex items-start gap-2.5 text-[13px] text-[#1D6315]/85"
+                    >
+                      <span className="mt-0.5 h-4 w-4 shrink-0 rounded-[5px] border-[1.5px] border-[#1D6315]/25 flex items-center justify-center">
+                        <Check
+                          size={10}
+                          className="text-[#1D6315]/30"
+                          aria-hidden
+                        />
                       </span>
                       {item}
                     </li>
@@ -408,37 +567,59 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
               </section>
             )}
 
-            {detail.critique?.passes === false && detail.critique.problems.length > 0 && (
-              <section className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3">
-                <h5 className="flex items-center gap-2 text-xs font-black text-amber-800 mb-1.5">
-                  <TriangleAlert size={13} aria-hidden /> The AI reviewer flagged:
-                </h5>
-                {detail.critique.kinds?.includes("content") && (
-                  <p className="text-xs font-bold text-amber-900 mb-1.5">
-                    This redraw differs from the textbook picture. Compare it with the original, and accept it only if
-                    these differences don&apos;t matter for what it teaches or the questions about it.
-                  </p>
-                )}
-                <ul className="list-disc pl-5 flex flex-col gap-1 text-xs text-amber-900/80">
-                  {detail.critique.problems.map((p, i) => (
-                    <li key={i}>{p}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            {detail.critique?.passes === false &&
+              detail.critique.problems.length > 0 && (
+                <section className="rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3">
+                  <h5 className="flex items-center gap-2 text-xs font-black text-amber-800 mb-1.5">
+                    <TriangleAlert size={13} aria-hidden /> The AI reviewer
+                    flagged:
+                  </h5>
+                  {detail.critique.kinds?.includes("content") && (
+                    <p className="text-xs font-bold text-amber-900 mb-1.5">
+                      This redraw differs from the textbook picture. Compare it
+                      with the original, and accept it only if these differences
+                      don&apos;t matter for what it teaches or the questions
+                      about it.
+                    </p>
+                  )}
+                  <ul className="list-disc pl-5 flex flex-col gap-1 text-xs text-amber-900/80">
+                    {detail.critique.problems.map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
             {detail.decision && (
-              <p className="text-xs text-[#122D30]/60">
-                <span className="font-black text-[#122D30]">
-                  {detail.decision.decision === "accept" ? "Accepted" : "Rejected"}
+              <p className="text-xs text-[#1D6315]/60">
+                <span className="font-black text-[#1D6315]">
+                  {detail.decision.decision === "accept"
+                    ? "Accepted"
+                    : "Rejected"}
                 </span>{" "}
                 on {formatDate(detail.decision.decided_at)}
                 {detail.decision.reason_codes.length > 0 && (
-                  <> · {detail.decision.reason_codes.map((c) => DECISION_REASON_LABELS[c] ?? c).join(", ")}</>
+                  <>
+                    {" "}
+                    ·{" "}
+                    {detail.decision.reason_codes
+                      .map((c) => DECISION_REASON_LABELS[c] ?? c)
+                      .join(", ")}
+                  </>
                 )}
-                {detail.decision.note && <> — <q>{detail.decision.note}</q></>}
+                {detail.decision.note && (
+                  <>
+                    {" "}
+                    — <q>{detail.decision.note}</q>
+                  </>
+                )}
               </p>
             )}
+
+            <DeviceReadableMark
+              detail={detail}
+              onMarked={() => void reload()}
+            />
 
             {detail.state === "pending" && (
               <DecisionPanel
@@ -456,7 +637,10 @@ export function VisualDetailPane({ id, onBack, onOpen, onDecided, onRecropped, o
               onOpen={onOpen}
               onChanged={() => void reload()}
               marks={canMark ? marks : []}
-              onMarksSent={() => { setMarks([]); setMarking(false); }}
+              onMarksSent={() => {
+                setMarks([]);
+                setMarking(false);
+              }}
               onEditMarks={editMarks}
               sendRef={sendRef}
             />

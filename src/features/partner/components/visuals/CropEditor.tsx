@@ -1,11 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Crop, Plus, RotateCcw, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Crop,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { asError } from "@/utils/errors";
 import { visualsService } from "../../services/visualsService";
-import { CROP_MAX_BOXES, type CropBox, type CropPage, type VisualCrop, type VisualDetail } from "../../types/visuals";
+import {
+  CROP_MAX_BOXES,
+  type CropBox,
+  type CropPage,
+  type VisualCrop,
+  type VisualDetail,
+} from "../../types/visuals";
 import {
   DEFAULT_BOX,
   boxBetween,
@@ -38,14 +51,46 @@ type Drag =
   | { kind: "draw"; key: number; from: Point };
 
 const HANDLES: { edges: Edges; label: string; className: string }[] = [
-  { edges: { top: true, left: true }, label: "top left", className: "-top-1.5 -left-1.5 cursor-nwse-resize" },
-  { edges: { top: true, right: true }, label: "top right", className: "-top-1.5 -right-1.5 cursor-nesw-resize" },
-  { edges: { bottom: true, left: true }, label: "bottom left", className: "-bottom-1.5 -left-1.5 cursor-nesw-resize" },
-  { edges: { bottom: true, right: true }, label: "bottom right", className: "-bottom-1.5 -right-1.5 cursor-nwse-resize" },
-  { edges: { top: true }, label: "top", className: "-top-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize" },
-  { edges: { bottom: true }, label: "bottom", className: "-bottom-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize" },
-  { edges: { left: true }, label: "left", className: "top-1/2 -left-1.5 -translate-y-1/2 cursor-ew-resize" },
-  { edges: { right: true }, label: "right", className: "top-1/2 -right-1.5 -translate-y-1/2 cursor-ew-resize" },
+  {
+    edges: { top: true, left: true },
+    label: "top left",
+    className: "-top-1.5 -left-1.5 cursor-nwse-resize",
+  },
+  {
+    edges: { top: true, right: true },
+    label: "top right",
+    className: "-top-1.5 -right-1.5 cursor-nesw-resize",
+  },
+  {
+    edges: { bottom: true, left: true },
+    label: "bottom left",
+    className: "-bottom-1.5 -left-1.5 cursor-nesw-resize",
+  },
+  {
+    edges: { bottom: true, right: true },
+    label: "bottom right",
+    className: "-bottom-1.5 -right-1.5 cursor-nwse-resize",
+  },
+  {
+    edges: { top: true },
+    label: "top",
+    className: "-top-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize",
+  },
+  {
+    edges: { bottom: true },
+    label: "bottom",
+    className: "-bottom-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize",
+  },
+  {
+    edges: { left: true },
+    label: "left",
+    className: "top-1/2 -left-1.5 -translate-y-1/2 cursor-ew-resize",
+  },
+  {
+    edges: { right: true },
+    label: "right",
+    className: "top-1/2 -right-1.5 -translate-y-1/2 cursor-ew-resize",
+  },
 ];
 
 const NUDGE = 5;
@@ -71,8 +116,19 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
   const refetched = useRef(false);
 
   const fromCrop = useCallback((c: VisualCrop) => {
-    setBoxes(c.boxes.map((b) => ({ key: nextKey.current++, page: b.page, box: b.box })));
-    setPageIndex(Math.max(0, c.pages.findIndex((p) => p.page === c.boxes[0]?.page)));
+    setBoxes(
+      c.boxes.map((b) => ({
+        key: nextKey.current++,
+        page: b.page,
+        box: b.box,
+      })),
+    );
+    setPageIndex(
+      Math.max(
+        0,
+        c.pages.findIndex((p) => p.page === c.boxes[0]?.page),
+      ),
+    );
   }, []);
 
   const load = useCallback(
@@ -82,7 +138,9 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
         setCrop(c);
         if (!keepBoxes) fromCrop(c);
       } catch (e) {
-        setLoadError(asError(e).message || "Couldn't open this figure's pages.");
+        setLoadError(
+          asError(e).message || "Couldn't open this figure's pages.",
+        );
       }
     },
     [detail.id, fromCrop],
@@ -96,7 +154,8 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
   const onPage = boxes.filter((b) => b.page === page?.page);
   const full = boxes.length >= CROP_MAX_BOXES;
 
-  const update = (key: number, box: CropBox) => setBoxes((bs) => bs.map((b) => (b.key === key ? { ...b, box } : b)));
+  const update = (key: number, box: CropBox) =>
+    setBoxes((bs) => bs.map((b) => (b.key === key ? { ...b, box } : b)));
   const remove = (key: number) => {
     setBoxes((bs) => bs.filter((b) => b.key !== key));
     setSelected((s) => (s === key ? null : s));
@@ -104,7 +163,9 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
 
   const point = (e: React.PointerEvent): Point | null => {
     const rect = frame.current?.getBoundingClientRect();
-    return rect && rect.width > 0 ? toThousandths(e.clientX, e.clientY, rect) : null;
+    return rect && rect.width > 0
+      ? toThousandths(e.clientX, e.clientY, rect)
+      : null;
   };
 
   const begin = (e: React.PointerEvent, next: Drag) => {
@@ -129,12 +190,17 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
       const box = boxBetween(d.from, at);
       if (!box) return;
       setBoxes((bs) =>
-        bs.some((b) => b.key === d.key) ? bs.map((b) => (b.key === d.key ? { ...b, box } : b)) : [...bs, { key: d.key, page: page.page, box }],
+        bs.some((b) => b.key === d.key)
+          ? bs.map((b) => (b.key === d.key ? { ...b, box } : b))
+          : [...bs, { key: d.key, page: page.page, box }],
       );
     } else if (d.kind === "move") {
       update(d.key, moveBox(d.start, at.x - d.from.x, at.y - d.from.y));
     } else {
-      update(d.key, resizeBox(d.start, d.edges, at.x - d.from.x, at.y - d.from.y));
+      update(
+        d.key,
+        resizeBox(d.start, d.edges, at.x - d.from.x, at.y - d.from.y),
+      );
     }
   };
 
@@ -178,7 +244,9 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
       });
       onSaved(made.id);
     } catch (e) {
-      setSaveError(asError(e).message || "Couldn't save the crop. Please try again.");
+      setSaveError(
+        asError(e).message || "Couldn't save the crop. Please try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -186,7 +254,10 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
 
   if (loadError) {
     return (
-      <div role="alert" className="flex flex-col items-center gap-3 py-16 text-center px-6">
+      <div
+        role="alert"
+        className="flex flex-col items-center gap-3 py-16 text-center px-6"
+      >
         <p className="text-sm font-bold text-[#1A3D2C]">{loadError}</p>
         <Button variant="outline" onClick={onCancel}>
           Back to the visual
@@ -208,12 +279,16 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
   const pageSrc = visualsService.imageSrc(page.image_url);
 
   return (
-    <section aria-label="Adjust crop" className="grid lg:grid-cols-[1.4fr_1fr] gap-6 lg:gap-8 p-5 md:p-7">
+    <section
+      aria-label="Adjust crop"
+      className="grid lg:grid-cols-[1.4fr_1fr] gap-6 lg:gap-8 p-5 md:p-7"
+    >
       {/* Left: the page, with the boxes on it */}
       <div className="flex flex-col gap-3 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-xs font-bold text-[#1A3D2C]/60 flex-1">
-            Drag a box to move it, its handles to resize it, or drag on the page to add one.
+            Drag a box to move it, its handles to resize it, or drag on the page
+            to add one.
           </p>
           {crop.pages.length > 1 && (
             <div className="flex items-center gap-1">
@@ -252,7 +327,10 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             className={`relative select-none touch-none bg-white shadow-sm ${full ? "" : "cursor-crosshair"}`}
-            style={{ width: `min(100%, calc(70vh * ${page.width / page.height}))`, aspectRatio: `${page.width} / ${page.height}` }}
+            style={{
+              width: `min(100%, calc(70vh * ${page.width / page.height}))`,
+              aspectRatio: `${page.width} / ${page.height}`,
+            }}
           >
             {pageSrc && (
               // eslint-disable-next-line @next/next/no-img-element -- signed, short-lived API path, like VisualImage
@@ -278,12 +356,21 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
                   tabIndex={0}
                   aria-label={`Box ${n}: move with the arrow keys, Delete removes it`}
                   aria-pressed={active}
-                  onPointerDown={(e) => begin(e, { kind: "move", key: b.key, from: point(e) ?? { x: 0, y: 0 }, start: b.box })}
+                  onPointerDown={(e) =>
+                    begin(e, {
+                      kind: "move",
+                      key: b.key,
+                      from: point(e) ?? { x: 0, y: 0 },
+                      start: b.box,
+                    })
+                  }
                   onKeyDown={(e) => onBoxKey(e, b)}
                   onFocus={() => setSelected(b.key)}
                   style={boxStyle(b.box)}
                   className={`absolute cursor-move border-2 outline-none ${
-                    active ? "border-[#1A3D2C] bg-[#1A3D2C]/10" : "border-[#1A3D2C]/70 bg-[#1A3D2C]/5"
+                    active
+                      ? "border-[#1A3D2C] bg-[#1A3D2C]/10"
+                      : "border-[#1A3D2C]/70 bg-[#1A3D2C]/5"
                   }`}
                 >
                   <span className="absolute -top-5 left-0 rounded-md bg-[#1A3D2C] px-1.5 text-[10px] font-black text-white">
@@ -295,7 +382,13 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
                         key={h.label}
                         aria-hidden
                         onPointerDown={(e) =>
-                          begin(e, { kind: "resize", key: b.key, from: point(e) ?? { x: 0, y: 0 }, start: b.box, edges: h.edges })
+                          begin(e, {
+                            kind: "resize",
+                            key: b.key,
+                            from: point(e) ?? { x: 0, y: 0 },
+                            start: b.box,
+                            edges: h.edges,
+                          })
                         }
                         className={`absolute h-3 w-3 rounded-sm border-2 border-[#1A3D2C] bg-white ${h.className}`}
                       />
@@ -314,8 +407,9 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
             <Crop size={14} aria-hidden /> Adjust crop
           </h4>
           <p className="mt-1 text-xs text-[#1A3D2C]/60">
-            The boxes are cut from the textbook page and joined top to bottom into one picture, which goes back to
-            review. Cropping can&apos;t remove a watermark or change the background.
+            The boxes are cut from the textbook page and joined top to bottom
+            into one picture, which goes back to review. Cropping can&apos;t
+            remove a watermark or change the background.
           </p>
         </header>
 
@@ -328,18 +422,38 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
               <li
                 key={b.key}
                 className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${
-                  selected === b.key ? "border-[#1A3D2C]/40 bg-[#1A3D2C]/5" : "border-[#1A3D2C]/10"
+                  selected === b.key
+                    ? "border-[#1A3D2C]/40 bg-[#1A3D2C]/5"
+                    : "border-[#1A3D2C]/10"
                 }`}
               >
-                <span className="text-xs font-black text-[#1A3D2C] w-4">{i + 1}</span>
+                <span className="text-xs font-black text-[#1A3D2C] w-4">
+                  {i + 1}
+                </span>
                 {styles && src && (
-                  <div className="relative w-20 shrink-0 overflow-hidden rounded-md border border-[#1A3D2C]/10 bg-white" style={styles.frame}>
+                  <div
+                    className="relative w-20 shrink-0 overflow-hidden rounded-md border border-[#1A3D2C]/10 bg-white"
+                    style={styles.frame}
+                  >
                     {/* eslint-disable-next-line @next/next/no-img-element -- the same signed page image, cropped by CSS */}
-                    <img src={src} alt="" className="absolute max-w-none" style={styles.image} />
+                    <img
+                      src={src}
+                      alt=""
+                      className="absolute max-w-none"
+                      style={styles.image}
+                    />
                   </div>
                 )}
-                <span className="flex-1 text-xs font-bold text-[#1A3D2C]/60">Page {b.page}</span>
-                <Button iconOnly size="sm" variant="tertiary" aria-label={`Remove box ${i + 1}`} onClick={() => remove(b.key)}>
+                <span className="flex-1 text-xs font-bold text-[#1A3D2C]/60">
+                  Page {b.page}
+                </span>
+                <Button
+                  iconOnly
+                  size="sm"
+                  variant="tertiary"
+                  aria-label={`Remove box ${i + 1}`}
+                  onClick={() => remove(b.key)}
+                >
                   <Trash2 size={13} />
                 </Button>
               </li>
@@ -348,20 +462,40 @@ export function CropEditor({ detail, onCancel, onSaved }: CropEditorProps) {
         </ol>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" leadingIcon={<Plus size={13} />} onClick={addBox} disabled={full}>
+          <Button
+            variant="outline"
+            size="sm"
+            leadingIcon={<Plus size={13} />}
+            onClick={addBox}
+            disabled={full}
+          >
             Add a box
           </Button>
-          <Button variant="tertiary" size="sm" leadingIcon={<RotateCcw size={13} />} onClick={() => fromCrop(crop)}>
+          <Button
+            variant="tertiary"
+            size="sm"
+            leadingIcon={<RotateCcw size={13} />}
+            onClick={() => fromCrop(crop)}
+          >
             Reset
           </Button>
         </div>
-        {full && <p className="text-[11px] font-bold text-[#1A3D2C]/50">Six boxes is the most one crop can join.</p>}
+        {full && (
+          <p className="text-[11px] font-bold text-[#1A3D2C]/50">
+            Six boxes is the most one crop can join.
+          </p>
+        )}
 
         <div className="flex justify-end gap-2 pt-3 border-t border-[#1A3D2C]/5">
           <Button variant="tertiary" onClick={onCancel} disabled={saving}>
             Cancel
           </Button>
-          <Button variant="primary" loading={saving} disabled={boxes.length === 0} onClick={() => void save()}>
+          <Button
+            variant="primary"
+            loading={saving}
+            disabled={boxes.length === 0}
+            onClick={() => void save()}
+          >
             Save crop
           </Button>
         </div>

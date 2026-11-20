@@ -10,7 +10,8 @@ export const REDRAW_POLL_MS = 30_000;
 /** Chapters per summary call: the backend's limit. */
 export const SUMMARY_CHUNK = 100;
 
-const running = (s: VisualReviewSummary | undefined) => !!s && s.redraws.queued + s.redraws.drawing > 0;
+const running = (s: VisualReviewSummary | undefined) =>
+  !!s && s.redraws.queued + s.redraws.drawing > 0;
 
 /**
  * Each chapter's visual review tally (pictures reviewed, accepted, rejected,
@@ -23,11 +24,15 @@ const running = (s: VisualReviewSummary | undefined) => !!s && s.redraws.queued 
  * the chapter's visuals. Failures are swallowed: the last tallies stay.
  */
 export function useRedrawSummary(subjects: Subject[]) {
-  const [summaries, setSummaries] = useState<Map<string, VisualReviewSummary>>(new Map());
+  const [summaries, setSummaries] = useState<Map<string, VisualReviewSummary>>(
+    new Map(),
+  );
   const [justReady, setJustReady] = useState<string[]>([]);
   const previous = useRef<Map<string, VisualReviewSummary>>(new Map());
   const mounted = useRef(true);
-  const ids = [...new Set(subjects.map((s) => s.source_id).filter(Boolean))].sort();
+  const ids = [
+    ...new Set(subjects.map((s) => s.source_id).filter(Boolean)),
+  ].sort();
   const signature = ids.join(",");
 
   const refresh = useCallback(async () => {
@@ -35,16 +40,25 @@ export function useRedrawSummary(subjects: Subject[]) {
     if (!sourceIds.length) return;
     try {
       const chunks: string[][] = [];
-      for (let i = 0; i < sourceIds.length; i += SUMMARY_CHUNK) chunks.push(sourceIds.slice(i, i + SUMMARY_CHUNK));
-      const found = (await Promise.all(chunks.map((c) => visualsService.summary(c)))).flat();
+      for (let i = 0; i < sourceIds.length; i += SUMMARY_CHUNK)
+        chunks.push(sourceIds.slice(i, i + SUMMARY_CHUNK));
+      const found = (
+        await Promise.all(chunks.map((c) => visualsService.summary(c)))
+      ).flat();
       if (!mounted.current) return;
       const next = new Map(found.map((s) => [s.source_id, s]));
       const landed = found
-        .filter((s) => running(previous.current.get(s.source_id)) && !running(s) && s.redraws.ready > 0)
+        .filter(
+          (s) =>
+            running(previous.current.get(s.source_id)) &&
+            !running(s) &&
+            s.redraws.ready > 0,
+        )
         .map((s) => s.source_id);
       previous.current = next;
       setSummaries(next);
-      if (landed.length) setJustReady((ready) => [...new Set([...ready, ...landed])]);
+      if (landed.length)
+        setJustReady((ready) => [...new Set([...ready, ...landed])]);
     } catch {
       // Keep the last known tallies.
     }
@@ -72,10 +86,15 @@ export function useRedrawSummary(subjects: Subject[]) {
   }, [anyRunning, refresh]);
 
   const summaryFor = useCallback(
-    (subject: Pick<Subject, "source_id">): VisualReviewSummary | null => summaries.get(subject.source_id) ?? null,
+    (subject: Pick<Subject, "source_id">): VisualReviewSummary | null =>
+      summaries.get(subject.source_id) ?? null,
     [summaries],
   );
-  const dismissReady = useCallback((sourceId: string) => setJustReady((ready) => ready.filter((id) => id !== sourceId)), []);
+  const dismissReady = useCallback(
+    (sourceId: string) =>
+      setJustReady((ready) => ready.filter((id) => id !== sourceId)),
+    [],
+  );
 
   return { summaryFor, refresh, justReady, dismissReady };
 }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { leaveWithLoader } from "@/features/auth/leaveWithLoader";
 import { asError } from "@/utils/errors";
 import { sourcesService } from "../services/sourcesService";
 import { partnerStudentsService } from "../services/partnerStudentsService";
@@ -6,7 +7,8 @@ import type {
   ChapterCorrection,
   ExcludedPages,
   ExcludedPagesDecision,
-  SourceReleaseRef, SourceOutcome, SuggestionsState,
+  SourceReleaseRef,
+  SourceOutcome,
   RegisterSourceInput,
   SourceProgress,
   SourceState,
@@ -15,7 +17,7 @@ import type {
 
 export interface Student {
   id: string;
-  name: string;       // mapped from API `username`
+  name: string; // mapped from API `username`
   grade: string;
   initials?: string;
   status: "APPROVED" | "PENDING";
@@ -63,7 +65,6 @@ export interface Subject {
   /** The last run left questions to complete (`SourceAuthoringModal`); how many the partner did; AI drafts' state. */
   has_authoring: boolean;
   authored: number;
-  suggestions: SuggestionsState | null;
   queued_at: string | null;
   started_at: string | null;
   finished_at: string | null;
@@ -99,7 +100,6 @@ export function toSubject(source: SourceView): Subject {
     outcome: source.outcome ?? null,
     has_authoring: source.has_authoring ?? false,
     authored: source.authored ?? 0,
-    suggestions: source.suggestions ?? null,
     queued_at: source.queued_at,
     started_at: source.started_at ?? null,
     finished_at: source.finished_at,
@@ -177,7 +177,10 @@ interface PartnerState {
   correctOutcomes: (sourceId: string, loCodes: string[]) => Promise<void>;
   cancelIngestion: (sourceId: string) => Promise<void>;
   /** Answer about the pages left out at upload: confirm the cut, or include them (the chapter runs again). */
-  decideExcludedPages: (sourceId: string, decision: ExcludedPagesDecision) => Promise<void>;
+  decideExcludedPages: (
+    sourceId: string,
+    decision: ExcludedPagesDecision,
+  ) => Promise<void>;
   removeSubject: (sourceId: string) => Promise<void>;
   removeStudent: (studentId: string) => Promise<void>;
   setShowUploadModal: (show: boolean) => void;
@@ -191,9 +194,14 @@ interface PartnerState {
 }
 
 /** Swap one row for the server's latest copy of it. */
-function replaceSubject(set: (fn: (state: PartnerState) => Partial<PartnerState>) => void, source: SourceView) {
+function replaceSubject(
+  set: (fn: (state: PartnerState) => Partial<PartnerState>) => void,
+  source: SourceView,
+) {
   const next = toSubject(source);
-  set((state) => ({ subjects: state.subjects.map((s) => (s.id === next.id ? next : s)) }));
+  set((state) => ({
+    subjects: state.subjects.map((s) => (s.id === next.id ? next : s)),
+  }));
 }
 
 /** The viewer shows the PDF from an object URL; free it when it's replaced or closed. */
@@ -202,16 +210,25 @@ function revokeViewerUrl(url: string | null) {
 }
 
 const getInitials = (name: string) =>
-  name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+  name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "";
 if (!API_URL) {
-  throw new Error("NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.");
+  throw new Error(
+    "NEXT_PUBLIC_API_URL is required. Set it in your .env.local file.",
+  );
 }
 
 /** The signed-in partner's id (their user id), as login stored it. */
 function storedPartnerId(): string | undefined {
-  return localStorage.getItem("gened_partner_id")?.replace(/['"]+/g, "") || undefined;
+  return (
+    localStorage.getItem("gened_partner_id")?.replace(/['"]+/g, "") || undefined
+  );
 }
 
 function requirePartnerId(): string {
@@ -267,14 +284,20 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       console.error("openIngestedPdf error:", error);
       set({
         isViewerLoading: false,
-        viewerError: asError(error).message || "PDF not available for this document.",
+        viewerError:
+          asError(error).message || "PDF not available for this document.",
       });
     }
   },
 
   closePdfViewer: () => {
     revokeViewerUrl(get().viewerPdfUrl);
-    set({ viewerPdfUrl: null, viewerTitle: null, isViewerLoading: false, viewerError: null });
+    set({
+      viewerPdfUrl: null,
+      viewerTitle: null,
+      isViewerLoading: false,
+      viewerError: null,
+    });
   },
 
   // -- Students and the approval queue ------------------------------------
@@ -322,7 +345,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   // -- Approve request (backend-first) ------------------------------------
   approveRequest: async (studentId) => {
-    await partnerStudentsService.setStatus(requirePartnerId(), studentId, "APPROVED");
+    await partnerStudentsService.setStatus(
+      requirePartnerId(),
+      studentId,
+      "APPROVED",
+    );
 
     // Backend confirmed — update local state
     set((state) => {
@@ -335,7 +362,9 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         initials: getInitials(request.name),
       };
 
-      const newPending = state.pendingRequests.filter((r) => r.id !== studentId);
+      const newPending = state.pendingRequests.filter(
+        (r) => r.id !== studentId,
+      );
 
       return {
         pendingRequests: newPending,
@@ -349,11 +378,17 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   // -- Reject request (backend-first) ------------------------------------─
   rejectRequest: async (studentId) => {
-    await partnerStudentsService.setStatus(requirePartnerId(), studentId, "REJECTED");
+    await partnerStudentsService.setStatus(
+      requirePartnerId(),
+      studentId,
+      "REJECTED",
+    );
 
     // Backend confirmed — remove from pending
     set((state) => {
-      const newPending = state.pendingRequests.filter((r) => r.id !== studentId);
+      const newPending = state.pendingRequests.filter(
+        (r) => r.id !== studentId,
+      );
       return {
         pendingRequests: newPending,
         numberOfPendingRequests: newPending.length,
@@ -364,22 +399,32 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
 
   // -- Revoke an approved student (backend-first) -------------------------
   revokeStudent: async (studentId) => {
-    await partnerStudentsService.setStatus(requirePartnerId(), studentId, "REVOKED");
+    await partnerStudentsService.setStatus(
+      requirePartnerId(),
+      studentId,
+      "REVOKED",
+    );
 
     set((state) => ({
       students: state.students.filter((s) => s.id !== studentId),
       totalEnrollments: Math.max(0, state.totalEnrollments - 1),
-      selectedStudent: state.selectedStudent?.id === studentId ? null : state.selectedStudent,
+      selectedStudent:
+        state.selectedStudent?.id === studentId ? null : state.selectedStudent,
     }));
   },
 
   // -- Subject actions ----------------------------------------------------
   setSubjectFilters: (filters) => {
-    set({ subjectFilters: filters, subjectPagination: { ...get().subjectPagination, offset: 0 } });
+    set({
+      subjectFilters: filters,
+      subjectPagination: { ...get().subjectPagination, offset: 0 },
+    });
   },
 
   setSubjectOffset: (offset) => {
-    set((state) => ({ subjectPagination: { ...state.subjectPagination, offset } }));
+    set((state) => ({
+      subjectPagination: { ...state.subjectPagination, offset },
+    }));
   },
 
   fetchSubjects: async (options) => {
@@ -404,7 +449,11 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
         subjectsError: null,
         subjectsFailures: 0,
         subjects: page.items.map(toSubject),
-        subjectPagination: { total_count: page.total_count, limit: page.limit, offset: page.offset },
+        subjectPagination: {
+          total_count: page.total_count,
+          limit: page.limit,
+          offset: page.offset,
+        },
       });
     } catch (error) {
       console.error("fetchSubjects error:", error);
@@ -501,6 +550,6 @@ export const usePartnerStore = create<PartnerState>((set, get) => ({
       selectedStudent: null,
       totalEnrollments: 0,
     });
-    window.location.href = "/";
+    leaveWithLoader("/");
   },
 }));

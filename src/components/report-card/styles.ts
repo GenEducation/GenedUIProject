@@ -7,19 +7,19 @@ export const RC_STYLES = `
      app-wide --border/--muted tokens for every other component on screen
      (e.g. the sidebar) for as long as it stayed mounted. */
   .report-root {
-    --navy:#122D30; --emerald:#075E63; --emerald-hover:#064C50; --bg:#F6F7F2; --border:#DCE6E2; --text:#122D30; --muted:#5E7477;
-    --surface:#ffffff; --surface-2:#F8FAF7; --rule:#E5EDEA; --ink-2:#2E4A4D; --soft:#DCEBE7;
+    --navy:#1D6315; --emerald:#287624; --emerald-hover:#22661F; --bg:#F7F4EA; --border:#DCE6E2; --text:#1D6315; --muted:#5A6E52;
+    --surface:#ffffff; --surface-2:#F8FAF7; --rule:#E5EDEA; --ink-2:#2E4A4D; --soft:#E8F0CC;
     /* Citron: fills under ink text, or a mark on a dark ground — never text on light. */
-    --citron:#D9F279; --citron-deep:#B8D63F; --citron-wash:#F3F9DC;
-    --adv-fg:#075E63; --adv-bg:#E8F2EF; --adv-bd:#C9DFD8;
-    --pro-fg:#2F7A7E; --pro-bg:#EEF5F3; --pro-bd:#CFE2DC;
+    --citron:#A6CF08; --citron-deep:#8DB000; --citron-wash:#F3F9DC;
+    --adv-fg:#287624; --adv-bg:#EEF4DD; --adv-bd:#D5E6B5;
+    --pro-fg:#3A8A2E; --pro-bg:#F3F6E6; --pro-bd:#CFE2DC;
     --app-fg:#B45309; --app-bg:#FFFBEB; --app-bd:#FDE68A;
     --dev-fg:#BE123C; --dev-bg:#FFF1F2; --dev-bd:#FECDD3;
-    --sr-tint:#EFF5F3; --sr-tint-2:#E2EEEA; --sr-accent:#075E63; --sr-border:#CFE2DC;
-    --tm-tint:#EFF5F3; --tm-tint-2:#E2EEEA; --tm-accent:#122D30; --tm-border:#CFE2DC;
+    --sr-tint:#EFF5F3; --sr-tint-2:#E2EEEA; --sr-accent:#287624; --sr-border:#CFE2DC;
+    --tm-tint:#EFF5F3; --tm-tint-2:#E2EEEA; --tm-accent:#1D6315; --tm-border:#CFE2DC;
     --r:10px; --r-sm:6px; --r-lg:16px;
     --sans:var(--font-body); --display:'Source Serif 4',Charter,Georgia,serif; --mono:'JetBrains Mono',monospace;
-    --shadow: 0 1px 2px rgba(18,45,48,.04), 0 8px 24px -12px rgba(18,45,48,.10);
+    --shadow: 0 1px 2px rgba(29,99,21,.04), 0 8px 24px -12px rgba(29,99,21,.10);
   }
   .report-root { background: var(--bg); font-family: var(--sans); color: var(--text); font-size: 15px; line-height: 1.55; }
   .rc-wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px 60px; }
@@ -50,7 +50,7 @@ export const RC_STYLES = `
   /* summary band */
   .rc-summary { margin-top: 22px; background: linear-gradient(160deg,var(--navy),var(--emerald)); border-radius: var(--r-lg); padding: 26px 26px 22px; color: #fff; box-shadow: var(--shadow); }
   .rc-summary-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 26px; }
-  .rc-summary-lead-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #A9CCC7; margin-bottom: 8px; }
+  .rc-summary-lead-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #C2DA94; margin-bottom: 8px; }
   .rc-summary-lead { font-family: var(--display); font-size: 18px; line-height: 1.5; font-weight: 500; }
   .rc-summary-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; align-content: start; }
   .rc-sstat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); border-radius: var(--r); padding: 11px 13px; }
@@ -62,7 +62,7 @@ export const RC_STYLES = `
   .rc-dial svg { width: 36px; height: 36px; }
   .rc-dial-txt .name { font-size: 12.5px; font-weight: 600; }
   .rc-dial-txt .band { font-size: 10.5px; color: #B5CFCB; display: inline-flex; align-items: center; gap: 3px; }
-  .rc-dial-trend { color: #A9CCC7; font-weight: 700; }
+  .rc-dial-trend { color: #C2DA94; font-weight: 700; }
 
   /* section framework */
   .rc-section { padding: 40px 0; border-bottom: 1px solid var(--border); }
@@ -75,7 +75,7 @@ export const RC_STYLES = `
   /* subject cards */
   .rc-subject-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow); }
   .rc-sc-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-bottom: 1px solid var(--rule); cursor: pointer; background: var(--surface-2); }
-  .rc-sc-head:hover { background: #EEF4F1; }
+  .rc-sc-head:hover { background: #F2F5E5; }
   .rc-sc-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .rc-sc-accent { width: 5px; height: 34px; border-radius: 3px; flex-shrink: 0; }
   .rc-sc-title { font-family: var(--display); font-size: 17px; font-weight: 600; color: var(--navy); }
@@ -219,7 +219,7 @@ export const RC_STYLES = `
   .rc-list-card ul { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-2); }
   .rc-list-card li { margin-bottom: 6px; line-height: 1.5; }
 
-  .rc-hero { background: linear-gradient(160deg,#FAFBF7,#EAF2EF); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px 26px; margin-bottom: 20px; }
+  .rc-hero { background: linear-gradient(160deg,#FAFBF7,#EFF4DF); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px 26px; margin-bottom: 20px; }
   .rc-hero blockquote { font-family: var(--display); font-style: italic; font-size: 19px; color: var(--navy); margin: 0 0 10px; line-height: 1.5; }
 
   .rc-markdown { font-size: 13px; line-height: 1.7; color: var(--ink-2); }
@@ -249,13 +249,13 @@ export const RC_STYLES = `
   .rc-sr-point-item { display: flex; gap: 9px; align-items: flex-start; line-height: 1.5; }
   .rc-sr-point-tag { font-family: var(--mono); font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid; flex-shrink: 0; text-transform: uppercase; letter-spacing: .04em; margin-top: 1px; }
   .rc-sr-point-tag.friction { background: var(--dev-bg); color: var(--dev-fg); border-color: var(--dev-bd); }
-  .rc-sr-point-tag.breakthrough { background: var(--soft); color: var(--emerald); border-color: #C9DFD8; }
+  .rc-sr-point-tag.breakthrough { background: var(--soft); color: var(--emerald); border-color: #D5E6B5; }
   .rc-sr-point-tag.misconception { background: var(--app-bg); color: var(--app-fg); border-color: var(--app-bd); }
 
   .rc-sr-trajectory-card { padding: 9px 0; border-bottom: 1px dashed var(--rule); font-size: 12.5px; }
   .rc-sr-trajectory-card:last-child { border-bottom: none; }
   .rc-sr-traj-head { font-weight: 600; color: var(--navy); margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .rc-sr-traj-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--sr-accent); background: rgba(7,94,99,.08); border: 1px solid rgba(7,94,99,.2); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .rc-sr-traj-badge { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--sr-accent); background: rgba(40,118,36,.08); border: 1px solid rgba(40,118,36,.2); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
   .rc-sr-traj-desc { color: var(--ink-2); font-size: 12px; line-height: 1.55; }
 
   .rc-sr-final { margin-top: 18px; background: linear-gradient(160deg,#FFFFFF,var(--sr-tint-2)); border: 1px solid var(--sr-border); border-radius: var(--r); padding: 14px 16px; }
@@ -282,13 +282,13 @@ export const RC_STYLES = `
   .rc-howto-title { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-weight: 600; margin-bottom: 12px; text-align: center; }
   .rc-howto-step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px dashed var(--rule); }
   .rc-howto-step:last-child { border-bottom: none; }
-  .rc-howto-n { width: 22px; height: 22px; border-radius: 50%; background: var(--soft); border: 1.5px solid #C9DFD8; color: var(--emerald); font-family: var(--mono); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .rc-howto-n { width: 22px; height: 22px; border-radius: 50%; background: var(--soft); border: 1.5px solid #D5E6B5; color: var(--emerald); font-family: var(--mono); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .rc-howto-txt { font-size: 13px; color: var(--text); line-height: 1.5; }
   .rc-howto-txt b { color: var(--navy); }
   .rc-cta-center { text-align: center; margin-top: 22px; }
 
   /* what unlocks next */
-  .rc-unlocks { background: linear-gradient(160deg,#FAFBF7,#EAF2EF); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px 24px; margin-top: 8px; }
+  .rc-unlocks { background: linear-gradient(160deg,#FAFBF7,#EFF4DF); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px 24px; margin-top: 8px; }
   .rc-unlocks-title { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--emerald); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
   .rc-unlock-row { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--rule); }
   .rc-unlock-row:last-child { border-bottom: none; }
@@ -346,7 +346,7 @@ export const RC_PRINT_PORTAL_STYLES = `
     body.rc-printing > *:not(#rc-print-root) { display: none !important; }
     body.rc-printing #rc-print-root { position: static !important; left: 0 !important; width: 100% !important; }
     @page { size: A4; margin: 14mm 12mm 18mm; }
-    .rc-print-footer { position: fixed; bottom: 6mm; left: 0; right: 0; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #5E7477; }
+    .rc-print-footer { position: fixed; bottom: 6mm; left: 0; right: 0; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 9px; color: #5A6E52; }
   }
   .rc-print-footer { display: none; }
 `;
@@ -356,11 +356,11 @@ export const RC_PRINT_PORTAL_STYLES = `
 // topic tree, tests) that the screen embeds at the same typeface.
 export const RC_SCREEN_STYLES = `
   .rc-screen {
-    --rs-ink:#122D30; --rs-ink-soft:#5E7477;
-    --rs-line:#E1EAE6; --rs-line-strong:#CCDED8;
-    --rs-mint:#DCEBE7; --rs-track:#E7EEEB; --rs-surface-2:#F7F9F5;
-    --rs-brand:#075E63; --rs-brand-deep:#064C50;
-    --rs-citron:#D9F279; --rs-citron-deep:#B8D63F;
+    --rs-ink:#1D6315; --rs-ink-soft:#5A6E52;
+    --rs-line:#E6EDD3; --rs-line-strong:#D8E6BA;
+    --rs-mint:#E8F0CC; --rs-track:#E7EEEB; --rs-surface-2:#F7F9F5;
+    --rs-brand:#287624; --rs-brand-deep:#22661F;
+    --rs-citron:#A6CF08; --rs-citron-deep:#8DB000;
     --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
     --font-body: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
     --sans: var(--font-body); --display: var(--font-display);
@@ -371,9 +371,9 @@ export const RC_SCREEN_STYLES = `
     line-height: 1.5;
     font-feature-settings: "ss01", "cv11";
     background:
-      radial-gradient(900px 420px at 0% -10%, rgba(7,94,99,.08), transparent 60%),
+      radial-gradient(900px 420px at 0% -10%, rgba(40,118,36,.08), transparent 60%),
       radial-gradient(640px 340px at 105% 4%, rgba(217,242,121,.22), transparent 62%),
-      linear-gradient(180deg, #F2F6F2 0%, #F6F7F2 100%);
+      linear-gradient(180deg, #F2F6F2 0%, #F7F4EA 100%);
   }
   .rc-screen h1, .rc-screen h2, .rc-screen h3, .rc-screen h4 { font-family: var(--font-display); }
   /* Inside a portal page (the parent's), the portal's own background and gutters frame it: no second backdrop. */

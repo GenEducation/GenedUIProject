@@ -10,18 +10,18 @@ const PdfViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex flex-col items-center justify-center flex-1 gap-3" style={{ background: "#F6F7F2" }}>
+      <div className="flex flex-col items-center justify-center flex-1 gap-3" style={{ background: "#F7F4EA" }}>
         <div
           style={{
             width: 28,
             height: 28,
-            border: "3px solid #DCEBE7",
+            border: "3px solid #E8F0CC",
             borderTopColor: "var(--tutor)",
             borderRadius: "50%",
             animation: "spin 0.8s linear infinite",
           }}
         />
-        <p style={{ fontSize: 13, color: "#5E7477", fontFamily: "var(--font-body)", margin: 0 }}>
+        <p style={{ fontSize: 13, color: "#5A6E52", fontFamily: "var(--font-body)", margin: 0 }}>
           Loading textbook…
         </p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -38,27 +38,27 @@ interface ChapterPdfViewerProps {
 
 export function ChapterPdfViewer({ pdfUrl, chapterName, onClose }: ChapterPdfViewerProps) {
   return (
-    <div className="flex flex-col h-full" style={{ borderLeft: "1px solid #E3E8E2", background: "#F6F7F2" }}>
+    <div className="flex flex-col h-full" style={{ borderLeft: "1px solid #E7E2D2", background: "#F7F4EA" }}>
       {/* Header */}
       <div
         className="flex items-center justify-between flex-shrink-0"
-        style={{ padding: "8px 10px", background: "#FFFFFF", borderBottom: "1px solid #E3E8E2" }}
+        style={{ padding: "8px 10px", background: "#FFFFFF", borderBottom: "1px solid #E7E2D2" }}
       >
         <div className="flex items-center gap-2 min-w-0">
           <div
             className="flex-shrink-0 flex items-center justify-center rounded-lg"
-            style={{ width: 28, height: 28, background: "#DCEBE7" }}
+            style={{ width: 28, height: 28, background: "#E8F0CC" }}
           >
             <BookOpen size={14} style={{ color: "var(--tutor)" }} />
           </div>
           <div className="min-w-0">
             <p
               className="truncate"
-              style={{ fontWeight: 700, fontSize: 13, color: "#122D30", fontFamily: "var(--font-display), var(--font-body)", margin: 0 }}
+              style={{ fontWeight: 700, fontSize: 13, color: "#1D6315", fontFamily: "var(--font-display), var(--font-body)", margin: 0 }}
             >
               {chapterName}
             </p>
-            <p style={{ fontSize: 10, fontWeight: 600, color: "#7F9295", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: "#7D8C73", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
               Textbook
             </p>
           </div>
@@ -68,7 +68,7 @@ export function ChapterPdfViewer({ pdfUrl, chapterName, onClose }: ChapterPdfVie
           onClick={onClose}
           title="Close textbook"
           className="flex items-center justify-center rounded-lg transition-colors hover:bg-gray-100 flex-shrink-0"
-          style={{ width: 40, height: 40, color: "#7F9295", border: "none", background: "transparent", cursor: "pointer" }}
+          style={{ width: 40, height: 40, color: "#7D8C73", border: "none", background: "transparent", cursor: "pointer" }}
         >
           <X size={16} />
         </button>

@@ -1,0 +1,70 @@
+/* Hand-written changes on top of the generated prototype styles (tokens.css etc. come from
+   scripts/zoovi-scope-css.mjs and are never edited by hand). Imported last by SiteShell. */
+
+/* Footer: three columns (the brand, then Explore and Company links), the GenEd note across the bottom. */
+.zv-site .foot {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); align-items: start;
+  gap: 40px clamp(24px, 5vw, 80px); padding-block: 56px 40px; font-size: 16px;
+}
+.zv-site .foot-brand { flex-direction: column; align-items: flex-start; gap: 14px; }
+.zv-site .foot img { height: clamp(52px, 6vw, 72px); width: auto; }
+.zv-site .foot nav.foot-col { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; justify-content: flex-start; gap: 12px; }
+/* Column headings are the brand's display face with a short lime bar under them; the links are lighter and
+   quieter, so the two never read as one list. */
+.zv-site .foot-h {
+  font: 600 20px/1.1 var(--display); letter-spacing: 0; color: var(--ink);
+  padding-bottom: 10px; margin-bottom: 8px;
+  background: linear-gradient(var(--lime), var(--lime)) 0 100% / 28px 3px no-repeat;
+}
+.zv-site .foot-col a { font-weight: 400; color: color-mix(in srgb, var(--ink) 72%, var(--paper)); transition: color .2s; }
+.zv-site .foot-col a:hover { color: var(--ink); }
+.zv-site .foot-note {
+  grid-column: 1 / -1; font-size: 14px; padding-top: 24px;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+@media (max-width: 600px) {
+  .zv-site .foot { grid-template-columns: 1fr 1fr; }
+  .zv-site .foot-brand { grid-column: 1 / -1; }
+}
+
+/* Phones: the nav holds a fourth link (Home) since the prototypes, so it tightens up to keep Log in on one line. */
+@media (max-width: 480px) {
+  .zv-site .nav-pages { gap: 10px; }
+  .zv-site .nav-page { font-size: 13px; }
+  .zv-site .nav .nav-login { white-space: nowrap; padding: 0 12px; min-height: 38px; font-size: 13px; }
+}
+
+/* Home without the intro (data-intro="skip", set by components/HomeIntro.tsx before the first paint): the logo and its
+   dot are never drawn, and the hero copy and the nav are there from the start. The story engine takes over from here
+   with inline styles, which win over these. */
+.zv-site[data-intro="skip"] :is(.intro, .intro-dot, .q) { display: none; }
+.zv-site[data-intro="skip"] [data-b="hero"] { opacity: 1; visibility: visible; }
+
+/* The "next" button (components/SectionStepper.tsx): a paper disc at the foot of the screen with an ink chevron that
+   nudges downward; ↓ on the keyboard does the same. Hidden until the page can be stepped, and after the last step. */
+.zv-site .zv-stepper {
+  position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 60;
+  width: 52px; height: 52px; margin-left: -26px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer;
+  color: var(--ink); background: var(--paper);
+  border: 1.5px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--ink) 55%, transparent), 0 0 0 5px color-mix(in srgb, var(--lime) 22%, transparent);
+  opacity: 0; transform: translateY(14px) scale(.9); pointer-events: none;
+  transition: opacity .25s ease, transform .3s cubic-bezier(.2, .9, .3, 1.3), background-color .15s ease;
+}
+.zv-site .zv-stepper[data-shown] { opacity: 1; transform: none; pointer-events: auto; }
+.zv-site .zv-stepper svg { animation: zv-stepper-nudge 1.8s ease-in-out infinite; }
+.zv-site .zv-stepper:hover { background: var(--lime); }
+.zv-site .zv-stepper:active { transform: scale(.94); }
+.zv-site .zv-stepper:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+@keyframes zv-stepper-nudge {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zv-site .zv-stepper { transition: opacity .2s ease; transform: none; }
+  .zv-site .zv-stepper svg { animation: none; }
+}
+@media (max-width: 700px) {
+  .zv-site .zv-stepper { width: 46px; height: 46px; margin-left: -23px; }
+}

@@ -81,7 +81,7 @@ describe("the key insights card", () => {
     expect(within(card).getByRole("heading", { name: "Needs attention" })).toBeInTheDocument();
     expect(within(card).getByText("One mix-up has come up twice.")).toBeInTheDocument();
     expect(within(card).getByText("Talk it through, then try the question again.")).toBeInTheDocument();
-    expect(within(card).getByText("By GenEd AI · updated 2 days ago")).toBeInTheDocument();
+    expect(within(card).getByText("By Zoovi AI · updated 2 days ago")).toBeInTheDocument();
   });
 
   it("keeps the previous note on screen and reads again until the new one is written", async () => {

@@ -68,7 +68,7 @@ export function MenuButton({
         <div
           id={menuId}
           role="menu"
-          className={`absolute top-full z-40 mt-1.5 min-w-[190px] overflow-hidden rounded-xl border border-border bg-white p-1 shadow-[0_12px_32px_rgba(18,45,48,.14)] ${
+          className={`absolute top-full z-40 mt-1.5 min-w-[190px] overflow-hidden rounded-xl border border-border bg-white p-1 shadow-[0_12px_32px_rgba(29,99,21,.14)] ${
             align === "right" ? "right-0" : "left-0"
           }`}
         >

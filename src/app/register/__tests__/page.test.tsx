@@ -26,7 +26,7 @@ describe("register page — a school's join link", () => {
     await waitFor(() => expect(seen.at(-1)?.partner_id).toBe("c2a1-school"));
   });
 
-  it("leaves partner_id unset without the link (the student joins GenEd)", async () => {
+  it("leaves partner_id unset without the link (the student joins Zoovi)", async () => {
     window.history.replaceState(null, "", "/register");
     render(<RegisterForm />);
     await waitFor(() => expect(seen.length).toBeGreaterThan(0));

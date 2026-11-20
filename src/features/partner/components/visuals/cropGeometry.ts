@@ -20,10 +20,15 @@ export interface Edges {
   right?: boolean;
 }
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, v));
 
 /** A pointer position over the page frame, in thousandths, kept on the page. */
-export function toThousandths(clientX: number, clientY: number, rect: DOMRect): Point {
+export function toThousandths(
+  clientX: number,
+  clientY: number,
+  rect: DOMRect,
+): Point {
   return {
     x: clamp(Math.round(((clientX - rect.left) / rect.width) * 1000), 0, 1000),
     y: clamp(Math.round(((clientY - rect.top) / rect.height) * 1000), 0, 1000),
@@ -31,7 +36,11 @@ export function toThousandths(clientX: number, clientY: number, rect: DOMRect): 
 }
 
 /** The box shifted by `(dx, dy)`, same size, stopped at the page's edges. */
-export function moveBox([ymin, xmin, ymax, xmax]: CropBox, dx: number, dy: number): CropBox {
+export function moveBox(
+  [ymin, xmin, ymax, xmax]: CropBox,
+  dx: number,
+  dy: number,
+): CropBox {
   const h = ymax - ymin;
   const w = xmax - xmin;
   const top = clamp(ymin + dy, 0, 1000 - h);
@@ -40,7 +49,12 @@ export function moveBox([ymin, xmin, ymax, xmax]: CropBox, dx: number, dy: numbe
 }
 
 /** The box with `edges` dragged by `(dx, dy)`; an edge stops `MIN_SIDE` short of the opposite one. */
-export function resizeBox([ymin, xmin, ymax, xmax]: CropBox, edges: Edges, dx: number, dy: number): CropBox {
+export function resizeBox(
+  [ymin, xmin, ymax, xmax]: CropBox,
+  edges: Edges,
+  dx: number,
+  dy: number,
+): CropBox {
   return [
     edges.top ? clamp(ymin + dy, 0, ymax - MIN_SIDE) : ymin,
     edges.left ? clamp(xmin + dx, 0, xmax - MIN_SIDE) : xmin,
@@ -51,7 +65,12 @@ export function resizeBox([ymin, xmin, ymax, xmax]: CropBox, edges: Edges, dx: n
 
 /** The box between two points, or null while it is still too small to be a figure. */
 export function boxBetween(a: Point, b: Point): CropBox | null {
-  const box: CropBox = [Math.min(a.y, b.y), Math.min(a.x, b.x), Math.max(a.y, b.y), Math.max(a.x, b.x)];
+  const box: CropBox = [
+    Math.min(a.y, b.y),
+    Math.min(a.x, b.x),
+    Math.max(a.y, b.y),
+    Math.max(a.x, b.x),
+  ];
   return box[2] - box[0] < MIN_SIDE || box[3] - box[1] < MIN_SIDE ? null : box;
 }
 
@@ -59,7 +78,12 @@ export function boxBetween(a: Point, b: Point): CropBox | null {
 export const DEFAULT_BOX: CropBox = [333, 333, 667, 667];
 
 /** CSS for showing a box over its page, as percentages. */
-export function boxStyle([ymin, xmin, ymax, xmax]: CropBox): React.CSSProperties {
+export function boxStyle([
+  ymin,
+  xmin,
+  ymax,
+  xmax,
+]: CropBox): React.CSSProperties {
   return {
     top: `${ymin / 10}%`,
     left: `${xmin / 10}%`,

@@ -7,7 +7,7 @@ import { ParentLoaderBackdrop } from "@/features/parent/components/loader/Parent
 
 /**
  * The full-screen "one moment" screen for a route that isn't ready yet (checking a sign-in, deciding where to
- * send a returning user): the GenEd loader's soft backdrop and the logo assembling itself (the cap toss). It
+ * send a returning user): the loader's soft backdrop and the Zoovi logo assembling itself (LogoToss). It
  * replaces the old pulsing-logo-and-spinner screen everywhere. It waits a beat before appearing, so a check that
  * finishes quickly never flashes it; until then only the backdrop shows.
  */

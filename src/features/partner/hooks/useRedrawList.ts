@@ -29,7 +29,8 @@ export function useRedrawList(sourceId: string | null) {
       setItems(found);
       setError(null);
     } catch (e) {
-      if (gen === generation.current) setError(asError(e).message || "Couldn't load the redraws.");
+      if (gen === generation.current)
+        setError(asError(e).message || "Couldn't load the redraws.");
     } finally {
       if (gen === generation.current) setLoading(false);
     }
@@ -44,7 +45,9 @@ export function useRedrawList(sourceId: string | null) {
     };
   }, [refresh]);
 
-  const anyRunning = items.some((r) => r.state === "queued" || r.state === "drawing");
+  const anyRunning = items.some(
+    (r) => r.state === "queued" || r.state === "drawing",
+  );
   useEffect(() => {
     if (!anyRunning) return;
     const timer = setTimeout(() => void refresh(), REDRAW_LIST_POLL_MS);

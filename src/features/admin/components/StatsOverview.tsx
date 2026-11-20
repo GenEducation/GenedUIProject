@@ -76,7 +76,7 @@ function Kpi({
   );
   const cls = `${CARD} group block h-full p-4 transition-all duration-200 sm:p-5`;
   return href ? (
-    <Link href={href} className={`${cls} hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(18,45,48,.08)]`}>
+    <Link href={href} className={`${cls} hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(29,99,21,.08)]`}>
       {body}
     </Link>
   ) : (
@@ -282,7 +282,7 @@ function Operations({ stats }: { stats: AdminStats }) {
           return (
             <li key={r.label}>
               <Link href={r.href} className="group flex items-center gap-3 rounded-xl bg-paper px-3.5 py-3 transition-colors hover:bg-emerald-50">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-emerald shadow-[0_1px_2px_rgba(18,45,48,.06)]">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-emerald shadow-[0_1px_2px_rgba(29,99,21,.06)]">
                   <Icon size={16} />
                 </span>
                 <span className="min-w-0 flex-1">

@@ -1,9 +1,11 @@
 "use client";
 
+import { useLessonStore } from "../useLessonStore";
 import { useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Mic, SendHorizontal, Square } from "lucide-react";
 import { MathField, type MathFieldHandle } from "../math/MathField";
 import { chatTextFromLatex, latexFromChatText } from "../math/latex";
+import { LessonLanguageSelect } from "./LessonLanguageSelect";
 
 /** Maths lessons write in the maths field (words, with `/` for notation); other subjects keep a plain box. */
 export const isMathsSubject = (subject: string | null | undefined) => !!subject && /math|ganit/i.test(subject);
@@ -37,11 +39,22 @@ export function ChatInput({ replying, disabled, onSend, onStop, subject = null, 
   // Maths lessons: the field holds LaTeX and the message is made from it; elsewhere the box holds the message.
   const [latex, setLatex] = useState("");
   const [plain, setPlain] = useState("");
+  // A quote chosen in the book to ask about (W1): the box takes it, once per quote, and the learner writes the question.
+  const draft = useLessonStore((state) => state.chatDraft);
+  const [takenDraft, setTakenDraft] = useState(0);
   const text = maths ? chatTextFromLatex(latex) : plain;
   const setText = (next: string) => (maths ? setLatex(latexFromChatText(next)) : setPlain(next));
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const mathRef = useRef<MathFieldHandle>(null);
+  if (draft && draft.nonce !== takenDraft) {
+    setTakenDraft(draft.nonce);
+    setText(draft.text.slice(0, MAX_MESSAGE));
+  }
   const focusBox = () => (maths ? mathRef.current?.focus() : areaRef.current?.focus());
+  useLayoutEffect(() => {
+    if (draft) focusBox();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new quote moves the focus
+  }, [draft?.nonce]);
   const canSend = !disabled && text.trim().length > 0 && text.length <= MAX_MESSAGE;
 
   // Grow with the text up to ~5 lines, then scroll.
@@ -59,6 +72,7 @@ export function ChatInput({ replying, disabled, onSend, onStop, subject = null, 
     if (disabled || !message.trim() || message.length > MAX_MESSAGE) return;
     onSend(message);
     setText("");
+    if (maths) mathRef.current?.clear?.();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -124,6 +138,8 @@ export function ChatInput({ replying, disabled, onSend, onStop, subject = null, 
                 <Mic size={18} />
               </button>
             )}
+            {/* The lesson's one language selector: inside the box the learner types in, as in the voice box. */}
+            <LessonLanguageSelect inBox />
             <span className="flex-1" />
             {text.length >= COUNT_FROM && (
               <span className="text-[11px] tabular-nums text-[var(--ls-ink-faint)]" aria-live="polite">
