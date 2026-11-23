@@ -4,7 +4,7 @@ import { render, screen, within, fireEvent } from "@testing-library/react";
 import { HomePage } from "../HomePage";
 import { ParentsPage } from "../ParentsPage";
 import { EducatorsPage } from "../EducatorsPage";
-import { CONTACT_HREF, ROUTES, SKIP_INTRO_KEY } from "../routes";
+import { INVITE_HREF, ROUTES, SKIP_INTRO_KEY } from "../routes";
 
 const MAILTO = "mailto:info@gened.ai";
 
@@ -27,7 +27,7 @@ describe("Zoovi marketing nav", () => {
     expect(parents).toHaveAttribute("href", ROUTES.parents);
     expect(educators).toHaveAttribute("href", ROUTES.educators);
     expect(within(header).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
-    expect(within(header).getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", CONTACT_HREF);
+    expect(within(header).getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", INVITE_HREF);
     // the current page is marked
     const marked = within(header)
       .getAllByRole("link")
@@ -53,6 +53,15 @@ describe("Zoovi marketing nav", () => {
     window.history.pushState({}, "", `/?redirect=${encodeURIComponent(to)}`);
     render(<HomePage />);
     expect(await within(nav()).findByRole("link", { name: "Log in" })).toHaveAttribute("href", `/login?redirect=${encodeURIComponent(to)}`);
+  });
+
+  it("sends every Get an Invite on the Parents page to the invite form, and Talk to Us to email", () => {
+    render(<ParentsPage />);
+    const main = screen.getByRole("main");
+    const invites = within(main).getAllByRole("link", { name: "Get an Invite" });
+    expect(invites.length).toBeGreaterThan(0);
+    for (const a of invites) expect(a).toHaveAttribute("href", INVITE_HREF);
+    expect(within(main).getByRole("link", { name: "Talk to Us" })).toHaveAttribute("href", MAILTO);
   });
 });
 
@@ -84,6 +93,7 @@ describe("Zoovi home (take B)", () => {
     expect(within(main).getByRole("link", { name: "Explore Zoovi for Parents" })).toHaveAttribute("href", ROUTES.parents);
     expect(within(main).getByRole("link", { name: "Explore Zoovi for Educators" })).toHaveAttribute("href", ROUTES.educators);
     expect(within(main).getByRole("link", { name: "Talk to Us" })).toHaveAttribute("href", MAILTO);
+    for (const a of within(main).getAllByRole("link", { name: "Get an Invite" })) expect(a).toHaveAttribute("href", INVITE_HREF);
     // targets that don't exist yet stay inert and are marked for follow-up
     for (const a of within(main).getAllByRole("link", { name: "See How Zoovi Works" })) {
       expect(a).toHaveAttribute("href", "#");

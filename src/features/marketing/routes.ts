@@ -7,7 +7,10 @@ export const ROUTES: Record<SitePage, string> = {
   educators: "/for-educators",
 };
 
-/** Where "Get an Invite", "Contact" and every "Talk to Us" go. */
+/** Where every "Get an Invite" goes: the invite form (src/app/get-an-invite). */
+export const INVITE_HREF = "/get-an-invite";
+
+/** Where "Contact", every "Talk to Us" and the educator programme links go. */
 export const CONTACT_EMAIL = "info@gened.ai";
 /** Opens a new email to CONTACT_EMAIL in the visitor's own mail app. */
 export const CONTACT_HREF = `mailto:${CONTACT_EMAIL}`;

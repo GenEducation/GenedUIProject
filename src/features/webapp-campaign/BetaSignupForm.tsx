@@ -2,17 +2,11 @@
 
 import { useState, type FormEvent } from "react";
 import { PILOT_SEATS, PILOT_START } from "@/constants/campaign";
-import { BOARDS, GRADES, submitBetaSignup, type BetaSignup } from "./googleForm";
+import { BOARDS, GRADES, normalisePhone, submitBetaSignup, type BetaSignup } from "./googleForm";
 import { trackMeta } from "./MetaPixel";
 
 type Status = "idle" | "sending" | "done" | "error";
 type Errors = Partial<Record<"name" | "whatsapp" | "grade" | "board" | "otherBoard", string>>;
-
-/** Indian mobile: 10 digits starting 6–9 (a leading 0, 91 or +91 is dropped). */
-function normalisePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  return digits.length > 10 ? digits.slice(-10) : digits;
-}
 
 export function BetaSignupForm() {
   const [name, setName] = useState("");

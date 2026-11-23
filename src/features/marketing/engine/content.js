@@ -7,6 +7,7 @@
 const HOW = '#';
 const HOME = '/';
 const MAIL = 'mailto:info@gened.ai';
+const INVITE = '/get-an-invite'; // INVITE_HREF in ../routes.ts
 const PARENTS = '/for-parents';
 const EDUCATORS = '/for-educators';
 
@@ -17,7 +18,7 @@ export const content = {
     lede: 'Zoovi is an AI-powered, voice-led learning companion that helps children explore ideas and understand concepts in an interactive and engaging way, while giving parents a better window into their child’s learning journey.',
     ctas: [
       { label: 'See How Zoovi Works', href: HOW, todo: true },
-      { label: 'Get an Invite', href: MAIL, ghost: true },
+      { label: 'Get an Invite', href: INVITE, ghost: true },
     ],
     visual: 'Hero film',
   },
@@ -97,7 +98,7 @@ export const content = {
     title: 'Give every question *room to grow.*',
     lede: 'Discover a more engaging way for your child to learn, understand and explore.',
     ctas: [
-      { label: 'Get an Invite', href: MAIL },
+      { label: 'Get an Invite', href: INVITE },
       { label: 'Talk to Us', href: MAIL, ghost: true },
     ],
   },

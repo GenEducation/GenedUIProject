@@ -22,10 +22,22 @@ const ENTRY = {
 
 export const GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9"] as const;
 export const BOARDS = ["NCERT / CBSE", "ICSE", "State Board", "IB", "Other"] as const;
+export const SUBJECTS = ["Maths", "English", "Science"] as const;
+/** "Where did you hear about GenEd?" — the form's own option text. */
+export const HEARD_FROM = [
+  "Friend or family",
+  "School",
+  "WhatsApp group",
+  "Facebook group",
+  "Instagram / Facebook ad",
+  "LinkedIn",
+  "Reddit",
+  "Other",
+] as const;
 
-/** Answers this campaign page always sends, without asking. */
+/** Answers sent when the page doesn't ask for them (the /pre-order ad page). */
 const FIXED = {
-  subjects: ["Maths", "English", "Science"],
+  subjects: [...SUBJECTS],
   heardFrom: "Instagram / Facebook ad",
   whatsappConsent: "Yes, contact me on WhatsApp",
 };
@@ -38,6 +50,28 @@ export interface BetaSignup {
   board: (typeof BOARDS)[number];
   /** Board name when `board` is "Other". */
   otherBoard?: string;
+  /** Defaults to every subject. */
+  subjects?: readonly (typeof SUBJECTS)[number][];
+  /** Defaults to "Instagram / Facebook ad" (the /pre-order ad page). */
+  heardFrom?: (typeof HEARD_FROM)[number];
+  /** Free text when `heardFrom` is "Other". */
+  otherHeardFrom?: string;
+}
+
+/** Indian mobile: 10 digits starting 6–9 (a leading 0, 91 or +91 is dropped). */
+export function normalisePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+/** Google's "Other" choice: a sentinel value plus the typed text. */
+function appendChoice(body: URLSearchParams, entry: string, value: string, other?: string) {
+  if (value === "Other") {
+    body.append(entry, "__other_option__");
+    body.append(`${entry}.other_option_response`, (other ?? "").trim());
+  } else {
+    body.append(entry, value);
+  }
 }
 
 export function toFormBody(s: BetaSignup): URLSearchParams {
@@ -45,15 +79,9 @@ export function toFormBody(s: BetaSignup): URLSearchParams {
   body.append(ENTRY.name, s.name.trim());
   body.append(ENTRY.whatsapp, `+91 ${s.whatsapp}`);
   body.append(ENTRY.grade, s.grade);
-  if (s.board === "Other") {
-    // Google's "Other" choice: a sentinel value plus the typed text.
-    body.append(ENTRY.board, "__other_option__");
-    body.append(`${ENTRY.board}.other_option_response`, (s.otherBoard ?? "").trim());
-  } else {
-    body.append(ENTRY.board, s.board);
-  }
-  for (const subject of FIXED.subjects) body.append(ENTRY.subjects, subject);
-  body.append(ENTRY.heardFrom, FIXED.heardFrom);
+  appendChoice(body, ENTRY.board, s.board, s.otherBoard);
+  for (const subject of s.subjects ?? FIXED.subjects) body.append(ENTRY.subjects, subject);
+  appendChoice(body, ENTRY.heardFrom, s.heardFrom ?? FIXED.heardFrom, s.otherHeardFrom);
   body.append(ENTRY.whatsappConsent, FIXED.whatsappConsent);
   return body;
 }
