@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { PILOT_SEATS, PILOT_START } from "@/constants/campaign";
-import { BOARDS, GRADES, normalisePhone, submitBetaSignup, type BetaSignup } from "./googleForm";
+import { BOARDS, PILOT_GRADES, normalisePhone, submitBetaSignup, type BetaSignup } from "./googleForm";
 import { trackMeta } from "./MetaPixel";
 
 type Status = "idle" | "sending" | "done" | "error";
@@ -121,7 +121,7 @@ export function BetaSignupForm() {
       <fieldset className="gc-field">
         <legend>Child&apos;s grade</legend>
         <div className="gc-chips">
-          {GRADES.map((g) => (
+          {PILOT_GRADES.map((g) => (
             <label key={g} className={grade === g ? "gc-chip-opt gc-chip-on" : "gc-chip-opt"}>
               <input type="radio" name="grade" value={g} checked={grade === g} onChange={() => setGrade(g)} />
               {g.replace("Grade ", "Class ")}

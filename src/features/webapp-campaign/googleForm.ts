@@ -20,13 +20,20 @@ const ENTRY = {
   whatsappConsent: "entry.1989914263",
 } as const;
 
-export const GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9"] as const;
+/** Every class the invite form offers. The Google Form's grade question must list each one, word for word. */
+export const GRADES = ["Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"] as const;
+/** The /pre-order pilot is Class 6 to 9 only. */
+export const PILOT_GRADES = ["Grade 6", "Grade 7", "Grade 8", "Grade 9"] as const satisfies readonly (typeof GRADES)[number][];
 export const BOARDS = ["NCERT / CBSE", "ICSE", "State Board", "IB", "Other"] as const;
-export const SUBJECTS = ["Maths", "English", "Science"] as const;
+/** The Google Form's subjects question must list each one, word for word. */
+export const SUBJECTS = ["Maths", "English", "Science", "Social Studies", "Hindi", "EVS"] as const;
+/** What the /pre-order pilot covers; the ad page sends all of these without asking. */
+export const PILOT_SUBJECTS = ["Maths", "English", "Science"] as const satisfies readonly (typeof SUBJECTS)[number][];
 /** "Where did you hear about GenEd?" — the form's own option text. */
 export const HEARD_FROM = [
   "Friend or family",
   "School",
+  "DIDAC",
   "WhatsApp group",
   "Facebook group",
   "Instagram / Facebook ad",
@@ -34,13 +41,12 @@ export const HEARD_FROM = [
   "Reddit",
   "Other",
 ] as const;
-
 /** Answers sent when the page doesn't ask for them (the /pre-order ad page). */
 const FIXED = {
-  subjects: [...SUBJECTS],
+  subjects: PILOT_SUBJECTS,
   heardFrom: "Instagram / Facebook ad",
   whatsappConsent: "Yes, contact me on WhatsApp",
-};
+} as const;
 
 export interface BetaSignup {
   name: string;
@@ -50,7 +56,7 @@ export interface BetaSignup {
   board: (typeof BOARDS)[number];
   /** Board name when `board` is "Other". */
   otherBoard?: string;
-  /** Defaults to every subject. */
+  /** Defaults to the pilot subjects. */
   subjects?: readonly (typeof SUBJECTS)[number][];
   /** Defaults to "Instagram / Facebook ad" (the /pre-order ad page). */
   heardFrom?: (typeof HEARD_FROM)[number];
@@ -65,7 +71,7 @@ export function normalisePhone(raw: string): string {
 }
 
 /** Google's "Other" choice: a sentinel value plus the typed text. */
-function appendChoice(body: URLSearchParams, entry: string, value: string, other?: string) {
+export function appendChoice(body: URLSearchParams, entry: string, value: string, other?: string) {
   if (value === "Other") {
     body.append(entry, "__other_option__");
     body.append(`${entry}.other_option_response`, (other ?? "").trim());

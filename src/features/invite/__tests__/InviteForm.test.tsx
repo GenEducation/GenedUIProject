@@ -70,6 +70,28 @@ describe("InviteForm", () => {
     expect(body.get("entry.1989914263")).toBe("Yes, contact me on WhatsApp");
   });
 
+  it("offers Class 3 to 9 and the new subjects, and sends them as the form's own options", async () => {
+    render(<InviteForm />);
+    for (const c of ["Class 3", "Class 4", "Class 5", "Class 9"]) expect(screen.getByRole("radio", { name: c })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Your full name"), { target: { value: "Test Parent" } });
+    fireEvent.change(screen.getByLabelText("WhatsApp number"), { target: { value: "9876543210" } });
+    pick("Class 4");
+    pick("NCERT / CBSE");
+    fireEvent.click(screen.getByRole("checkbox", { name: "EVS" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Hindi" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Social Studies" }));
+    pick("DIDAC");
+    fireEvent.click(screen.getByRole("checkbox", { name: /contact me on WhatsApp/ }));
+    submit();
+
+    await screen.findByText("You're on the list!");
+    const body = fetchMock.mock.calls[0][1].body as URLSearchParams;
+    expect(body.get("entry.408290889")).toBe("Grade 4");
+    expect(body.getAll("entry.1367073796")).toEqual(["Social Studies", "Hindi", "EVS"]);
+    expect(body.get("entry.1639274391")).toBe("DIDAC");
+    expect(body.has("entry.1639274391.other_option_response")).toBe(false);
+  });
+
   it("keeps the parent's details for another child", async () => {
     render(<InviteForm />);
     fireEvent.change(screen.getByLabelText("Your full name"), { target: { value: "Test Parent" } });

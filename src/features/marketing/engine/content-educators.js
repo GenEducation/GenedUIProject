@@ -6,8 +6,8 @@
 // Explore story and its approach pillars), and §6 "Zoovi Teacher Programme" (removed on request). Shared by educators.html (Take A) and educators-b.html (Take B).
 import { esc, rich, ctas, closingAndFooter } from './content.js';
 
-const MAIL = 'mailto:info@gened.ai';
-const REGISTER = { label: 'Register for the Educator Programme', href: MAIL };
+const EDUCATOR_INVITE = '/get-an-invite/educators'; // EDUCATOR_INVITE_HREF in ../routes.ts
+const REGISTER = { label: 'Register for the Educator Programme', href: EDUCATOR_INVITE };
 
 export const educators = {
   hero: {

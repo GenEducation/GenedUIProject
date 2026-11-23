@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useHydrated } from "@/hooks/useHydrated";
 import { safeRedirect, withRedirect } from "@/features/auth/usePostAuthRedirect";
-import { INVITE_HREF, ROUTES, SKIP_INTRO_KEY, type SitePage } from "../routes";
+import { EDUCATOR_INVITE_HREF, INVITE_HREF, ROUTES, SKIP_INTRO_KEY, type SitePage } from "../routes";
 
 function Arrow() {
   return (
@@ -68,7 +68,7 @@ export function NavBar({ current }: { current: SitePage }) {
         <a className="pill ghost nav-login" href={loginHref}>
           <span>Log in</span>
         </a>
-        <a className="pill nav-cta" href={INVITE_HREF}>
+        <a className="pill nav-cta" href={current === "educators" ? EDUCATOR_INVITE_HREF : INVITE_HREF}>
           <span>Get an Invite</span>
           <Arrow />
         </a>

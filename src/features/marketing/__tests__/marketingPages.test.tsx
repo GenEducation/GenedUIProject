@@ -4,7 +4,7 @@ import { render, screen, within, fireEvent } from "@testing-library/react";
 import { HomePage } from "../HomePage";
 import { ParentsPage } from "../ParentsPage";
 import { EducatorsPage } from "../EducatorsPage";
-import { INVITE_HREF, ROUTES, SKIP_INTRO_KEY } from "../routes";
+import { EDUCATOR_INVITE_HREF, INVITE_HREF, ROUTES, SKIP_INTRO_KEY } from "../routes";
 
 const MAILTO = "mailto:info@gened.ai";
 
@@ -14,10 +14,10 @@ const nav = () => screen.getByRole("banner");
 
 describe("Zoovi marketing nav", () => {
   it.each([
-    ["home", HomePage, null],
-    ["parents", ParentsPage, "Parents"],
-    ["educators", EducatorsPage, "Educators"],
-  ] as const)("on the %s page links home, both audiences, log in and invite", (_, Page, current) => {
+    ["home", HomePage, null, INVITE_HREF],
+    ["parents", ParentsPage, "Parents", INVITE_HREF],
+    ["educators", EducatorsPage, "Educators", EDUCATOR_INVITE_HREF],
+  ] as const)("on the %s page links home, both audiences, log in and invite", (_, Page, current, invite) => {
     render(<Page />);
     const header = nav();
     expect(within(header).getByRole("link", { name: "Zoovi home" })).toHaveAttribute("href", "/");
@@ -27,7 +27,7 @@ describe("Zoovi marketing nav", () => {
     expect(parents).toHaveAttribute("href", ROUTES.parents);
     expect(educators).toHaveAttribute("href", ROUTES.educators);
     expect(within(header).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
-    expect(within(header).getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", INVITE_HREF);
+    expect(within(header).getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", invite);
     // the current page is marked
     const marked = within(header)
       .getAllByRole("link")
@@ -133,7 +133,9 @@ describe("Zoovi for Educators (take A)", () => {
     }
     expect(screen.getByRole("heading", { name: "Your teaching assistant. Your extra pair of hands." })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bring Zoovi into your school" })).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: "Register for the Educator Programme" })[0]).toHaveAttribute("href", MAILTO);
+    for (const a of screen.getAllByRole("link", { name: "Register for the Educator Programme" })) {
+      expect(a).toHaveAttribute("href", EDUCATOR_INVITE_HREF);
+    }
     expect(container.querySelector("#lab-seq")).not.toBeNull();
   });
 });
