@@ -20,7 +20,6 @@ describe("leaveWithLoader", () => {
 
     const loader = useLoaderStore.getState();
     expect(loader.isVisible).toBe(true);
-    expect(loader.variant).toBe("default");
     expect(loader.reason).toBe("logout");
     expect(sessionStorage.getItem(LOADER_RESUME_KEY)).toBe("logout");
     expect(beforeLeave).not.toHaveBeenCalled();

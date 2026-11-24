@@ -10,7 +10,7 @@ import { useLoaderStore } from "@/stores/useLoaderStore";
 import { waitForPageVisuals } from "@/components/shared/loaders/waitForPageVisuals";
 import { loadSubjectCatalog } from "@/features/subjects/subjectCatalog";
 import { adminReferenceBase } from "@/features/admin/adminApiRouting";
-import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+import { LoaderBackdrop } from "@/features/parent/components/loader/LoaderBackdrop";
 import { BrandLoadingScreen } from "@/components/shared/loaders/BrandLoadingScreen";
 
 type Role = "student" | "parent" | "partner" | "admin" | "teacher";
@@ -128,29 +128,21 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
       setIsAuthorized(true);
 
-      // The parent loader (the hat toss) is for signing up and signing in
-      // only. When one is handing off, the portal dismisses it once the
-      // family has loaded, so it isn't stopped here. A refresh, a new tab or
-      // a bookmark starts none; the portal shows its own light skeleton.
+      // The parent portal dismisses a sign-in loader itself, once the family
+      // has loaded (ParentHome), so it isn't stopped here. A refresh, a new
+      // tab or a bookmark starts none; the portal shows its own light skeleton.
       if (requiredRole === "parent") return;
 
       // This route is now authorized and rendering — it's the destination of
       // any post-auth handoff, so it owns telling the overlay it may go.
       const loader = useLoaderStore.getState();
-      if (loader.variant === "parent") {
-        // The logo-toss loader (partners) leaves on its own fade once told the
-        // destination is ready. A short delay lets the first paint land.
-        const timeout = setTimeout(() => useLoaderStore.getState().finishLoading(), 500);
-        return () => clearTimeout(timeout);
-      }
-
       // The study deck keeps playing until this page's on-screen images (the
       // dashboard's 3D renders) have loaded, then finishes its own cycle.
       if (!loader.isVisible) return;
       let cancelled = false;
       void waitForPageVisuals().then(() => {
         const current = useLoaderStore.getState();
-        if (!cancelled && current.isVisible && current.variant !== "parent") current.finishLoading();
+        if (!cancelled && current.isVisible) current.finishLoading();
       });
       return () => {
         cancelled = true;
@@ -165,10 +157,11 @@ export function AuthGuard({ requiredRole, children }: AuthGuardProps) {
 
   if (!isAuthorized) {
     if (requiredRole === "parent") {
-      // Same atmosphere as the parent loader, so nothing flashes between them.
+      // A plain backdrop while the session is checked: the sign-in loader, if
+      // any, is drawn over it.
       return (
         <div className="relative h-screen w-full">
-          <ParentLoaderBackdrop />
+          <LoaderBackdrop />
         </div>
       );
     }

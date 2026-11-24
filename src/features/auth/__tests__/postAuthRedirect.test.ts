@@ -25,7 +25,7 @@ describe("completeAndRedirect watchdog", () => {
     useLoaderStore.getState().startLoading();
     completeAndRedirect(router, "/parent");
     useLoaderStore.getState().stopLoading();
-    useLoaderStore.getState().startLoading({ variant: "parent" }); // e.g. a fresh login
+    useLoaderStore.getState().startLoading(); // e.g. a fresh login
 
     vi.advanceTimersByTime(15_000);
     expect(useLoaderStore.getState().isVisible).toBe(true);

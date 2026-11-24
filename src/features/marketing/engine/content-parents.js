@@ -6,6 +6,7 @@
 import { esc, rich, growingQuestion, closingAndFooter } from './content.js';
 
 const MAIL = 'mailto:info@gened.ai';
+const INVITE = '/get-an-invite'; // INVITE_HREF in ../routes.ts
 
 export const parents = {
   hero: {
@@ -13,7 +14,7 @@ export const parents = {
     title: 'Know more about your child’s learning. *Every day.*',
     lede: 'Go beyond marks and periodic school updates. Follow your child’s daily learning, see what they’re understanding, discover their interests, and identify where they may need more practice. Zoovi gives you timely insights to stay involved and offer the right support at the right time.',
     ctas: [
-      { label: 'Get an Invite', href: MAIL },
+      { label: 'Get an Invite', href: INVITE },
       { label: 'Explore the Parent Dashboard', href: '#dashboard', ghost: true },
     ],
   },
@@ -76,7 +77,7 @@ export const parents = {
     title: 'Be closer to every step of your child’s *learning journey*',
     lede: 'Understand what your child is learning, recognise their progress, and give them the support they need to keep growing.',
     ctas: [
-      { label: 'Get an Invite', href: MAIL },
+      { label: 'Get an Invite', href: INVITE },
       { label: 'Talk to Us', href: MAIL, ghost: true },
     ],
   },

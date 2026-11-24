@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { LOGO_BOX, LogoToss } from "@/features/parent/components/loader/LogoToss";
-import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+import { LoaderBackdrop } from "@/features/parent/components/loader/LoaderBackdrop";
 
 /**
  * The full-screen "one moment" screen for a route that isn't ready yet (checking a sign-in, deciding where to
@@ -23,7 +23,7 @@ export function BrandLoadingScreen({ appearDelayMs = 250, label = "Loading" }: {
 
   return (
     <div role="status" aria-label={label} aria-busy="true" className="relative flex h-screen w-full items-center justify-center overflow-hidden">
-      <ParentLoaderBackdrop animated={!reduceMotion} />
+      <LoaderBackdrop animated={!reduceMotion} />
       {shown && (
         <motion.div
           initial={{ opacity: 0 }}

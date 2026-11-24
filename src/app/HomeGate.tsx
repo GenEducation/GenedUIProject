@@ -6,7 +6,7 @@ import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { useParentStore } from "@/features/parent/store/useParentStore";
 import { useTeacherStore } from "@/features/teacher/store/useTeacherStore";
 import { useHydrated } from "@/hooks/useHydrated";
-import { ParentLoaderBackdrop } from "@/features/parent/components/loader/ParentLoader";
+import { LoaderBackdrop } from "@/features/parent/components/loader/LoaderBackdrop";
 import { BrandLoadingScreen } from "@/components/shared/loaders/BrandLoadingScreen";
 import { safeRedirect } from "@/features/auth/usePostAuthRedirect";
 
@@ -132,7 +132,7 @@ export function HomeGate({ children }: { children: ReactNode }) {
     if (hydrated && storedRole() === "parent") {
       return (
         <div className="relative h-screen w-full">
-          <ParentLoaderBackdrop />
+          <LoaderBackdrop />
         </div>
       );
     }

@@ -120,12 +120,12 @@ describe("AuthGuard — parent portal loader", () => {
   beforeEach(() => window.history.pushState({}, "", "/parent"));
 
   it("leaves a sign-in hand-off loader for the portal to dismiss", async () => {
-    useLoaderStore.getState().startLoading({ variant: "parent", stage: "signin-handoff" });
+    useLoaderStore.getState().startLoading();
     seedAuthLocalStorage("parent", { profile: { user_id: "p1" } });
     renderGuard("parent");
 
     await waitFor(() => expect(screen.getByText(SECRET)).toBeInTheDocument());
     await new Promise((r) => setTimeout(r, 600));
-    expect(useLoaderStore.getState().isVisible).toBe(true); // not stopped after 500ms like other portals
+    expect(useLoaderStore.getState().isVisible).toBe(true); // ParentHome dismisses it once the family loads
   });
 });
