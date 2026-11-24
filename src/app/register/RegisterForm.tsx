@@ -96,10 +96,7 @@ export function RegisterForm() {
       return;
     }
     setIsSubmitting(true);
-    // Parents get their own loader from the first moment of sign-up.
-    useLoaderStore.getState().startLoading(
-      signupData.role === "parent" ? { variant: "parent", stage: "signup" } : undefined,
-    );
+    useLoaderStore.getState().startLoading();
     try {
       let authResponse;
       if (googleSignUpToken) {

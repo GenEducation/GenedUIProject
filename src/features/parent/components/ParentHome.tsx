@@ -161,16 +161,12 @@ export function ParentHome() {
     fetchLinkedStudents();
   }, [fetchLinkedStudents]);
 
-  // Portal entry: the parent loader now waits on the family — it names them
-  // as they load, then leaves once they have (after its minimum hold).
-  useEffect(() => {
-    const loader = useLoaderStore.getState();
-    if (loader.isVisible && loader.variant === "parent") loader.setParentStage("entry");
-  }, []);
+  // Portal entry: a sign-in loader (the study deck) waits on the family, then
+  // leaves once it has played its own cycle through.
   useEffect(() => {
     if (!hasFetchedStudents) return;
     const loader = useLoaderStore.getState();
-    if (loader.isVisible && loader.variant === "parent") loader.finishLoading();
+    if (loader.isVisible) loader.finishLoading();
   }, [hasFetchedStudents]);
 
   const selectedStudent = linkedStudents.find(s => s.student_id === selectedStudentId);

@@ -56,20 +56,22 @@ beforeEach(() => {
 });
 
 describe("login flow (integration)", () => {
-  it("hands a parent over to the parent loader before navigating", async () => {
+  it("hands a parent over to the study deck before navigating", async () => {
     server.use(
       http.post(`${BASE}/auth/sign-in`, () => HttpResponse.json(makeAuthToken({ role: "parent", user_id: "u_p" }))),
     );
-    let variantAtNavigation: string | null = null;
+    let loaderAtNavigation: { isVisible: boolean; isHandoff: boolean } | null = null;
     routerMock.replace.mockImplementation(() => {
-      variantAtNavigation = useLoaderStore.getState().variant;
+      const { isVisible, isHandoff } = useLoaderStore.getState();
+      loaderAtNavigation = { isVisible, isHandoff };
     });
     const { container } = renderLoginPage();
 
     fillAndSubmit(container);
 
     await waitFor(() => expect(routerMock.replace).toHaveBeenCalledWith("/parent"), { timeout: 4000 });
-    expect(variantAtNavigation).toBe("parent");
+    // The same loader as a student's, still up and handing off to the portal.
+    expect(loaderAtNavigation).toEqual({ isVisible: true, isHandoff: true });
   });
 
   it("persists the token/profile/role and redirects to the role home on success", async () => {

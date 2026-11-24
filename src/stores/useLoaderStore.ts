@@ -1,23 +1,10 @@
 import { create } from 'zustand';
 
-/** Which full-screen loader to show. Students (and unknown roles) get the journey. */
-export type LoaderVariant = 'default' | 'parent';
-
-/** What the logo-toss loader is waiting on; drives its status line. */
-// The Zoovi logo-toss loader serves parents and partners; partners have their
-// own wording.
-export type ParentLoaderStage = 'signup' | 'signin-handoff' | 'entry' | 'partner-signin' | 'partner-signup';
-
 /** Why the loader is up; sets the study deck's closing word. */
 export type LoaderReason = 'signin' | 'logout';
 
 interface StartOptions {
-  variant?: LoaderVariant;
   reason?: LoaderReason;
-  stage?: ParentLoaderStage;
-  // Wait this long before appearing, so a load that finishes quickly never
-  // flashes a full-screen loader. Parent loader only.
-  appearDelayMs?: number;
 }
 
 interface LoaderState {
@@ -30,13 +17,10 @@ interface LoaderState {
   // Invoked by the loader once its completion moment has been shown for its
   // minimum hold. This is when the caller should actually navigate.
   onCelebrated: (() => void) | null;
-  variant: LoaderVariant;
   reason: LoaderReason;
-  parentStage: ParentLoaderStage;
   // Bumped on every startLoading(), so a late timer from an earlier load
   // (e.g. the hand-off watchdog) can tell it no longer owns the loader.
   loadId: number;
-  appearDelayMs: number;
   startLoading: (options?: StartOptions) => void;
   completeLoading: () => void;
   // Marks the loader complete and hands off dismissal + navigation timing to
@@ -44,10 +28,6 @@ interface LoaderState {
   // held for its minimum duration, and will not self-dismiss until
   // stopLoading() is called explicitly (by the destination).
   beginHandoff: (onCelebrated: () => void) => void;
-  // Switches the visible loader's look mid-flight — e.g. once a login reply
-  // reveals the user is a parent.
-  setVariant: (variant: LoaderVariant) => void;
-  setParentStage: (stage: ParentLoaderStage) => void;
   // The destination is ready: the loader leaves once its minimum hold has
   // passed (rather than vanishing mid-animation, as stopLoading would).
   finishLoading: () => void;
@@ -63,28 +43,20 @@ export const useLoaderStore = create<LoaderState>((set) => ({
   isComplete: false,
   isHandoff: false,
   onCelebrated: null,
-  variant: 'default',
   reason: 'signin',
-  parentStage: 'entry',
   loadId: 0,
-  appearDelayMs: 0,
   startLoading: (options) =>
     set(() => ({
       isVisible: true,
       isComplete: false,
       isHandoff: false,
       onCelebrated: null,
-      variant: options?.variant ?? 'default',
       reason: options?.reason ?? 'signin',
-      parentStage: options?.stage ?? 'entry',
       loadId: ++lastLoadId,
-      appearDelayMs: options?.appearDelayMs ?? 0,
     })),
   completeLoading: () => set({ isComplete: true }),
   beginHandoff: (onCelebrated) => set({ isComplete: true, isHandoff: true, onCelebrated }),
-  setVariant: (variant) => set({ variant }),
-  setParentStage: (parentStage) => set({ parentStage }),
   finishLoading: () => set({ isComplete: true, isHandoff: false, onCelebrated: null }),
   stopLoading: () =>
-    set({ isVisible: false, isComplete: false, isHandoff: false, onCelebrated: null, variant: 'default' }),
+    set({ isVisible: false, isComplete: false, isHandoff: false, onCelebrated: null }),
 }));
