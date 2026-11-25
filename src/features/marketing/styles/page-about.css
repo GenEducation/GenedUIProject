@@ -38,12 +38,16 @@
 }
 @keyframes ah-sun { from { scale: .4; opacity: 0; } }
 
-/* The paper-letter "About us" in CSS: what shows until the 3D model is up, and where WebGL is missing. Each letter is
-   extruded with stacked shadows and drops in on its own beat. */
+/* The paper-letter "About us" in CSS: the fallback where WebGL is missing or the 3D model is slow. Each letter is
+   extruded with stacked shadows and drops in on its own beat, but only after --ah-wait: the 3D letters normally
+   arrive first and do the drop-in themselves, so the word isn't played twice (CSS, then 3D over it). run-about.js sets
+   .nogl when the 3D can't run (the letters then show at once), and starts the 3D already landed if these showed. */
 .zv-site:where([data-page="about"]) .ah-type {
+  --ah-wait: 2.5s;
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-wrap: nowrap;
   font: 700 clamp(64px, 9vw, 150px)/1 var(--display); letter-spacing: -.02em; transition: opacity .5s var(--ease);
 }
+.zv-site:where([data-page="about"]) .ah-stage.nogl .ah-type { --ah-wait: 0s; }
 .zv-site:where([data-page="about"]) .ah-stage.gl .ah-type { opacity: 0; pointer-events: none; }
 .zv-site:where([data-page="about"]) .ah-type .sp { width: .28em; }
 .zv-site:where([data-page="about"]) .ah-type span {
@@ -51,7 +55,7 @@
   display: inline-block; color: var(--c); -webkit-text-stroke: .018em color-mix(in srgb, var(--ink) 30%, transparent);
   text-shadow: 0 .02em 0 var(--s), 0 .04em 0 var(--s), 0 .06em 0 var(--s), 0 .08em 0 var(--s), 0 .1em 0 var(--s), 0 .2em .18em color-mix(in srgb, var(--ink) 25%, transparent);
   rotate: calc((var(--i) - 3.5) * 1.6deg);
-  animation: ah-drop .9s var(--spring) calc(.25s + var(--i) * .07s) both;
+  animation: ah-drop .9s var(--spring) calc(var(--ah-wait) + .25s + var(--i) * .07s) both;
 }
 .zv-site:where([data-page="about"]) .ah-type .t-paper { --c: var(--paper); --s: color-mix(in srgb, var(--paper) 72%, var(--green)); }
 .zv-site:where([data-page="about"]) .ah-type .t-lime { --c: var(--lime); }

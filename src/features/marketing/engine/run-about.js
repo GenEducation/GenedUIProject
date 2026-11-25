@@ -58,6 +58,10 @@ export async function runAbout() {
       const hero = await createAboutHero(canvas, { motion: !reduced });
       if (life.dead) { hero.dispose(); return cleanup; }
       life.undo.push(() => hero.dispose());
+      // the CSS letters wait (page-about.css --ah-wait) so the word drops in once, in 3D. If the model was slow and they
+      // have already shown, the 3D takes over standing still instead of dropping the word in a second time.
+      const cssLetter = stageEl.querySelector('.ah-type span');
+      if (cssLetter && parseFloat(getComputedStyle(cssLetter).opacity) > .05) hero.skipIntro();
       stageEl.classList.add('gl');
       life.undo.push(() => stageEl.classList.remove('gl'));
       if (!reduced) {
@@ -67,7 +71,9 @@ export async function runAbout() {
         });
       }
     } catch (err) {
-      // no WebGL or no model yet: the CSS lettering stays
+      // no WebGL or no model yet: the CSS lettering shows now rather than after its wait
+      stageEl.classList.add('nogl');
+      life.undo.push(() => stageEl.classList.remove('nogl'));
       console.warn('[about] 3D hero unavailable, keeping the CSS letters:', err?.message ?? err);
     }
   }

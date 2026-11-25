@@ -67,7 +67,11 @@ export async function createAboutHero(canvas, { url = URL_GLB, motion = true, fa
     scene.updateMatrixWorld(true);
     const ob = new THREE.Box3().setFromObject(ring);
     const oSize = ob.getSize(new THREE.Vector3()), oCentre = ob.getCenter(new THREE.Vector3());
-    ring.traverse((o) => { if (o.isMesh) o.visible = false; });   // the lettering's own o (ring + flat screen) steps aside
+    // the lettering's own o (ring + flat screen) steps aside. Its surfaces get an invisible material rather than
+    // visible = false: the o may be a single mesh, and hiding the object would hide the device attached to it below
+    // (and place() sets each piece's visibility every frame). A fresh material, so letters sharing a colour stay drawn.
+    const hidden = new THREE.MeshBasicMaterial({ visible: false });
+    ring.traverse((o) => { if (o.isMesh) { o.material = hidden; o.castShadow = false; } });
     const device = await loadDeskbot('/zoovi/zoovi.glb', faceTex);
     // as tall as the lowercase letters and a touch more, standing on the base where the o stood
     const k = oSize.y * 1.32;
@@ -124,6 +128,14 @@ export async function createAboutHero(canvas, { url = URL_GLB, motion = true, fa
     });
   }
 
+  // Compile every material (letters, device, shadows) and upload the face before the intro. Drawn lazily, each piece's
+  // first appearance would freeze the page for a moment mid drop-in. Every piece is still visible here and the canvas
+  // is still transparent (the page adds .gl after this returns), so this warm-up frame is never seen.
+  camera.position.set(0, dist * .17, dist); camera.lookAt(0, -.02, 0);
+  face.update(0); faceTex.needsUpdate = true;
+  try { await renderer.compileAsync(scene, camera); } catch { /* compiled on the first render instead */ }
+  renderer.render(scene, camera);
+
   let visible = true, last = performance.now(), raf = 0, landed = !motion;
   const io = new IntersectionObserver(([e]) => { visible = e.isIntersecting; }, { threshold: 0 });
   io.observe(canvas);
@@ -153,6 +165,8 @@ export async function createAboutHero(canvas, { url = URL_GLB, motion = true, fa
     setPart(p) { state.part = Math.max(0, Math.min(1, p)); },
     /** A face state from deskbot.js (idle, happy, thinking…). */
     setFace(name) { face.set(name); },
+    /** Start with every letter already landed (the page's CSS letters have already played the drop-in). */
+    skipIntro() { state.intro = 1; landed = true; face.set('happy'); },
     dispose() {
       cancelAnimationFrame(raf); ro.disconnect(); io.disconnect();
       removeEventListener('pointermove', onPointer);
