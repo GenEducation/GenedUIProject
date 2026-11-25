@@ -1,6 +1,9 @@
 /* The About page (hand-written, not generated: there is no prototype for it). Colours and type come only from
    tokens.css; everything is scoped to .zv-site[data-page="about"]. Kalam is the one extra face, used once, for the
    hand-written note in the vision section. */
+/* Kalam-Bold.woff2 is a basic-English subset (12 KB; the full font with Devanagari is 132 KB): A–Z, a–z, 0–9, ASCII
+   punctuation, curly quotes, en/em dashes, ellipsis, no-break space. Any other character falls back to Fredoka. Made with
+   pyftsubset --unicodes="U+0020-007E,U+00A0,U+2013,U+2014,U+2018,U+2019,U+201C,U+201D,U+2026" --layout-features='*' --flavor=woff2 */
 @font-face { font-family: "Kalam"; src: url("/zoovi/fonts/Kalam-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 
 .zv-site:where([data-page="about"]) { --hand: "Kalam", "Fredoka", cursive; }

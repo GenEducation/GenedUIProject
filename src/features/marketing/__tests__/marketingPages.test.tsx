@@ -190,7 +190,9 @@ describe("About", () => {
   it("links its calls to action and is reachable from the footer", () => {
     render(<AboutPage />);
     const main = screen.getByRole("main");
-    expect(within(main).getByRole("link", { name: "Get in Touch" })).toHaveAttribute("href", MAILTO);
+    // the closing sends each audience on to its own page
+    expect(within(main).getByRole("link", { name: "Discover as a parent" })).toHaveAttribute("href", ROUTES.parents);
+    expect(within(main).getByRole("link", { name: "Discover as an educator" })).toHaveAttribute("href", ROUTES.educators);
     expect(within(main).getByRole("link", { name: "Explore Zoovi" })).toHaveAttribute("href", ROUTES.home);
     expect(within(main).getByRole("link", { name: "Meet the team" })).toHaveAttribute("href", "#team");
     expect(within(screen.getByRole("navigation", { name: "Company" })).getByRole("link", { name: "About" })).toHaveAttribute("href", ROUTES.about);

@@ -6,7 +6,6 @@
 //   §6's team photo is left out for now (on request).
 import { esc, rich, ctas, closingAndFooter } from './content.js';
 
-const MAIL = 'mailto:info@gened.ai';
 const HOME = '/';
 
 export const about = {
@@ -95,9 +94,10 @@ export const about = {
   closing: {
     title: 'Meet a new kind of *learning companion*',
     lede: 'Discover Zoovi and see how it brings curiosity, exploration, and personalised learning into every child’s journey.',
+    // one way on for each audience, equal weight (both solid)
     ctas: [
-      { label: 'Discover Zoovi', href: HOME },
-      { label: 'Get in Touch', href: MAIL, ghost: true },
+      { label: 'Discover as a parent', href: '/for-parents' },
+      { label: 'Discover as an educator', href: '/for-educators' },
     ],
   },
 };
@@ -123,8 +123,8 @@ const LINKEDIN = '<svg viewBox="0 0 24 24" aria-hidden="true" class="ab-li"><pat
 
 // The problem's picture: a Blender render (public/zoovi/about/paths*.webp) of a fixed rail track and the three paths
 // children actually take, all reaching the same flag. Numbered markers sit on the render where each path begins, at
-// positions read from the render (paths.json, in % of the 1600 × 1100 image).
-// paths.json gave [530, 514], [226, 584], [277, 713]; nudged down onto each lane's starting end: [545, 548], [205, 612], [250, 742]
+// positions in % of the 1600 × 1100 image: each lane's starting end, at [545, 548], [205, 612] and [250, 742] px.
+// (Measured on the render; if the render changes, re-measure these and the rail tag in page-about.css.)
 const PATH_MARKERS = [[34.1, 49.8], [12.8, 55.6], [15.6, 67.5]];
 const pathsFigure = () => `
   <figure class="ab-paths" role="img" aria-label="A fixed, straight rail track, and three different paths beside it that all reach the same flag: one starts further along, one loops back to revisit, one climbs in small steps.">
