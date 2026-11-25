@@ -15,7 +15,7 @@ function Arrow() {
 
 /**
  * The marketing pages' top nav (navBar() in the prototypes' content.js): logo, Home, For Parents, For Educators,
- * Log in, Get an Invite. The logo goes home through the Zoovi loader; the Home link goes straight to the hero.
+ * About, FAQs, Log in, Get an Invite. The logo goes home through the Zoovi loader; the Home link goes straight to the hero.
  * It picks up a paper ground once the page scrolls. Its classes are set by hand, never by React, because the
  * Home story hides it (.hidden) until the opening loader has played.
  *
@@ -62,6 +62,13 @@ export function NavBar({ current }: { current: SitePage }) {
         </a>
         <a className="nav-page" href={ROUTES.educators} {...here("educators")}>
           <span className="nav-for">For </span>Educators
+        </a>
+        <a className="nav-page" href={ROUTES.about} {...here("about")}>
+          About
+        </a>
+        {/* hidden on the narrowest phones (site.css), where the footer and the invite forms still link to it */}
+        <a className="nav-page nav-faq" href={ROUTES.faq} {...here("faq")}>
+          FAQs
         </a>
       </nav>
       <nav className="nav-links" aria-label="Account">

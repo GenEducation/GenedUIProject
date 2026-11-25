@@ -33,6 +33,21 @@
   .zv-site .nav-page { font-size: 13px; }
   .zv-site .nav .nav-login { white-space: nowrap; padding: 0 12px; min-height: 38px; font-size: 13px; }
 }
+/* …and FAQs since the FAQ page. Six links: they never wrap, "For " drops off sooner (tokens.css drops it on phones), and on
+   phones FAQs steps out altogether (the footer and the invite forms still link to it). */
+.zv-site .nav-page { white-space: nowrap; }
+@media (max-width: 900px) {
+  .zv-site .nav-for { display: none; }
+}
+@media (max-width: 560px) {
+  .zv-site .nav-faq { display: none; }
+}
+/* …and a fifth (About) since the About page: tighter still on the narrowest phones */
+@media (max-width: 400px) {
+  .zv-site .nav-pages { gap: 7px; }
+  .zv-site .nav-page { font-size: 12.5px; }
+  .zv-site .nav .nav-login { padding: 0 10px; font-size: 12.5px; }
+}
 
 /* Home without the intro (data-intro="skip", set by components/HomeIntro.tsx before the first paint): the logo and its
    dot are never drawn, and the hero copy and the nav are there from the start. The story engine takes over from here

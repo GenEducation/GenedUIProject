@@ -284,15 +284,23 @@ export function EducatorInviteForm() {
         Request my educator invite
       </Button>
 
-      <p className="text-center text-sm font-medium text-[#3B5533]/60">
-        Signing up as a parent?{" "}
-        <Link
-          href="/get-an-invite"
-          className="font-bold text-[#287624] transition-colors hover:text-[#22661F] hover:underline"
-        >
-          Get a parent invite
-        </Link>
-      </p>
+      <div className="space-y-1.5 text-center text-sm font-medium text-[#3B5533]/60">
+        <p>
+          Signing up as a parent?{" "}
+          <Link
+            href="/get-an-invite"
+            className="font-bold text-[#287624] transition-colors hover:text-[#22661F] hover:underline"
+          >
+            Get a parent invite
+          </Link>
+        </p>
+        <p>
+          Have a question?{" "}
+          <Link href="/faq#schools" className="font-bold text-[#287624] transition-colors hover:text-[#22661F] hover:underline">
+            Read the FAQs
+          </Link>
+        </p>
+      </div>
     </form>
   );
 }

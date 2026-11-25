@@ -8,8 +8,11 @@ const HOW = '#';
 const HOME = '/';
 const MAIL = 'mailto:info@gened.ai';
 const INVITE = '/get-an-invite'; // INVITE_HREF in ../routes.ts
+const EDUCATOR_INVITE = '/get-an-invite/educators'; // EDUCATOR_INVITE_HREF in ../routes.ts
 const PARENTS = '/for-parents';
 const EDUCATORS = '/for-educators';
+const ABOUT = '/about';
+const FAQ = '/faq';
 
 export const content = {
   hero: {
@@ -39,12 +42,10 @@ export const content = {
     device: {
       title: 'Zoovi Companion',
       body: 'A personalised, AI-enabled learning companion that brings voice-led interaction and visual explanations together in a focused learning environment.',
-      cta: { label: 'Explore the Zoovi Device', href: '#', todo: true },
     },
     web: {
       title: 'Zoovi Web',
       body: 'An interactive web-based learning experience with guided lessons, visual explanations and a student dashboard to follow learning activity.',
-      cta: { label: 'Explore the Zoovi Web App', href: '#', todo: true },
       visual: 'Zoovi Web App',
     },
   },
@@ -91,7 +92,7 @@ export const content = {
     ],
     ctas: [
       { label: 'Explore Zoovi for Educators', href: EDUCATORS },
-      { label: 'Register for the Educator’s Programme', href: MAIL, ghost: true },
+      { label: 'Register for the Educator’s Programme', href: EDUCATOR_INVITE, ghost: true },
     ],
   },
   closing: {
@@ -112,7 +113,8 @@ export const content = {
         { label: 'For Educators', href: EDUCATORS },
       ] },
       { title: 'Company', links: [
-        { label: 'About', href: '#', todo: true },
+        { label: 'About', href: ABOUT },
+        { label: 'FAQs', href: FAQ },
         { label: 'Contact', href: MAIL },
       ] },
     ],

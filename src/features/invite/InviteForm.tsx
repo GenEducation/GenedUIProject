@@ -228,6 +228,12 @@ export function InviteForm() {
             Log in
           </Link>
         </p>
+        <p>
+          Have a question?{" "}
+          <Link href="/faq#parents" className="font-bold text-[#287624] transition-colors hover:text-[#22661F] hover:underline">
+            Read the FAQs
+          </Link>
+        </p>
       </div>
     </form>
   );

@@ -11,6 +11,8 @@ const ENGINES: Record<SitePage, () => Promise<Cleanup>> = {
   home: () => import("../engine/run-home.js").then((m) => m.runHome()),
   parents: () => import("../engine/run-parents.js").then((m) => m.runParents()),
   educators: () => import("../engine/run-educators.js").then((m) => m.runEducators()),
+  about: () => import("../engine/run-about.js").then((m) => m.runAbout()),
+  faq: () => import("../engine/run-faq.js").then((m) => m.runFaq()),
 };
 
 // Engines take over the whole document (scroll triggers, the page's canvas), so only one runs at a time: a new one
