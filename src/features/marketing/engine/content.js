@@ -10,6 +10,7 @@ const MAIL = 'mailto:info@gened.ai';
 const INVITE = '/get-an-invite'; // INVITE_HREF in ../routes.ts
 const PARENTS = '/for-parents';
 const EDUCATORS = '/for-educators';
+const ABOUT = '/about';
 
 export const content = {
   hero: {
@@ -112,7 +113,7 @@ export const content = {
         { label: 'For Educators', href: EDUCATORS },
       ] },
       { title: 'Company', links: [
-        { label: 'About', href: '#', todo: true },
+        { label: 'About', href: ABOUT },
         { label: 'Contact', href: MAIL },
       ] },
     ],

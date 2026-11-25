@@ -1,0 +1,279 @@
+/* The About page (hand-written, not generated: there is no prototype for it). Colours and type come only from
+   tokens.css; everything is scoped to .zv-site[data-page="about"]. Kalam is the one extra face, used once, for the
+   hand-written note in the vision section. */
+@font-face { font-family: "Kalam"; src: url("/zoovi/fonts/Kalam-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+.zv-site:where([data-page="about"]) { --hand: "Kalam", "Fredoka", cursive; }
+
+/* ------------------------------------------------------------------ hero ------------------------------------------------------------------ */
+.zv-site:where([data-page="about"]) .about-hero {
+  position: relative; min-height: 100vh; min-height: 100svh; padding: var(--nav-space) var(--gutter) 48px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: center; gap: clamp(16px, 3vw, 48px);
+  overflow: clip;
+}
+/* a soft paper grain under everything, and a lime glow behind the letters */
+.zv-site:where([data-page="about"]) .about-hero::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+  background:
+    radial-gradient(60% 70% at 72% 55%, color-mix(in srgb, var(--lime) 26%, transparent), transparent 70%),
+    radial-gradient(30% 40% at 92% 12%, color-mix(in srgb, var(--yellow) 30%, transparent), transparent 70%);
+}
+.zv-site:where([data-page="about"]) .ah-text { position: relative; z-index: 2; animation: ah-rise 1s var(--ease) .15s both; }
+.zv-site:where([data-page="about"]) .ah-text h1 { font-size: clamp(44px, 5.4vw, 84px); max-width: 11ch; }
+.zv-site:where([data-page="about"]) .ah-text .lede { margin-top: 24px; }
+.zv-site:where([data-page="about"]) .ah-text .ctas { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 12px; }
+@keyframes ah-rise { from { opacity: 0; transform: translateY(24px); } }
+
+.zv-site:where([data-page="about"]) .ah-stage { position: relative; height: min(72svh, 640px); min-height: 360px; margin-right: calc(var(--gutter) * -1); }
+.zv-site:where([data-page="about"]) .ah-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity .6s var(--ease); }
+.zv-site:where([data-page="about"]) .ah-stage.gl canvas { opacity: 1; }
+/* a sun-yellow disc low behind the model, like the logo's dot */
+.zv-site:where([data-page="about"]) .ah-sun {
+  position: absolute; left: 50%; top: 52%; width: min(62%, 460px); aspect-ratio: 1; translate: -50% -50%; border-radius: 50%;
+  background: radial-gradient(circle at 38% 34%, color-mix(in srgb, var(--yellow) 90%, var(--paper)), var(--yellow) 60%, color-mix(in srgb, var(--yellow) 80%, var(--lime)));
+  opacity: .55; filter: blur(.5px); animation: ah-sun 1.4s var(--spring) .1s both;
+}
+@keyframes ah-sun { from { scale: .4; opacity: 0; } }
+
+/* The paper-letter "About us" in CSS: what shows until the 3D model is up, and where WebGL is missing. Each letter is
+   extruded with stacked shadows and drops in on its own beat. */
+.zv-site:where([data-page="about"]) .ah-type {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-wrap: nowrap;
+  font: 700 clamp(64px, 9vw, 150px)/1 var(--display); letter-spacing: -.02em; transition: opacity .5s var(--ease);
+}
+.zv-site:where([data-page="about"]) .ah-stage.gl .ah-type { opacity: 0; pointer-events: none; }
+.zv-site:where([data-page="about"]) .ah-type .sp { width: .28em; }
+.zv-site:where([data-page="about"]) .ah-type span {
+  --c: var(--paper); --s: color-mix(in srgb, var(--c) 70%, var(--ink));
+  display: inline-block; color: var(--c); -webkit-text-stroke: .018em color-mix(in srgb, var(--ink) 30%, transparent);
+  text-shadow: 0 .02em 0 var(--s), 0 .04em 0 var(--s), 0 .06em 0 var(--s), 0 .08em 0 var(--s), 0 .1em 0 var(--s), 0 .2em .18em color-mix(in srgb, var(--ink) 25%, transparent);
+  rotate: calc((var(--i) - 3.5) * 1.6deg);
+  animation: ah-drop .9s var(--spring) calc(.25s + var(--i) * .07s) both;
+}
+.zv-site:where([data-page="about"]) .ah-type .t-paper { --c: var(--paper); --s: color-mix(in srgb, var(--paper) 72%, var(--green)); }
+.zv-site:where([data-page="about"]) .ah-type .t-lime { --c: var(--lime); }
+.zv-site:where([data-page="about"]) .ah-type .t-yellow { --c: var(--yellow); }
+.zv-site:where([data-page="about"]) .ah-type .t-green { --c: var(--green); }
+/* the o is Zoovi's screen: a bezel ring, a cream face, two eyes and a smile */
+.zv-site:where([data-page="about"]) .ah-o {
+  position: relative; display: inline-block; width: .62em; height: .62em; margin: 0 .02em; vertical-align: -.02em; border-radius: 50%;
+  background: var(--face-screen); border: .07em solid var(--bezel); box-shadow: 0 .1em 0 color-mix(in srgb, var(--bezel) 70%, var(--ink));
+}
+.zv-site:where([data-page="about"]) .ah-o i { position: absolute; background: var(--face-eye); border-radius: 50%; }
+.zv-site:where([data-page="about"]) .ah-o i:nth-child(1), .zv-site:where([data-page="about"]) .ah-o i:nth-child(2) { width: .07em; height: .09em; top: 36%; animation: ah-blink 4s infinite; }
+.zv-site:where([data-page="about"]) .ah-o i:nth-child(1) { left: 30%; }
+.zv-site:where([data-page="about"]) .ah-o i:nth-child(2) { right: 30%; }
+.zv-site:where([data-page="about"]) .ah-o i:nth-child(3) { left: 38%; right: 38%; top: 58%; height: .06em; background: none; border: .018em solid var(--face-mouth); border-top: 0; border-radius: 0 0 1em 1em; }
+@keyframes ah-drop { from { transform: translateY(-1.2em) scale(.6); opacity: 0; } }
+@keyframes ah-blink { 0%, 94%, 100% { scale: 1 1; } 97% { scale: 1 .15; } }
+
+/* ------------------------------------------------------------------ shared rhythm ------------------------------------------------------------------ */
+/* the About page runs tighter than the other pages' tails: less air between sections, smaller headlines */
+.zv-site:where([data-page="about"]) .tail section { padding-block: clamp(56px, 7vw, 104px); }
+.zv-site:where([data-page="about"]) .tail section > .eyebrow + h2 { margin-top: 18px; }
+.zv-site:where([data-page="about"]) .ab-band { position: relative; }
+.zv-site:where([data-page="about"]) .ab-band-ink { background: var(--ink); color: var(--paper); --hl: color-mix(in srgb, var(--lime) 55%, transparent); --ul: var(--yellow); }
+.zv-site:where([data-page="about"]) .ab-band-ink .eyebrow { color: var(--lime); }
+.zv-site:where([data-page="about"]) .ab-band-ink .lede { color: color-mix(in srgb, var(--paper) 82%, var(--ink)); }
+.zv-site:where([data-page="about"]) .ab-band-lime { background: var(--lime); --hl: var(--yellow); --chip-bg: var(--ink); }
+.zv-site:where([data-page="about"]) .ab-band-lime .eyebrow { color: var(--ink); }
+.zv-site:where([data-page="about"]) .ab-band-lime .eyebrow::before { background: var(--yellow); }
+/* the bands meet the paper on a soft wave rather than a hard edge */
+.zv-site:where([data-page="about"]) .ab-band::before, .zv-site:where([data-page="about"]) .ab-band::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 40px; background: inherit; pointer-events: none;
+  -webkit-mask: radial-gradient(28px 22px at 50% 100%, #000 98%, transparent) 0 0 / 56px 40px repeat-x;
+          mask: radial-gradient(28px 22px at 50% 100%, #000 98%, transparent) 0 0 / 56px 40px repeat-x;
+}
+.zv-site:where([data-page="about"]) .ab-band::before { top: -39px; }
+.zv-site:where([data-page="about"]) .ab-band::after { bottom: -39px; rotate: 180deg; z-index: 1; }
+
+/* ------------------------------------------------------------------ why we exist ------------------------------------------------------------------ */
+.zv-site:where([data-page="about"]) .ab-why h2 { max-width: 16ch; font-size: clamp(32px, 3.8vw, 52px); }
+/* two by two: the headline beside the three words, then the lede beside the founding belief */
+.zv-site:where([data-page="about"]) .ab-why {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: clamp(24px, 5vw, 80px);
+  grid-template-areas: "eyebrow words" "title words" "lede belief";
+}
+.zv-site:where([data-page="about"]) .ab-why > .eyebrow { grid-area: eyebrow; }
+.zv-site:where([data-page="about"]) .ab-why > h2 { grid-area: title; align-self: start; }
+.zv-site:where([data-page="about"]) .ab-why-row { display: contents; }
+.zv-site:where([data-page="about"]) .ab-why-row .lede { grid-area: lede; margin-top: 28px; }
+.zv-site:where([data-page="about"]) .ab-words { grid-area: words; align-self: end; }
+
+.zv-site:where([data-page="about"]) .ab-words { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.zv-site:where([data-page="about"]) .ab-words li { display: flex; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 22%, transparent); }
+.zv-site:where([data-page="about"]) .ab-word { font: 600 clamp(30px, 3.4vw, 46px)/1 var(--display); min-width: 4.4em; }
+.zv-site:where([data-page="about"]) .ab-words li:nth-child(1) .ab-word { color: var(--green); }
+.zv-site:where([data-page="about"]) .ab-words li:nth-child(2) .ab-word { color: color-mix(in srgb, var(--lime) 70%, var(--ink)); }
+.zv-site:where([data-page="about"]) .ab-words li:nth-child(3) .ab-word { color: var(--ink); }
+.zv-site:where([data-page="about"]) .ab-word-l { font-size: 16px; color: color-mix(in srgb, var(--ink) 70%, var(--paper)); }
+.zv-site:where([data-page="about"]) .ab-belief {
+  grid-area: belief; margin-top: 28px; align-self: start; max-width: 34ch; font: 500 clamp(19px, 1.7vw, 24px)/1.35 var(--display);
+  padding-left: clamp(16px, 2vw, 28px); border-left: 6px solid var(--yellow);
+}
+
+/* ------------------------------------------------------------------ the problem ------------------------------------------------------------------ */
+.zv-site:where([data-page="about"]) .ab-problem h2 { max-width: 15ch; font-size: clamp(32px, 3.8vw, 52px); }
+/* text and points on the left, the drawing on the right, held in view while the points light up */
+.zv-site:where([data-page="about"]) .ab-prob-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 5vw, 80px); align-items: start; }
+.zv-site:where([data-page="about"]) .ab-prob-map { position: sticky; top: calc(var(--nav-space) + 24px); padding-top: clamp(24px, 4vw, 64px); }
+.zv-site:where([data-page="about"]) .ab-paths { width: 100%; height: auto; overflow: visible; --draw: 1; }
+.zv-site:where([data-page="about"]) .ab-track { fill: none; stroke: color-mix(in srgb, var(--paper) 40%, transparent); stroke-width: 3; stroke-dasharray: 2 10; stroke-linecap: round; transition: opacity .4s; }
+.zv-site:where([data-page="about"]) .ab-track-t { font: 700 13px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; fill: color-mix(in srgb, var(--paper) 55%, transparent); }
+.zv-site:where([data-page="about"]) .ab-p-line { fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: calc(1 - var(--d, 1)); }
+.zv-site:where([data-page="about"]) .ab-p-start { fill: var(--ink); stroke-width: 4; }
+.zv-site:where([data-page="about"]) .ab-p-end circle { stroke: var(--ink); stroke-width: 3; }
+.zv-site:where([data-page="about"]) .ab-p-end text { font: 600 18px/1 var(--display); fill: var(--ink); }
+.zv-site:where([data-page="about"]) .ab-p-end { transform-box: fill-box; transform-origin: center; scale: var(--e, 1); opacity: var(--e, 1); }
+.zv-site:where([data-page="about"]) .ab-path[data-i="0"] { --pc: var(--lime); }
+.zv-site:where([data-page="about"]) .ab-path[data-i="1"] { --pc: var(--yellow); }
+.zv-site:where([data-page="about"]) .ab-path[data-i="2"] { --pc: var(--paper); }
+.zv-site:where([data-page="about"]) .ab-path .ab-p-line, .zv-site:where([data-page="about"]) .ab-path .ab-p-start { stroke: var(--pc); }
+.zv-site:where([data-page="about"]) .ab-path .ab-p-end circle { fill: var(--pc); }
+.zv-site:where([data-page="about"]) .ab-prob-list { list-style: none; margin: 32px 0 0; padding: 0; display: grid; gap: 18px; }
+.zv-site:where([data-page="about"]) .ab-prob-list li { display: flex; gap: 16px; align-items: flex-start; transition: opacity .4s var(--ease), translate .4s var(--ease); }
+.zv-site:where([data-page="about"]) .ab-prob-list li[data-i="1"] .dot { background: var(--yellow); }
+.zv-site:where([data-page="about"]) .ab-prob-list li[data-i="2"] .dot { background: var(--paper); }
+.zv-site:where([data-page="about"]) .ab-prob-list h3 { font-size: 22px; color: var(--paper); }
+.zv-site:where([data-page="about"]) .ab-prob-list p { margin-top: 4px; font-size: 15.5px; color: color-mix(in srgb, var(--paper) 78%, var(--ink)); }
+/* list items wait for their path (the engine sets data-on); with reduced motion they're simply there */
+html:not(.rm) .zv-site:where([data-page="about"]) .ab-prob-list li:not([data-on]) { opacity: .25; translate: 0 8px; }
+.zv-site:where([data-page="about"]) .ab-prob-turn {
+  margin-top: clamp(40px, 5vw, 64px); padding-top: clamp(28px, 3.5vw, 44px); border-top: 1.5px dashed color-mix(in srgb, var(--paper) 22%, transparent);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px clamp(24px, 5vw, 80px); align-items: center;
+}
+.zv-site:where([data-page="about"]) .ab-fixed { font: 500 clamp(16px, 1.4vw, 19px)/1.35 var(--body); color: color-mix(in srgb, var(--paper) 70%, var(--ink)); text-decoration: line-through; text-decoration-color: var(--yellow); text-decoration-thickness: 3px; }
+.zv-site:where([data-page="about"]) .ab-change { font: 600 clamp(34px, 4vw, 56px)/1 var(--display); color: var(--lime); margin-top: 10px; }
+.zv-site:where([data-page="about"]) .tail .ab-prob-turn .lede { margin: 0; font-size: clamp(16px, 1.3vw, 19px); }
+
+/* ------------------------------------------------------------------ vision ------------------------------------------------------------------ */
+.zv-site:where([data-page="about"]) .ab-vision h2 { max-width: 14ch; font-size: clamp(32px, 3.8vw, 52px); }
+/* text on the left; the quote on the right as a paper card pinned slightly askew */
+.zv-site:where([data-page="about"]) .ab-vis-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 80px); align-items: center; }
+.zv-site:where([data-page="about"]) .ab-quote {
+  margin: 0; position: relative; padding: clamp(28px, 3.5vw, 48px) clamp(24px, 3vw, 44px) clamp(24px, 3vw, 36px);
+  background: var(--paper); border-radius: 28px; rotate: 2deg;
+  box-shadow: 0 24px 40px -28px color-mix(in srgb, var(--ink) 70%, transparent), 0 2px 0 color-mix(in srgb, var(--ink) 10%, transparent);
+}
+/* a strip of tape holding the card */
+.zv-site:where([data-page="about"]) .ab-quote::before {
+  content: ""; position: absolute; top: -14px; left: 50%; width: 96px; height: 28px; translate: -50% 0; rotate: -4deg;
+  background: color-mix(in srgb, var(--yellow) 70%, transparent); border-radius: 3px;
+}
+.zv-site:where([data-page="about"]) .ab-quote blockquote {
+  margin: 0; font: 700 clamp(40px, 5.2vw, 84px)/1 var(--display); letter-spacing: -.03em; color: var(--ink);
+  background: linear-gradient(var(--yellow), var(--yellow)) 0 86% / var(--sweep, 100%) .34em no-repeat; display: inline;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.zv-site:where([data-page="about"]) .ab-note {
+  display: flex; align-items: flex-start; gap: 6px; margin: 20px 0 0 auto; max-width: 24ch;
+  font: 700 clamp(18px, 1.7vw, 24px)/1.2 var(--hand); color: var(--green); rotate: -3deg;
+  clip-path: inset(0 calc((1 - var(--w, 1)) * 100%) 0 0);
+}
+.zv-site:where([data-page="about"]) .ab-note-arrow { flex: none; width: 64px; height: 48px; fill: none; stroke: var(--green); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; margin-top: -18px; }
+.zv-site:where([data-page="about"]) .ab-vis-body { margin-top: 24px; display: grid; gap: 14px; font-size: clamp(16px, 1.25vw, 18px); }
+.zv-site:where([data-page="about"]) .ab-vis-cta { margin-top: 32px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px 28px; }
+.zv-site:where([data-page="about"]) .ab-vis-cta p { font: 600 20px/1.2 var(--display); }
+.zv-site:where([data-page="about"]) .tail .ab-vis-cta .ctas { margin: 0; }
+.zv-site:where([data-page="about"]) .ab-band-lime .pill { --btn-bg: var(--ink); --btn-fg: var(--lime); --btn-corner: var(--lime); --btn-fold: var(--yellow); }
+
+/* ------------------------------------------------------------------ founders ------------------------------------------------------------------ */
+.zv-site:where([data-page="about"]) .ab-team { padding-bottom: clamp(60px, 8vw, 120px); }
+.zv-site:where([data-page="about"]) .ab-founders { list-style: none; margin: clamp(32px, 4vw, 56px) 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 96px); }
+.zv-site:where([data-page="about"]) .ab-f:nth-child(2) { margin-top: clamp(0px, 6vw, 88px); }
+.zv-site:where([data-page="about"]) .ab-f { --tone: var(--lime); }
+.zv-site:where([data-page="about"]) .ab-f.t-yellow { --tone: var(--yellow); }
+/* the portrait: a cut-out with its own paper outline, standing on a big disc in the logo's colours, the head breaking
+   out over the top of it */
+.zv-site:where([data-page="about"]) .ab-f-pic { position: relative; margin: 0; aspect-ratio: 4 / 5; max-width: 400px; isolation: isolate; }
+.zv-site:where([data-page="about"]) .ab-f-disc {
+  position: absolute; z-index: -1; left: 4%; right: 4%; bottom: 0; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, color-mix(in srgb, var(--tone) 70%, var(--paper)), var(--tone) 62%);
+  box-shadow: inset 0 -14px 0 color-mix(in srgb, var(--tone) 80%, var(--ink));
+  transition: scale .6s var(--spring), rotate .6s var(--spring);
+}
+/* a dotted orbit round the disc, like the hop paths elsewhere on the site */
+.zv-site:where([data-page="about"]) .ab-f-disc::after { content: ""; position: absolute; inset: -14px; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--ink) 28%, transparent); }
+.zv-site:where([data-page="about"]) .ab-f-pic img {
+  position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%;
+  -webkit-mask: linear-gradient(#000 80%, transparent 100%); mask: linear-gradient(#000 80%, transparent 100%);
+  transition: translate .6s var(--spring);
+}
+.zv-site:where([data-page="about"]) .ab-f:hover .ab-f-disc { scale: 1.04; rotate: -8deg; }
+.zv-site:where([data-page="about"]) .ab-f:hover .ab-f-pic img { translate: 0 -10px; }
+.zv-site:where([data-page="about"]) .ab-f-text { margin-top: 28px; max-width: 30rem; }
+.zv-site:where([data-page="about"]) .ab-f-text h3 { font-size: clamp(36px, 4vw, 52px); }
+.zv-site:where([data-page="about"]) .ab-f-role {
+  display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 999px;
+  font: 700 14px/1 var(--body); letter-spacing: .06em; text-transform: uppercase; background: var(--tone); color: var(--ink);
+}
+.zv-site:where([data-page="about"]) .ab-f-bio { margin-top: 18px; font-size: 17px; color: color-mix(in srgb, var(--ink) 82%, var(--paper)); }
+.zv-site:where([data-page="about"]) .ab-f-in { margin-top: 22px; min-height: 44px; padding: 0 18px; gap: 8px; }
+.zv-site:where([data-page="about"]) .ab-li { width: 18px; height: 18px; }
+
+/* ------------------------------------------------------------------ mission & values ------------------------------------------------------------------ */
+.zv-site:where([data-page="about"]) .ab-mission { max-width: 1280px; }
+.zv-site:where([data-page="about"]) .ab-mission h2 { max-width: 17ch; font-size: clamp(32px, 3.8vw, 52px); }
+.zv-site:where([data-page="about"]) .ab-values-h { margin-top: clamp(36px, 5vw, 64px); font-size: 24px; }
+.zv-site:where([data-page="about"]) .ab-values { list-style: none; margin: 24px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+/* each value is a paper tab whose top-right corner folds down on hover, like the site's buttons */
+.zv-site:where([data-page="about"]) .ab-value {
+  --bg: var(--paper); --fg: var(--ink); --fold: var(--lime);
+  position: relative; overflow: hidden; min-height: 280px; padding: 26px 22px; border-radius: 26px;
+  background: var(--bg); color: var(--fg); border: 1.5px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  display: flex; flex-direction: column; justify-content: flex-end;
+  transition: translate .45s var(--spring), box-shadow .45s var(--ease);
+  translate: 0 calc(var(--i) * 14px);
+}
+.zv-site:where([data-page="about"]) .ab-value:nth-child(1) { --bg: var(--lime); --fold: var(--yellow); border-color: transparent; }
+.zv-site:where([data-page="about"]) .ab-value:nth-child(3) { --bg: var(--yellow); --fold: var(--lime); border-color: transparent; }
+.zv-site:where([data-page="about"]) .ab-value:nth-child(5) { --bg: var(--green); --fg: var(--paper); --fold: var(--lime); border-color: transparent; }
+.zv-site:where([data-page="about"]) .ab-value::after {
+  content: ""; position: absolute; right: -1px; top: -1px; width: 0; height: 0; border-bottom-left-radius: 14px;
+  background: linear-gradient(225deg, var(--paper) 0 50%, var(--fold) 50% 100%); transition: width .4s var(--ease), height .4s var(--ease);
+}
+.zv-site:where([data-page="about"]) .ab-value:hover { translate: 0 calc(var(--i) * 14px - 10px); box-shadow: 0 18px 30px -22px color-mix(in srgb, var(--ink) 60%, transparent); }
+.zv-site:where([data-page="about"]) .ab-value:hover::after { width: 46px; height: 46px; }
+.zv-site:where([data-page="about"]) .ab-vi { position: absolute; top: 24px; left: 22px; width: 40px; height: 40px; }
+.zv-site:where([data-page="about"]) .ab-value h4 { font-size: 26px; }
+.zv-site:where([data-page="about"]) .ab-value p { margin-top: 10px; font-size: 15.5px; line-height: 1.45; }
+.zv-site:where([data-page="about"]) .ab-signoff { margin: clamp(48px, 7vw, 88px) auto 0; max-width: 28ch; text-align: center; font: 600 clamp(26px, 3vw, 42px)/1.25 var(--display); }
+
+/* ------------------------------------------------------------------ tablets and phones ------------------------------------------------------------------ */
+@media (max-width: 1080px) {
+  /* three across, then two wider ones, so the five tabs leave no hole */
+  .zv-site:where([data-page="about"]) .ab-values { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .zv-site:where([data-page="about"]) .ab-value { translate: none; min-height: 240px; grid-column: span 2; }
+  .zv-site:where([data-page="about"]) .ab-value:nth-child(n+4) { grid-column: span 3; }
+  .zv-site:where([data-page="about"]) .ab-value:hover { translate: 0 -8px; }
+}
+@media (max-width: 860px) {
+  .zv-site:where([data-page="about"]) .about-hero { grid-template-columns: 1fr; align-content: start; gap: 0; padding-top: calc(var(--nav-space) + 8px); }
+  .zv-site:where([data-page="about"]) .ah-stage { order: -1; height: 42svh; min-height: 260px; }
+  .zv-site:where([data-page="about"]) .ah-text h1 { max-width: 14ch; }
+  .zv-site:where([data-page="about"]) .ab-why { grid-template-columns: 1fr; grid-template-areas: "eyebrow" "title" "lede" "words" "belief"; }
+  .zv-site:where([data-page="about"]) .ab-words { margin-top: 20px; }
+  .zv-site:where([data-page="about"]) .ab-why-row, .zv-site:where([data-page="about"]) .ab-prob-grid,
+  .zv-site:where([data-page="about"]) .ab-prob-turn, .zv-site:where([data-page="about"]) .ab-vis-grid { grid-template-columns: 1fr; }
+  .zv-site:where([data-page="about"]) .ab-prob-map { position: static; padding-top: 0; order: -1; }
+  .zv-site:where([data-page="about"]) .ab-prob-grid { gap: 8px; }
+  .zv-site:where([data-page="about"]) .ab-quote { rotate: 1deg; }
+}
+@media (max-width: 700px) {
+  .zv-site:where([data-page="about"]) .ah-type { font-size: 19vw; }
+  .zv-site:where([data-page="about"]) .ah-text h1 { font-size: 40px; }
+  .zv-site:where([data-page="about"]) .ab-founders { grid-template-columns: 1fr; }
+  .zv-site:where([data-page="about"]) .ab-f:nth-child(2) { margin-top: 0; }
+  .zv-site:where([data-page="about"]) .ab-f-pic { max-width: 320px; }
+  .zv-site:where([data-page="about"]) .ab-values { grid-template-columns: 1fr 1fr; }
+  .zv-site:where([data-page="about"]) .ab-value, .zv-site:where([data-page="about"]) .ab-value:nth-child(n+4) { grid-column: auto; }
+  .zv-site:where([data-page="about"]) .ab-value { min-height: 0; padding-top: 84px; }
+  .zv-site:where([data-page="about"]) .ab-value:last-child { grid-column: 1 / -1; }
+  .zv-site:where([data-page="about"]) .ab-note { margin-left: 0; }
+}
+
+/* reduced motion: everything in its final state */
+@media (prefers-reduced-motion: reduce) {
+  .zv-site:where([data-page="about"]) :is(.ah-text, .ah-sun, .ah-type span, .ah-o i) { animation: none; }
+}
+html.rm .zv-site:where([data-page="about"]) :is(.ah-text, .ah-sun, .ah-type span, .ah-o i) { animation: none; }

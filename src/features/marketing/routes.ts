@@ -1,10 +1,11 @@
 /** The Zoovi marketing pages. */
-export type SitePage = "home" | "parents" | "educators";
+export type SitePage = "home" | "parents" | "educators" | "about";
 
 export const ROUTES: Record<SitePage, string> = {
   home: "/",
   parents: "/for-parents",
   educators: "/for-educators",
+  about: "/about",
 };
 
 /** Where every "Get an Invite" goes: the invite form (src/app/get-an-invite). */

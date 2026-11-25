@@ -4,6 +4,7 @@ import { render, screen, within, fireEvent } from "@testing-library/react";
 import { HomePage } from "../HomePage";
 import { ParentsPage } from "../ParentsPage";
 import { EducatorsPage } from "../EducatorsPage";
+import { AboutPage } from "../AboutPage";
 import { EDUCATOR_INVITE_HREF, INVITE_HREF, ROUTES, SKIP_INTRO_KEY } from "../routes";
 
 const MAILTO = "mailto:info@gened.ai";
@@ -14,10 +15,11 @@ const nav = () => screen.getByRole("banner");
 
 describe("Zoovi marketing nav", () => {
   it.each([
-    ["home", HomePage, null, INVITE_HREF],
-    ["parents", ParentsPage, "Parents", INVITE_HREF],
-    ["educators", EducatorsPage, "Educators", EDUCATOR_INVITE_HREF],
-  ] as const)("on the %s page links home, both audiences, log in and invite", (_, Page, current, invite) => {
+    ["home", HomePage, "Home", INVITE_HREF],
+    ["parents", ParentsPage, "For Parents", INVITE_HREF],
+    ["educators", EducatorsPage, "For Educators", EDUCATOR_INVITE_HREF],
+    ["about", AboutPage, "About", INVITE_HREF],
+  ] as const)("on the %s page links home, both audiences, about, log in and invite", (_, Page, current, invite) => {
     render(<Page />);
     const header = nav();
     expect(within(header).getByRole("link", { name: "Zoovi home" })).toHaveAttribute("href", "/");
@@ -26,6 +28,7 @@ describe("Zoovi marketing nav", () => {
     const educators = within(header).getByRole("link", { name: /Educators/ });
     expect(parents).toHaveAttribute("href", ROUTES.parents);
     expect(educators).toHaveAttribute("href", ROUTES.educators);
+    expect(within(header).getByRole("link", { name: "About" })).toHaveAttribute("href", ROUTES.about);
     expect(within(header).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
     expect(within(header).getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", invite);
     // the current page is marked
@@ -33,7 +36,7 @@ describe("Zoovi marketing nav", () => {
       .getAllByRole("link")
       .filter((a) => a.getAttribute("aria-current") === "page")
       .map((a) => a.getAttribute("aria-label") ?? a.textContent);
-    expect(marked).toEqual([current ? `For ${current}` : "Home"]);
+    expect(marked).toEqual([current]);
   });
 
   it("leaves the home page a one-time flag to skip its loader from the Home link, not from the logo", () => {
@@ -137,5 +140,54 @@ describe("Zoovi for Educators (take A)", () => {
       expect(a).toHaveAttribute("href", EDUCATOR_INVITE_HREF);
     }
     expect(container.querySelector("#lab-seq")).not.toBeNull();
+  });
+});
+
+describe("About", () => {
+  it("tells GenEd's story, leaving out what the other pages already say", () => {
+    render(<AboutPage />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Beyond answers. Towards real understanding.");
+    for (const name of [
+      "Children are naturally curious. Learning should encourage that.",
+      "Learning doesn’t follow the same path for every child.",
+      "A future where curiosity has room to grow",
+      "Meet the team",
+      "Making personalised learning accessible to every child",
+      "Meet a new kind of learning companion",
+    ]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    }
+    for (const p of ["Different starting points", "Time to revisit", "Practice to progress"]) {
+      expect(screen.getByRole("heading", { name: p })).toBeInTheDocument();
+    }
+    for (const v of ["Empathy", "Curiosity", "Understanding", "Accessibility", "Responsibility"]) {
+      expect(screen.getByRole("heading", { name: v })).toBeInTheDocument();
+    }
+    // home's six pillars are not repeated here
+    expect(screen.queryByRole("heading", { name: "Child-first learning" })).toBeNull();
+  });
+
+  it("introduces both founders with their LinkedIn profiles, opening in a new tab", () => {
+    render(<AboutPage />);
+    for (const [name, href] of [
+      ["Vedant", "https://www.linkedin.com/in/vedant-bisen-147a591b9"],
+      ["Utkarsh", "https://www.linkedin.com/in/utkarsh9abxt"],
+    ]) {
+      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+      const a = screen.getByRole("link", { name: `${name} on LinkedIn` });
+      expect(a).toHaveAttribute("href", href);
+      expect(a).toHaveAttribute("target", "_blank");
+      expect(a).toHaveAttribute("rel", "noopener noreferrer");
+    }
+    expect(screen.getByRole("img", { name: /Vedant, Founder and CEO/ })).toHaveAttribute("src", "/zoovi/about/vedant.webp");
+  });
+
+  it("links its calls to action and is reachable from the footer", () => {
+    render(<AboutPage />);
+    const main = screen.getByRole("main");
+    expect(within(main).getByRole("link", { name: "Get in Touch" })).toHaveAttribute("href", MAILTO);
+    expect(within(main).getByRole("link", { name: "Explore Zoovi" })).toHaveAttribute("href", ROUTES.home);
+    expect(within(main).getByRole("link", { name: "Meet the team" })).toHaveAttribute("href", "#team");
+    expect(within(screen.getByRole("navigation", { name: "Company" })).getByRole("link", { name: "About" })).toHaveAttribute("href", ROUTES.about);
   });
 });

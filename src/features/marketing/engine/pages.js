@@ -1,10 +1,11 @@
-// The three marketing pages' markup, from render_handoff_v72/prototypes/home: index.html (Home, take B),
+// The marketing pages' markup (About is new in the app, not ported from a prototype), from render_handoff_v72/prototypes/home: index.html (Home, take B),
 // parents.html (For Parents, take A) and educators.html (For Educators, take A). Server-safe: string builders only.
 // The pages render this HTML on the server; run-home.js / run-parents.js / run-educators.js then bring it to life.
 import { content as C, esc, rich, pillarRing, ctas, tailHtml, webTablet, parentTablet, teacherTablet } from './content.js';
 import { parents as P_, concernIcon, parentTailHtml, more } from './content-parents.js';
 import { portalTablet, basicReportCard } from './portal.js';
 import { educators as E, philoLede, eduTailHtml } from './content-educators.js';
+import { aboutHeroHtml, aboutTailHtml } from './content-about.js';
 
 /* ------------------------------------------------------------------ Home (B, "One Question") ------------------------------------------------------------------ */
 const typed = (s) => `<p class="typed" aria-label="${esc(s)}">${[...s].map((ch) => `<span aria-hidden="true">${esc(ch)}</span>`).join('')}</p>`;
@@ -177,3 +178,8 @@ export const educatorsHtml = () => {
 
   <div id="tail" class="tail">${eduTailHtml()}</div>`;
 };
+
+/* ------------------------------------------------------------------ About ------------------------------------------------------------------ */
+export const aboutHtml = () => `
+  ${aboutHeroHtml()}
+  <div id="tail" class="tail">${aboutTailHtml()}</div>`;

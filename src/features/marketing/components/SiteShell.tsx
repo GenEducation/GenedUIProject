@@ -12,6 +12,8 @@ import "../styles/educators.css";
 import "../styles/page-home.css";
 import "../styles/page-parents.css";
 import "../styles/page-educators.css";
+// hand-written, no prototype behind it
+import "../styles/page-about.css";
 // hand-written changes on top of the generated styles
 import "../styles/site.css";
 
