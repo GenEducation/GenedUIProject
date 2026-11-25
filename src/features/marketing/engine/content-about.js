@@ -121,26 +121,17 @@ const valueIcon = (i) => `<svg class="ab-vi" viewBox="0 0 24 24" aria-hidden="tr
 
 const LINKEDIN = '<svg viewBox="0 0 24 24" aria-hidden="true" class="ab-li"><path fill="currentColor" d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9.5h4V21H3zM9.5 9.5h3.8v1.6h.1c.5-1 1.8-2 3.8-2 4 0 4.8 2.6 4.8 6V21h-4v-5.2c0-1.2 0-2.9-1.8-2.9s-2 1.4-2 2.8V21h-4z"/></svg>';
 
-// The problem's drawing: one fixed track, and the three paths children actually take. viewBox 600 × 420.
-const PATHS = [
-  // 1. Different starting points: this one starts further along, and somewhere else
-  { d: 'M150 78C250 40 300 150 400 112S520 70 556 82', end: [556, 82], start: [150, 78] },
-  // 2. Time to revisit: it loops back over itself before going on
-  { d: 'M44 214C150 214 214 150 300 186C376 218 346 298 284 262C232 232 290 168 392 196S520 222 556 212', end: [556, 212], start: [44, 214] },
-  // 3. Practice to progress: small steps up
-  { d: 'M44 372H140Q160 372 160 352V340H256Q276 340 276 320V308H372Q392 308 392 288V276H486Q506 276 506 256V248H556', end: [556, 248], start: [44, 372] },
-];
-const problemSvg = () => `
-  <svg class="ab-paths" viewBox="0 0 600 420" role="img" aria-label="One straight, fixed track, and three different paths beside it: one starts further along, one loops back to revisit, one climbs in small steps.">
-    <path class="ab-track" d="M44 214H556"/>
-    <text class="ab-track-t" x="48" y="244">fixed sequence &amp; pace</text>
-    ${PATHS.map((p, i) => `
-    <g class="ab-path" data-i="${i}">
-      <circle class="ab-p-start" cx="${p.start[0]}" cy="${p.start[1]}" r="7"/>
-      <path class="ab-p-line" pathLength="1" d="${p.d}"/>
-      <g class="ab-p-end" transform="translate(${p.end[0]} ${p.end[1]})"><circle r="17"/><text y="6" text-anchor="middle">${i + 1}</text></g>
-    </g>`).join('')}
-  </svg>`;
+// The problem's picture: a Blender render (public/zoovi/about/paths*.webp) of a fixed rail track and the three paths
+// children actually take, all reaching the same flag. Numbered markers sit on the render where each path begins, at
+// positions read from the render (paths.json, in % of the 1600 × 1100 image).
+// paths.json gave [530, 514], [226, 584], [277, 713]; nudged down onto each lane's starting end: [545, 548], [205, 612], [250, 742]
+const PATH_MARKERS = [[34.1, 49.8], [12.8, 55.6], [15.6, 67.5]];
+const pathsFigure = () => `
+  <figure class="ab-paths" role="img" aria-label="A fixed, straight rail track, and three different paths beside it that all reach the same flag: one starts further along, one loops back to revisit, one climbs in small steps.">
+    <img src="/zoovi/about/paths.webp" srcset="/zoovi/about/paths-m.webp 800w, /zoovi/about/paths.webp 1600w" sizes="(max-width: 860px) 92vw, 50vw" alt="" width="1600" height="1100" loading="lazy" decoding="async">
+    ${PATH_MARKERS.map(([x, y], i) => `<span class="ab-path ab-pm" data-i="${i}" style="left:${x}%;top:${y}%" aria-hidden="true">${i + 1}</span>`).join('')}
+    <span class="ab-rail-tag" aria-hidden="true">fixed sequence &amp; pace</span>
+  </figure>`;
 
 /* ------------------------------------------------------------------ the page ------------------------------------------------------------------ */
 
@@ -187,7 +178,7 @@ export function aboutTailHtml() {
               <li data-i="${i}"><span class="dot" aria-hidden="true">${i + 1}</span><div><h3>${esc(p.title)}</h3><p>${esc(p.body)}</p></div></li>`).join('')}
             </ol>
           </div>
-          <div class="ab-prob-map">${problemSvg()}</div>
+          <div class="ab-prob-map">${pathsFigure()}</div>
         </div>
         <div class="ab-prob-turn" data-reveal>
           <div>

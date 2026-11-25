@@ -1,0 +1,133 @@
+/* The FAQ page (hand-written, no prototype behind it). Colours and type come only from tokens.css; everything is
+   scoped to .zv-site[data-page="faq"]. The accordion itself is the shared .faqs from tokens.css. */
+
+/* ------------------------------------------------------------------ hero ------------------------------------------------------------------ */
+.zv-site:where([data-page="faq"]) .fq-hero {
+  position: relative; padding: calc(var(--nav-space) + clamp(24px, 5vw, 72px)) var(--gutter) clamp(32px, 5vw, 64px);
+  max-width: 1180px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: center; gap: clamp(24px, 4vw, 64px);
+}
+.zv-site:where([data-page="faq"]) .fq-hero-text { animation: fq-rise .9s var(--ease) .1s both; }
+.zv-site:where([data-page="faq"]) .fq-hero h1 { font-size: clamp(42px, 5.4vw, 80px); max-width: 12ch; }
+.zv-site:where([data-page="faq"]) .fq-hero .lede { margin-top: 22px; }
+@keyframes fq-rise { from { opacity: 0; transform: translateY(20px); } }
+
+/* the question mark that grows a sprout, on a lime disc, with how many answers wait below */
+.zv-site:where([data-page="faq"]) .fq-hero-art {
+  position: relative; justify-self: center; width: min(100%, 340px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 36% 32%, color-mix(in srgb, var(--lime) 55%, var(--paper)), var(--lime) 70%);
+  box-shadow: inset 0 -16px 0 color-mix(in srgb, var(--lime) 78%, var(--ink));
+  animation: fq-pop 1s var(--spring) both;
+}
+.zv-site:where([data-page="faq"]) .fq-hero-art::after { content: ""; position: absolute; inset: -16px; border-radius: 50%; border: 2px dashed color-mix(in srgb, var(--ink) 26%, transparent); }
+.zv-site:where([data-page="faq"]) .fq-grow { --q-mark: var(--ink); --q-stem: var(--green); --q-leaf: var(--paper); --q-leaf-2: var(--green); width: 46%; margin: 0 0 6%; }
+.zv-site:where([data-page="faq"]) .fq-count {
+  position: absolute; right: -4%; bottom: 10%; padding: 10px 16px; border-radius: 999px; rotate: -6deg;
+  background: var(--yellow); color: var(--ink); font: 700 15px/1 var(--body); box-shadow: 0 10px 20px -12px color-mix(in srgb, var(--ink) 60%, transparent);
+}
+.zv-site:where([data-page="faq"]) .fq-count b { font: 600 22px/1 var(--display); margin-right: 4px; }
+@keyframes fq-pop { from { scale: .6; opacity: 0; } }
+
+/* ------------------------------------------------------------------ the questions ------------------------------------------------------------------ */
+.zv-site:where([data-page="faq"]) .tail section.fq-body {
+  padding-top: clamp(16px, 3vw, 40px); padding-bottom: clamp(48px, 6vw, 88px);
+  display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: clamp(24px, 5vw, 72px); align-items: start;
+}
+/* the group list stays beside the questions and marks the group you're reading */
+.zv-site:where([data-page="faq"]) .fq-nav { position: sticky; top: calc(var(--nav-space) + 16px); }
+.zv-site:where([data-page="faq"]) .fq-nav ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.zv-site:where([data-page="faq"]) .fq-nav a {
+  display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; padding: 10px 12px 10px 10px; border-radius: 18px;
+  text-decoration: none; color: var(--ink); font: 700 15.5px/1.25 var(--body);
+  transition: background-color .25s var(--ease), translate .3s var(--spring);
+}
+.zv-site:where([data-page="faq"]) .fq-nav a:hover { background: color-mix(in srgb, var(--lime) 22%, transparent); translate: 4px 0; }
+.zv-site:where([data-page="faq"]) .fq-nav a[aria-current="true"] { background: var(--ink); color: var(--paper); }
+.zv-site:where([data-page="faq"]) .fq-nav a:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.zv-site:where([data-page="faq"]) .fq-nav-i { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--lime); color: var(--ink); }
+.zv-site:where([data-page="faq"]) .fq-nav-i svg { width: 22px; height: 22px; }
+.zv-site:where([data-page="faq"]) .fq-nav li:nth-child(2) .fq-nav-i { background: var(--yellow); }
+.zv-site:where([data-page="faq"]) .fq-nav li:nth-child(3) .fq-nav-i { background: color-mix(in srgb, var(--green) 85%, var(--paper)); color: var(--paper); }
+.zv-site:where([data-page="faq"]) .fq-nav li:nth-child(4) .fq-nav-i { background: var(--paper); border: 1.5px solid color-mix(in srgb, var(--ink) 22%, transparent); }
+.zv-site:where([data-page="faq"]) .fq-nav-n { font: 600 14px/1 var(--display); padding: 5px 9px; border-radius: 999px; background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.zv-site:where([data-page="faq"]) .fq-nav a[aria-current="true"] .fq-nav-n { background: color-mix(in srgb, var(--paper) 18%, transparent); }
+
+.zv-site:where([data-page="faq"]) .fq-groups { display: grid; gap: clamp(36px, 5vw, 64px); }
+/* the groups are sections inside the tail, so they shed the tail's section padding */
+.zv-site:where([data-page="faq"]) .tail section.fq-group { padding: 0; max-width: none; margin: 0; scroll-margin-top: calc(var(--nav-space) + 24px); }
+.zv-site:where([data-page="faq"]) .fq-group h2 {
+  font-size: clamp(26px, 2.6vw, 34px); max-width: none; padding-bottom: 12px;
+  background: linear-gradient(var(--lime), var(--lime)) 0 100% / 40px 4px no-repeat;
+}
+.zv-site:where([data-page="faq"]) .fq-group .faqs { margin-top: 16px; border-top: 0; }
+.zv-site:where([data-page="faq"]) .fq-group .faqs details { border-bottom: 1.5px dashed color-mix(in srgb, var(--ink) 24%, transparent); }
+.zv-site:where([data-page="faq"]) .fq-group .faqs summary { padding: 20px 0; font-size: clamp(18px, 1.6vw, 21px); transition: color .2s; }
+.zv-site:where([data-page="faq"]) .fq-group .faqs summary:hover { color: var(--green); }
+.zv-site:where([data-page="faq"]) .fq-group .faqs summary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; border-radius: 6px; }
+/* the +/– sits in a small lime disc */
+.zv-site:where([data-page="faq"]) .fq-group .faqs summary::after {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 700 18px/1 var(--body);
+  background: color-mix(in srgb, var(--lime) 35%, transparent); transition: background-color .2s, rotate .3s var(--spring);
+}
+.zv-site:where([data-page="faq"]) .fq-group .faqs details[open] summary::after { background: var(--lime); rotate: 180deg; }
+.zv-site:where([data-page="faq"]) .fq-group .faqs details p { padding: 0 0 22px; font-size: 16.5px; color: color-mix(in srgb, var(--ink) 84%, var(--paper)); }
+.zv-site:where([data-page="faq"]) .fq-group .faqs details[open] p { animation: fq-open .35s var(--ease); }
+.zv-site:where([data-page="faq"]) .faqs p a { color: var(--green); font-weight: 700; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.zv-site:where([data-page="faq"]) .faqs p a:hover { background: color-mix(in srgb, var(--lime) 40%, transparent); }
+@keyframes fq-open { from { opacity: 0; transform: translateY(-6px); } }
+
+/* ------------------------------------------------------------------ still have questions ------------------------------------------------------------------ */
+.zv-site:where([data-page="faq"]) .tail section.fq-still { padding-top: 0; padding-bottom: clamp(24px, 4vw, 48px); }
+.zv-site:where([data-page="faq"]) .fq-still-card {
+  position: relative; overflow: hidden; border-radius: 32px; padding: clamp(28px, 4vw, 56px);
+  background: var(--ink); color: var(--paper); --hl: color-mix(in srgb, var(--lime) 55%, transparent);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; gap: 24px clamp(24px, 4vw, 64px);
+}
+/* a big soft question mark in the corner */
+.zv-site:where([data-page="faq"]) .fq-still-card::before {
+  content: "?"; position: absolute; right: -2%; top: -28%; font: 700 clamp(220px, 26vw, 380px)/1 var(--display);
+  color: color-mix(in srgb, var(--paper) 6%, transparent); pointer-events: none;
+}
+.zv-site:where([data-page="faq"]) .fq-still h2 { font-size: clamp(32px, 3.8vw, 52px); }
+.zv-site:where([data-page="faq"]) .fq-still .lede { margin-top: 12px; color: color-mix(in srgb, var(--paper) 82%, var(--ink)); }
+.zv-site:where([data-page="faq"]) .fq-mail { position: relative; display: grid; gap: 18px; justify-items: start; }
+.zv-site:where([data-page="faq"]) .fq-addr { font: 600 clamp(26px, 3.2vw, 44px)/1.1 var(--display); color: var(--lime); overflow-wrap: anywhere; }
+.zv-site:where([data-page="faq"]) .fq-mail-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.zv-site:where([data-page="faq"]) .fq-still .pill { --btn-bg: var(--lime); --btn-fg: var(--ink); --btn-corner: var(--ink); --btn-fold: var(--yellow); }
+.zv-site:where([data-page="faq"]) .fq-still .pill.ghost { --btn-bg: var(--paper); }
+.zv-site:where([data-page="faq"]) .fq-copy { font: 600 16px/1 var(--body); cursor: pointer; }
+.zv-site:where([data-page="faq"]) .fq-copy-i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.zv-site:where([data-page="faq"]) .fq-copy[data-done] { background: var(--paper); color: var(--ink); }
+
+/* ------------------------------------------------------------------ tablets and phones ------------------------------------------------------------------ */
+@media (max-width: 900px) {
+  /* minmax(0, …) and min-width: 0, or the row of chips stretches the column wider than the screen */
+  .zv-site:where([data-page="faq"]) .tail section.fq-body { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .zv-site:where([data-page="faq"]) :is(.fq-nav, .fq-groups) { min-width: 0; }
+  /* the groups become a row of chips that stays under the nav */
+  .zv-site:where([data-page="faq"]) .fq-nav {
+    top: calc(var(--nav-space) - 6px); z-index: 4; margin: 0 calc(var(--gutter) * -1); padding: 8px var(--gutter);
+    background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(8px);
+  }
+  .zv-site:where([data-page="faq"]) .fq-nav ul { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .zv-site:where([data-page="faq"]) .fq-nav ul::-webkit-scrollbar { display: none; }
+  .zv-site:where([data-page="faq"]) .fq-nav a { grid-template-columns: 28px auto auto; gap: 8px; padding: 6px 12px 6px 6px; white-space: nowrap; font-size: 14px; border: 1.5px solid color-mix(in srgb, var(--ink) 14%, transparent); }
+  .zv-site:where([data-page="faq"]) .fq-nav a:hover { translate: none; }
+  .zv-site:where([data-page="faq"]) .fq-nav-i { width: 28px; height: 28px; }
+  .zv-site:where([data-page="faq"]) .fq-nav-i svg { width: 16px; height: 16px; }
+  .zv-site:where([data-page="faq"]) .tail section.fq-group { scroll-margin-top: calc(var(--nav-space) + 72px); }
+  .zv-site:where([data-page="faq"]) .fq-still-card { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .zv-site:where([data-page="faq"]) .fq-hero { grid-template-columns: 1fr; padding-top: calc(var(--nav-space) + 16px); }
+  .zv-site:where([data-page="faq"]) .fq-hero-art { order: -1; width: 180px; }
+  .zv-site:where([data-page="faq"]) .fq-count { font-size: 13px; padding: 8px 12px; right: -18%; }
+  .zv-site:where([data-page="faq"]) .fq-count b { font-size: 18px; }
+  .zv-site:where([data-page="faq"]) .fq-hero h1 { font-size: 40px; }
+}
+
+/* reduced motion: everything in its final state */
+@media (prefers-reduced-motion: reduce) {
+  .zv-site:where([data-page="faq"]) :is(.fq-hero-text, .fq-hero-art, .faqs details[open] p) { animation: none; }
+}
+html.rm .zv-site:where([data-page="faq"]) :is(.fq-hero-text, .fq-hero-art, .faqs details[open] p) { animation: none; }

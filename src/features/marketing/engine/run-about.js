@@ -24,14 +24,12 @@ export async function runAbout() {
   life.undo.push(registerStepper({ lenis, stops: () => [topOf($('.about-hero')), ...sectionStops(tail)] }));
 
   /* ---------- the problem: three paths ---------- */
-  const paths = $$('.ab-path'), items = $$('.ab-prob-list li'), track = $('.ab-track');
+  const paths = $$('.ab-path'), items = $$('.ab-prob-list li');
   const drawPaths = (p) => {
-    // the track fades as the paths take over; each path draws in its own third, its end marker pops at the end
-    if (track) track.style.opacity = String(1 - .7 * Math.min(1, p * 1.5));
-    paths.forEach((g, i) => {
+    // each path has its own stretch of the scroll: its marker pops onto the render and its point in the list lights up
+    paths.forEach((m, i) => {
       const k = Math.min(1, Math.max(0, (p - i * .28) / .4));
-      g.style.setProperty('--d', k.toFixed(3));
-      g.style.setProperty('--e', Math.min(1, Math.max(0, (k - .85) / .15)).toFixed(3));
+      m.style.setProperty('--e', Math.min(1, Math.max(0, (k - .55) / .3)).toFixed(3));
       items[i]?.toggleAttribute('data-on', k >= .85);
     });
   };

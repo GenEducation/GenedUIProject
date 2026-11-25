@@ -6,6 +6,7 @@ import { parents as P_, concernIcon, parentTailHtml, more } from './content-pare
 import { portalTablet, basicReportCard } from './portal.js';
 import { educators as E, philoLede, eduTailHtml } from './content-educators.js';
 import { aboutHeroHtml, aboutTailHtml } from './content-about.js';
+import { faqHtml } from './content-faq.js';
 
 /* ------------------------------------------------------------------ Home (B, "One Question") ------------------------------------------------------------------ */
 const typed = (s) => `<p class="typed" aria-label="${esc(s)}">${[...s].map((ch) => `<span aria-hidden="true">${esc(ch)}</span>`).join('')}</p>`;
@@ -51,8 +52,8 @@ const homeBeats = () => `
   <section class="beat ways-title" data-b="ways"><h2>${rich(C.ways.title)}</h2></section>
   <div class="twin dev" aria-hidden="true"></div>
   <div class="twin web">${webTablet()}</div>
-  <div class="cap dev"><h3>${esc(C.ways.device.title)}</h3><p>${esc(C.ways.device.body)}</p>${ctas([C.ways.device.cta])}</div>
-  <div class="cap web"><h3>${esc(C.ways.web.title)}</h3><p>${esc(C.ways.web.body)}</p>${ctas([C.ways.web.cta])}</div>
+  <div class="cap dev"><h3>${esc(C.ways.device.title)}</h3><p>${esc(C.ways.device.body)}</p></div>
+  <div class="cap web"><h3>${esc(C.ways.web.title)}</h3><p>${esc(C.ways.web.body)}</p></div>
 
   <section class="beat left" data-b="approach">
     <h2>${rich(C.approach.title)}</h2>
@@ -183,3 +184,6 @@ export const educatorsHtml = () => {
 export const aboutHtml = () => `
   ${aboutHeroHtml()}
   <div id="tail" class="tail">${aboutTailHtml()}</div>`;
+
+/* ------------------------------------------------------------------ FAQ ------------------------------------------------------------------ */
+export const faqPageHtml = () => faqHtml();

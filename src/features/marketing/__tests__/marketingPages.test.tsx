@@ -5,6 +5,8 @@ import { HomePage } from "../HomePage";
 import { ParentsPage } from "../ParentsPage";
 import { EducatorsPage } from "../EducatorsPage";
 import { AboutPage } from "../AboutPage";
+import { FaqPage } from "../FaqPage";
+import { faqEntries } from "../engine/content-faq.js";
 import { EDUCATOR_INVITE_HREF, INVITE_HREF, ROUTES, SKIP_INTRO_KEY } from "../routes";
 
 const MAILTO = "mailto:info@gened.ai";
@@ -19,7 +21,8 @@ describe("Zoovi marketing nav", () => {
     ["parents", ParentsPage, "For Parents", INVITE_HREF],
     ["educators", EducatorsPage, "For Educators", EDUCATOR_INVITE_HREF],
     ["about", AboutPage, "About", INVITE_HREF],
-  ] as const)("on the %s page links home, both audiences, about, log in and invite", (_, Page, current, invite) => {
+    ["faq", FaqPage, "FAQs", INVITE_HREF],
+  ] as const)("on the %s page links home, both audiences, about, FAQs, log in and invite", (_, Page, current, invite) => {
     render(<Page />);
     const header = nav();
     expect(within(header).getByRole("link", { name: "Zoovi home" })).toHaveAttribute("href", "/");
@@ -29,6 +32,7 @@ describe("Zoovi marketing nav", () => {
     expect(parents).toHaveAttribute("href", ROUTES.parents);
     expect(educators).toHaveAttribute("href", ROUTES.educators);
     expect(within(header).getByRole("link", { name: "About" })).toHaveAttribute("href", ROUTES.about);
+    expect(within(header).getByRole("link", { name: "FAQs" })).toHaveAttribute("href", ROUTES.faq);
     expect(within(header).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
     expect(within(header).getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", invite);
     // the current page is marked
@@ -95,6 +99,7 @@ describe("Zoovi home (take B)", () => {
     const main = screen.getByRole("main");
     expect(within(main).getByRole("link", { name: "Explore Zoovi for Parents" })).toHaveAttribute("href", ROUTES.parents);
     expect(within(main).getByRole("link", { name: "Explore Zoovi for Educators" })).toHaveAttribute("href", ROUTES.educators);
+    expect(within(main).getByRole("link", { name: "Register for the Educator’s Programme" })).toHaveAttribute("href", EDUCATOR_INVITE_HREF);
     expect(within(main).getByRole("link", { name: "Talk to Us" })).toHaveAttribute("href", MAILTO);
     for (const a of within(main).getAllByRole("link", { name: "Get an Invite" })) expect(a).toHaveAttribute("href", INVITE_HREF);
     // targets that don't exist yet stay inert and are marked for follow-up
@@ -189,5 +194,40 @@ describe("About", () => {
     expect(within(main).getByRole("link", { name: "Explore Zoovi" })).toHaveAttribute("href", ROUTES.home);
     expect(within(main).getByRole("link", { name: "Meet the team" })).toHaveAttribute("href", "#team");
     expect(within(screen.getByRole("navigation", { name: "Company" })).getByRole("link", { name: "About" })).toHaveAttribute("href", ROUTES.about);
+  });
+});
+
+describe("FAQs", () => {
+  it("answers every question, grouped by who is asking", () => {
+    const { container } = render(<FaqPage />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Have a question? We’re here to help.");
+    for (const name of ["About GenEd & Zoovi", "For parents", "For teachers & schools", "For partners & general enquiries"]) {
+      expect(screen.getByRole("heading", { level: 2, name })).toBeInTheDocument();
+    }
+    // the doc's ten plus six parent questions, each once
+    const questions = [...container.querySelectorAll(".fq-group summary")].map((s) => s.textContent);
+    expect(questions).toHaveLength(16);
+    expect(new Set(questions).size).toBe(16);
+    expect(faqEntries()).toHaveLength(16);
+    // the group list links to each group
+    const groups = within(screen.getByRole("navigation", { name: "Question groups" })).getAllByRole("link");
+    expect(groups.map((a) => a.getAttribute("href"))).toEqual(["#about-zoovi", "#parents", "#schools", "#partners"]);
+  });
+
+  it("points answers at real destinations, not a form that doesn't exist", () => {
+    render(<FaqPage />);
+    const answers = within(screen.getByRole("region", { name: "Questions" }));
+    expect(answers.getByRole("link", { name: "Get an Invite" })).toHaveAttribute("href", "/get-an-invite");
+    expect(answers.getByRole("link", { name: "register for the Zoovi Educator Programme" })).toHaveAttribute("href", "/get-an-invite/educators");
+    expect(screen.queryByText(/contact form|on this page/)).toBeNull();
+    // structured data carries plain-text answers
+    expect(faqEntries().every(({ a }) => !/\]\(/.test(a))).toBe(true);
+  });
+
+  it("ends with the email address and is linked from the footer", () => {
+    render(<FaqPage />);
+    expect(screen.getByRole("link", { name: "Contact Us" })).toHaveAttribute("href", MAILTO);
+    expect(screen.getByRole("button", { name: "Copy address" })).toBeInTheDocument();
+    expect(within(screen.getByRole("navigation", { name: "Company" })).getByRole("link", { name: "FAQs" })).toHaveAttribute("href", ROUTES.faq);
   });
 });

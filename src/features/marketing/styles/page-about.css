@@ -117,19 +117,30 @@
 /* text and points on the left, the drawing on the right, held in view while the points light up */
 .zv-site:where([data-page="about"]) .ab-prob-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 5vw, 80px); align-items: start; }
 .zv-site:where([data-page="about"]) .ab-prob-map { position: sticky; top: calc(var(--nav-space) + 24px); padding-top: clamp(24px, 4vw, 64px); }
-.zv-site:where([data-page="about"]) .ab-paths { width: 100%; height: auto; overflow: visible; --draw: 1; }
-.zv-site:where([data-page="about"]) .ab-track { fill: none; stroke: color-mix(in srgb, var(--paper) 40%, transparent); stroke-width: 3; stroke-dasharray: 2 10; stroke-linecap: round; transition: opacity .4s; }
-.zv-site:where([data-page="about"]) .ab-track-t { font: 700 13px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; fill: color-mix(in srgb, var(--paper) 55%, transparent); }
-.zv-site:where([data-page="about"]) .ab-p-line { fill: none; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1 1; stroke-dashoffset: calc(1 - var(--d, 1)); }
-.zv-site:where([data-page="about"]) .ab-p-start { fill: var(--ink); stroke-width: 4; }
-.zv-site:where([data-page="about"]) .ab-p-end circle { stroke: var(--ink); stroke-width: 3; }
-.zv-site:where([data-page="about"]) .ab-p-end text { font: 600 18px/1 var(--display); fill: var(--ink); }
-.zv-site:where([data-page="about"]) .ab-p-end { transform-box: fill-box; transform-origin: center; scale: var(--e, 1); opacity: var(--e, 1); }
+/* the rendered paths, with a numbered marker popping onto each one as its point comes up (--e, 0..1, from the engine) */
+.zv-site:where([data-page="about"]) .ab-paths { position: relative; margin: 0; }
+.zv-site:where([data-page="about"]) .ab-paths img { display: block; width: 100%; height: auto; filter: drop-shadow(0 24px 30px color-mix(in srgb, #000 28%, transparent)); }
+.zv-site:where([data-page="about"]) .ab-pm {
+  position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; display: grid; place-items: center;
+  font: 600 19px/1 var(--display); color: var(--ink); background: var(--pc); border: 3px solid var(--ink);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pc) 35%, transparent), 0 8px 14px -6px color-mix(in srgb, #000 50%, transparent);
+  scale: calc(.4 + .6 * var(--e, 1)); opacity: var(--e, 1);
+}
+/* the rail is the fixed track the three paths are set against: not a numbered point, so a quiet tag laid along it
+   (the rail runs from about (260, 860) to (1260, 580) in the 1600 × 1100 render, about 15.6° up) */
+.zv-site:where([data-page="about"]) .ab-rail-tag {
+  position: absolute; left: 47%; top: 68.5%; translate: -50% -50%; rotate: -15.6deg; white-space: nowrap;
+  padding: 5px 12px 6px; border-radius: 999px; background: var(--ink); color: var(--paper);
+  font: 700 12px/1 var(--body); letter-spacing: .1em; text-transform: uppercase;
+  box-shadow: 0 6px 12px -6px color-mix(in srgb, #000 55%, transparent);
+}
 .zv-site:where([data-page="about"]) .ab-path[data-i="0"] { --pc: var(--lime); }
 .zv-site:where([data-page="about"]) .ab-path[data-i="1"] { --pc: var(--yellow); }
 .zv-site:where([data-page="about"]) .ab-path[data-i="2"] { --pc: var(--paper); }
-.zv-site:where([data-page="about"]) .ab-path .ab-p-line, .zv-site:where([data-page="about"]) .ab-path .ab-p-start { stroke: var(--pc); }
-.zv-site:where([data-page="about"]) .ab-path .ab-p-end circle { fill: var(--pc); }
+@media (max-width: 700px) {
+  .zv-site:where([data-page="about"]) .ab-pm { width: 30px; height: 30px; margin: -15px 0 0 -15px; font-size: 15px; border-width: 2px; }
+  .zv-site:where([data-page="about"]) .ab-rail-tag { font-size: 9.5px; padding: 4px 8px; letter-spacing: .08em; }
+}
 .zv-site:where([data-page="about"]) .ab-prob-list { list-style: none; margin: 32px 0 0; padding: 0; display: grid; gap: 18px; }
 .zv-site:where([data-page="about"]) .ab-prob-list li { display: flex; gap: 16px; align-items: flex-start; transition: opacity .4s var(--ease), translate .4s var(--ease); }
 .zv-site:where([data-page="about"]) .ab-prob-list li[data-i="1"] .dot { background: var(--yellow); }
