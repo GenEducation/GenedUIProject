@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { Check, RotateCcw } from "lucide-react";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { CHAPTER_COMPLETE_ART } from "@/features/student/theme/momentArt";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { useLessonStore } from "../useLessonStore";
 import { RevisitChoices } from "./RevisitChoices";
@@ -31,8 +33,17 @@ export function LessonSummary() {
 
   return (
     <section aria-labelledby="lesson-summary-heading" className="lesson-rise overflow-hidden rounded-[24px] bg-[var(--ls-soft)]">
-      <div className="relative bg-[var(--ls-primary)] px-6 py-6 text-white">
-        <div aria-hidden className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[var(--ls-accent)] opacity-40 blur-2xl" />
+      <div className="relative bg-[var(--ls-primary)] px-6 py-6 text-white pr-36">
+        <div aria-hidden className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[var(--ls-accent)] opacity-25 blur-2xl" />
+        {/* The last jigsaw piece, about to click into place. */}
+        <MomentArt
+          art={CHAPTER_COMPLETE_ART}
+          width={128}
+          float
+          shadow={false}
+          className="right-3 top-1/2 -translate-y-1/2 sm:right-6"
+          style={{ position: "absolute" }}
+        />
         <p className="relative text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--ls-accent)]">Chapter complete</p>
         <h2 id="lesson-summary-heading" className="lesson-hand relative mt-1 text-[30px] leading-tight">
           You did it!

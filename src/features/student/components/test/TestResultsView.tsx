@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Award, ArrowRight, BookOpen, MessageSquareText } from "lucide-react";
+import { ArrowRight, BookOpen, MessageSquareText } from "lucide-react";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { RESULT_ART, type MomentArtSrc } from "@/features/student/theme/momentArt";
 import { SubmitTestResponse, CreateChapterTestResponse, ZPDVerdict } from "../../types/test";
 
 interface TestResultsViewProps {
@@ -10,17 +12,17 @@ interface TestResultsViewProps {
   onClose: () => void;
 }
 
-const VERDICT_CONFIG: Record<ZPDVerdict, { bg: string; text: string; icon: typeof Award; label: string }> = {
+// The moon, waxing: full above, half at, a crescent on its way to full below.
+const VERDICT_CONFIG: Record<ZPDVerdict, { bg: string; text: string; art: MomentArtSrc; label: string }> = {
   // ABOVE is earned, so it gets the citron badge (ink on citron); AT sits on
   // the calm soft surface; BELOW stays on the warning hue, never red.
-  ABOVE: { bg: "bg-[var(--accent)]", text: "text-[var(--accent-ink)]", icon: Award, label: "Above Expectations" },
-  AT: { bg: "bg-[var(--soft-surface)]", text: "text-[var(--primary)]", icon: CheckCircle2, label: "At Expectations" },
-  BELOW: { bg: "bg-[var(--warning-bg)]", text: "text-[var(--warning-ink)]", icon: XCircle, label: "Below Expectations" },
+  ABOVE: { bg: "bg-[var(--accent)]", text: "text-[var(--accent-ink)]", art: RESULT_ART.above, label: "Above Expectations" },
+  AT: { bg: "bg-[var(--soft-surface)]", text: "text-[var(--primary)]", art: RESULT_ART.at, label: "At Expectations" },
+  BELOW: { bg: "bg-[var(--warning-bg)]", text: "text-[var(--warning-ink)]", art: RESULT_ART.below, label: "Below Expectations" },
 };
 
 export function TestResultsView({ test, result, onClose }: TestResultsViewProps) {
   const verdict = VERDICT_CONFIG[result.overall_verdict];
-  const VerdictIcon = verdict.icon;
 
   const totalMarks = Object.values(result.section_results).reduce(
     (sum, s) => sum + (s.total_marks ?? 0),
@@ -39,10 +41,10 @@ export function TestResultsView({ test, result, onClose }: TestResultsViewProps)
         animate={{ opacity: 1, y: 0 }}
         className="text-center space-y-4"
       >
+        <MomentArt art={verdict.art} width={132} float className="mx-auto -mb-2" />
         <div
           className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${verdict.bg} ${verdict.text} font-bold text-sm tracking-wider uppercase`}
         >
-          <VerdictIcon size={18} />
           {verdict.label}
         </div>
 

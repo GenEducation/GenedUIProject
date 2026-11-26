@@ -1,7 +1,7 @@
 "use client";
 
 import { FEATURES } from "@/constants/features";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, PanelLeftOpen, TrendingUp, Library, type LucideIcon } from "lucide-react";
 import Image from "next/image";
@@ -34,6 +34,8 @@ import { GuardianInvitePopup } from "./guardian/GuardianInvitePopup";
 import { Select } from "@/components/ui/Select";
 import { subjectIslandFloating } from "@/features/subjects/subjectPresentation";
 import { EMPTY_RECENT_ART } from "../theme/progressArt";
+import { WELCOME_ABOARD_ART } from "../theme/momentArt";
+import { MomentArt } from "@/components/shared/MomentArt";
 import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
@@ -161,41 +163,34 @@ function AprilAvatar({ state = "idle", size = 52 }: { state?: AprilState; size?:
   );
 }
 
-/* ═══ CONFETTI ═══ */
-function Confetti({ active, onDone }: { active: boolean; onDone?: () => void }) {
-  const ref = useRef<HTMLCanvasElement>(null);
+/* ═══ WELCOME ABOARD ═══ */
+/** After a new student's first tour: a paper kite lifting off, then it fades away (or on a tap). */
+function WelcomeAboard({ onDone }: { onDone: () => void }) {
+  const [leaving, setLeaving] = useState(false);
   useEffect(() => {
-    if (!active || !ref.current) return;
-    const cv = ref.current;
-    const ctx = cv.getContext("2d");
-    if (!ctx) return;
-    cv.width  = cv.offsetWidth;
-    cv.height = cv.offsetHeight;
-    const cols = [C.genPurple, C.edGreen, C.sun, C.coral, C.sky, C.sparkle];
-    const p = Array.from({ length: 60 }, () => ({
-      x: Math.random() * cv.width, y: -10 - Math.random() * 80,
-      w: 3 + Math.random() * 4,   h: 7 + Math.random() * 5,
-      c: cols[Math.floor(Math.random() * cols.length)],
-      vx: (Math.random() - 0.5) * 2.5, vy: 2 + Math.random() * 3.5,
-      r: Math.random() * 360,          rv: (Math.random() - 0.5) * 10,
-    }));
-    let f = 0; const mx = 100;
-    function draw() {
-      ctx!.clearRect(0, 0, cv.width, cv.height);
-      p.forEach(q => {
-        q.x += q.vx; q.y += q.vy; q.vy += 0.07; q.r += q.rv;
-        ctx!.save(); ctx!.translate(q.x, q.y); ctx!.rotate(q.r * Math.PI / 180);
-        ctx!.fillStyle = q.c; ctx!.globalAlpha = Math.max(0, 1 - f / mx);
-        ctx!.fillRect(-q.w/2, -q.h/2, q.w, q.h); ctx!.restore();
-      });
-      f++;
-      if (f < mx) requestAnimationFrame(draw);
-      else { ctx!.clearRect(0, 0, cv.width, cv.height); onDone?.(); }
-    }
-    draw();
-  }, [active]);
-  if (!active) return null;
-  return <canvas ref={ref} className="absolute inset-0 z-50 pointer-events-none w-full h-full" />;
+    const fade = setTimeout(() => setLeaving(true), 2800);
+    const done = setTimeout(onDone, 3200);
+    return () => { clearTimeout(fade); clearTimeout(done); };
+  }, [onDone]);
+  return (
+    <div
+      role="status"
+      onClick={() => { setLeaving(true); setTimeout(onDone, 400); }}
+      className="absolute inset-0 z-50 flex items-center justify-center p-6 transition-opacity duration-400"
+      style={{ opacity: leaving ? 0 : 1, background: "rgba(247,244,234,0.55)", backdropFilter: "blur(2px)" }}
+    >
+      <div
+        className="lesson-rise flex flex-col items-center rounded-[28px] px-8 pb-7 pt-5 text-center shadow-[0_18px_50px_rgba(29,99,21,0.16)]"
+        style={{ background: C.card, border: `1px solid ${C.border}` }}
+      >
+        <MomentArt art={WELCOME_ABOARD_ART} width={170} float />
+        <p className="m-0 mt-1 text-[22px] font-extrabold" style={{ color: C.text, fontFamily: "var(--font-display)" }}>
+          You&apos;re all set!
+        </p>
+        <p className="m-0 mt-1 text-[14px]" style={{ color: C.textMid }}>Let&apos;s start learning.</p>
+      </div>
+    </div>
+  );
 }
 
 /* ═══ FILTER DROPDOWN ═══ */
@@ -297,7 +292,9 @@ export function StudentHome() {
   /* Mount */
   useEffect(() => { setMounted(true); }, []);
 
-  /* One-shot confetti — only after a new student's first tour (a replay from Profile doesn't arm it) */
+  const hideCelebration = useCallback(() => setShowConfetti(false), []);
+
+  /* One-shot "welcome aboard" — only after a new student's first tour (a replay from Profile doesn't arm it) */
   useEffect(() => {
     if (!hasEnded || hasDismissedCelebration) return;
     setAprilState("celebrating");
@@ -423,7 +420,7 @@ export function StudentHome() {
 
       {/* ── MAIN ── */}
       <main className="flex-1 overflow-hidden flex flex-col relative min-w-0">
-        <Confetti active={showConfetti} onDone={() => setShowConfetti(false)} />
+        {showConfetti && <WelcomeAboard onDone={hideCelebration} />}
 
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (
@@ -781,12 +778,15 @@ export function StudentHome() {
                   ))}
                 </div>
               ) : recentRows.length === 0 ? (
-                // Nothing opened yet: a desk set up and waiting, notebook open and lamp on.
+                // Nothing opened yet: a garden gate swung open, stepping stones leading through.
                 <div
                   className="rounded-[22px] flex flex-col sm:flex-row items-center text-center sm:text-left"
                   style={{ border: `1.5px dashed ${C.border}`, padding: "10px clamp(16px, 2vw, 24px) 16px 10px", gap: "clamp(8px, 1.6vw, 18px)" }}
                 >
-                  <Image src={EMPTY_RECENT_ART} alt="" aria-hidden="true" width={900} height={600} unoptimized style={{ width: 210, height: 140, objectFit: "contain" }} />
+                  <div aria-hidden="true" className="relative shrink-0" style={{ width: 210, height: 140 }}>
+                    <Image src={EMPTY_RECENT_ART.base} alt="" width={900} height={600} unoptimized className="absolute inset-0 h-full w-full object-contain" />
+                    <Image src={EMPTY_RECENT_ART.accent} alt="" width={900} height={600} unoptimized className="absolute inset-0 h-full w-full object-contain" />
+                  </div>
                   <div>
                     <p className="m-0 font-bold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(17px, 1.6vw, 20px)" }}>
                       Your desk is ready

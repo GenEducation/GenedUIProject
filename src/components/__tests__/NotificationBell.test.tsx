@@ -66,4 +66,29 @@ describe("NotificationBell", () => {
     expect(screen.queryByRole("button", { name: /mark read/i })).not.toBeInTheDocument();
     expect(useNotificationStore.getState().unreadCount).toBe(0);
   });
+
+  it("opens as a dialog and shows the parked-plane empty state when there are none", async () => {
+    render(<NotificationBell userId="u1" />);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /^notifications$/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("All quiet on the runway");
+    expect(dialog.querySelector('img[src="/student/moments/empty-notifications.webp"]')).not.toBeNull();
+  });
+
+  it("marks everything read at once and filters to unread", async () => {
+    fetchMock.mockResolvedValue([notif({ id: "a", title: "First" }), notif({ id: "b", title: "Second", is_read: true })]);
+    render(<NotificationBell userId="u1" />);
+    await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /^notifications$/i }));
+
+    fireEvent.click(screen.getByRole("tab", { name: /unread/i }));
+    expect(screen.getByText("First")).toBeInTheDocument();
+    expect(screen.queryByText("Second")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /mark all read/i }));
+    await waitFor(() => expect(markAsReadMock).toHaveBeenCalledWith("a"));
+    expect(screen.getByText("Nothing unread")).toBeInTheDocument();
+  });
 });

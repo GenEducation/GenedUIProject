@@ -3,16 +3,10 @@
 import { Button } from "@/components/ui/Button";
 import { PlacementHeader } from "./PlacementHeader";
 import { PlacementStepper } from "./PlacementStepper";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { PLACEMENT_COMPLETE_ART } from "@/features/student/theme/momentArt";
 
 /** Fixed, hand-placed to match the vendored illustration's burst layout — decorative, aria-hidden. */
-const CONFETTI_POSITIONS = [
-  { top: "4%", left: "8%", size: 22, rotate: -18 },
-  { top: "2%", left: "78%", size: 18, rotate: 12 },
-  { top: "20%", left: "2%", size: 16, rotate: 30 },
-  { top: "18%", left: "90%", size: 20, rotate: -25 },
-  { top: "78%", left: "4%", size: 18, rotate: 15 },
-  { top: "82%", left: "86%", size: 22, rotate: -10 },
-];
 
 /**
  * The last screen of the flow — no score, no correctness, nothing about how
@@ -68,21 +62,8 @@ export function PlacementCompleteView({
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-        <div className="relative" style={{ width: 180, height: 180 }}>
-          {CONFETTI_POSITIONS.map((c, i) => (
-            // eslint-disable-next-line @next/next/no-img-element -- a small vendored decorative SVG, not a page asset next/image needs to optimize.
-            <img
-              key={i}
-              src="/placement/icons/confetti.png"
-              alt=""
-              aria-hidden="true"
-              className="absolute"
-              style={{ top: c.top, left: c.left, width: c.size, height: c.size, transform: `rotate(${c.rotate}deg)` }}
-            />
-          ))}
-          {/* eslint-disable-next-line @next/next/no-img-element -- a small vendored decorative SVG, not a page asset next/image needs to optimize. */}
-          <img src="/placement/icons/after-test-illustration.png" alt="" className="w-full h-full" />
-        </div>
+        {/* The marble come to rest on its own step: we found your level. */}
+        <MomentArt art={PLACEMENT_COMPLETE_ART} width={200} float />
 
         <h3
           className="mt-6 mb-0 font-extrabold text-[24px]"

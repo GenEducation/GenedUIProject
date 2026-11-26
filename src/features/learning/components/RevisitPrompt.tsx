@@ -1,8 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { Target } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { REVISIT_ART } from "@/features/student/theme/momentArt";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { useLessonStore } from "../useLessonStore";
 import { RevisitChoices } from "./RevisitChoices";
@@ -53,14 +54,8 @@ export function RevisitPrompt() {
           style={{ background: "radial-gradient(closest-side, rgb(206 232 204 / 0.95), rgb(176 214 182 / 0.75) 62%, transparent)" }}
         />
         <div aria-hidden className="absolute -right-6 -top-16 -z-10 h-48 w-48 rounded-full bg-[var(--ls-accent)] opacity-25 blur-3xl" />
-        <Image
-          src="/illustrations/welcome-back-student.webp"
-          alt=""
-          width={880}
-          height={407}
-          priority
-          className="pointer-events-none absolute bottom-0 right-0 hidden h-auto w-[300px] select-none sm:block"
-        />
+        {/* A winding path, a pin where you left off. */}
+        <MomentArt art={REVISIT_ART} width={300} float shadow={false} className="-bottom-3 right-0 hidden sm:block" style={{ position: "absolute" }} />
         <div className="relative px-6 py-6 sm:py-8 sm:pl-8 sm:pr-0">
           <p className="flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--ls-accent)]">
             Welcome back! <Spark />

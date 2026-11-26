@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/Button";
 import { PlacementHeader } from "./PlacementHeader";
 import { PlacementStepper } from "./PlacementStepper";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { PLACEMENT_INTRO_ART } from "@/features/student/theme/momentArt";
 
 /**
  * The first screen. Its whole job is to lower the stakes: mixed subjects,
@@ -44,12 +46,8 @@ export function PlacementIntro({
           className="rounded-2xl overflow-hidden flex items-center justify-center p-4"
           style={{ background: "var(--pl-surface)" }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element -- a small vendored decorative SVG, not a page asset next/image needs to optimize. */}
-          <img
-            src="/placement/icons/before-test-illustration.png"
-            alt=""
-            className="w-full h-full object-contain"
-          />
+          {/* Rising stepping posts, a marble waiting at the start: let's find your step. */}
+          <MomentArt art={PLACEMENT_INTRO_ART} width={240} float className="max-w-full" />
         </div>
 
         <div>

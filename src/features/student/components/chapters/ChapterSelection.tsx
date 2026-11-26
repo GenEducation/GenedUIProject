@@ -15,6 +15,8 @@ import { useLearnerChapters } from "../../learner/useLearnerChapters";
 import { useLessonLaunch } from "../../learner/useLessonLaunch";
 import type { LearnerChapter } from "../../learner/types";
 import { ChapterTile } from "./ChapterTile";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { EMPTY_CHAPTERS_ART } from "../../theme/momentArt";
 
 const GRID = "grid gap-[clamp(12px,1.6vw,20px)] grid-cols-1 sm:grid-cols-2 xl:grid-cols-3";
 
@@ -113,10 +115,9 @@ export function ChapterSelection({ subject }: { subject: string }) {
                 </Button>
               </div>
             ) : chapters.length === 0 ? (
-              <div className="rounded-[22px] border-2 border-dashed border-[var(--primary-ink)]/10 px-6 py-14 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--soft-surface)] text-[var(--primary)]">
-                  <BookOpen size={22} />
-                </div>
+              <div className="rounded-[22px] border-2 border-dashed border-[var(--primary-ink)]/10 px-6 py-10 text-center">
+                {/* An empty platform, tracks leading away: the next one is coming. */}
+                <MomentArt art={EMPTY_CHAPTERS_ART} width={270} float className="mx-auto mb-3" />
                 <p className="m-0 text-base font-bold text-[var(--primary-ink)]">No chapters yet</p>
                 <p className="m-0 mt-1.5 text-sm text-[var(--primary-ink)]/55">
                   Your school hasn&apos;t published any {subject} chapters for your grade yet. Check back soon.

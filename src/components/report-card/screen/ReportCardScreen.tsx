@@ -6,13 +6,15 @@ import type { ReportCardData, ReportCardUI } from "../types";
 import { overallSummary, subjectSummaries, type SubjectSummary } from "../selectors";
 import { Button } from "@/components/ui/Button";
 import { BandChip, CARD, SubjectGlyph } from "./primitives";
-import { Icon, TintIcon } from "./icons";
+import { TintIcon } from "./icons";
 import { SummaryHeader } from "./SummaryHeader";
 import { SubjectList } from "./SubjectList";
 import { InsightsPanel, OverviewHabits, OverviewInsights, OverviewMain } from "./InsightsPanel";
 import { SubjectPreview } from "./SubjectPreview";
 import { SubjectDetail, type DetailTab } from "./SubjectDetail";
 import { ListChecks } from "lucide-react";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { EMPTY_REPORT_ART } from "@/features/student/theme/momentArt";
 
 /**
  * The on-screen report card. Three levels, stepped through like cascading
@@ -263,10 +265,9 @@ function BrandNew({ firstName, onStart }: { firstName: string; onStart?: () => v
   ];
   return (
     <section className={`${CARD} rc-rise mx-auto w-full max-w-[720px] p-6 sm:p-8`}>
-      <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--rs-mint)] text-[var(--rs-brand-deep)]">
-        <Icon name="session-content/achievement" size={26} />
-      </span>
-      <h2 className="mt-4 text-[22px] font-bold text-[var(--rs-ink)]">No chapters yet</h2>
+      {/* A chart's first bar just starting to rise. */}
+      <MomentArt art={EMPTY_REPORT_ART} width={150} float className="-ml-2" />
+      <h2 className="mt-2 text-[22px] font-bold text-[var(--rs-ink)]">No chapters yet</h2>
       <p className="mt-1.5 text-[14px] leading-relaxed text-[var(--rs-ink-soft)]">
         {firstName}&apos;s report fills in once a chapter is opened. Every figure here comes from real lesson activity.
       </p>

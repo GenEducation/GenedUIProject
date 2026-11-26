@@ -4,7 +4,7 @@ import { Flame, Star, type LucideIcon } from "lucide-react";
 
 import { STUDENT_COLORS } from "../theme/colors";
 import { STRINGS } from "../constants/strings";
-import { CHAPTERS_ART, LONGEST_ART, STREAK_ART, TIME_ART } from "../theme/progressArt";
+import { CHAPTERS_ART, LONGEST_ART, STREAK_ART, TIME_ART, type LayeredArt } from "../theme/progressArt";
 
 /**
  * Shared streak/session stat display. Previously StudentHome.tsx,
@@ -112,7 +112,7 @@ export function StreakStats({
     parts: { n: number; u: string }[] | null;
     of?: number;
     /** The card's 3D model and a line saying what the number means. */
-    art: string;
+    art: LayeredArt;
     caption: string;
   };
   const current = data?.currentStreak ?? 0;
@@ -181,9 +181,14 @@ export function StreakStats({
             </div>
           ))
         : cards.map((s) => (
-            <div key={s.key} className="rounded-[22px] flex flex-col items-center text-center min-w-0" style={cardStyle}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 512px WebP, served as is */}
-              <img src={s.art} alt="" aria-hidden="true" width={512} height={512} draggable={false} className="select-none" style={{ ...well, objectFit: "contain", marginBottom: -4 }} />
+            <div key={s.key} className="group rounded-[22px] flex flex-col items-center text-center min-w-0" style={cardStyle}>
+              {/* The paper, and its lime part on top: on hover only the lime moves (see .stat-accent in globals.css). */}
+              <div aria-hidden="true" className="relative select-none" style={{ ...well, marginBottom: -4 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 512px WebP, served as is */}
+                <img src={s.art.base} alt="" width={512} height={512} draggable={false} className="absolute inset-0 h-full w-full object-contain" />
+                {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 512px WebP, served as is */}
+                <img src={s.art.accent} alt="" width={512} height={512} draggable={false} className={`stat-accent stat-accent--${s.key} absolute inset-0 h-full w-full object-contain`} />
+              </div>
 
               {/* Value, with its unit carried in the value as the design does */}
               <div

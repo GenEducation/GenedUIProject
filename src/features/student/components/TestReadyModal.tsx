@@ -2,13 +2,14 @@
 
 import { useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ClipboardCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { STUDENT_COLORS as C } from "../theme/colors";
 import { useStudentStore } from "../store/useStudentStore";
 import { useTestStore } from "../store/useTestStore";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { TEST_READY_ART } from "../theme/momentArt";
 
 /**
  * Asks what to do with a test that has just finished generating.
@@ -59,13 +60,8 @@ export function TestReadyModal() {
       panelStyle={{ background: C.card, border: `1px solid ${C.border}` }}
     >
       <div className="flex flex-col items-center text-center" style={{ padding: "32px 28px 24px" }}>
-        <div
-          className="flex items-center justify-center rounded-[20px] mb-5"
-          // Soft-surface well + teal glyph: calm, on-brand good news.
-          style={{ width: 64, height: 64, background: C.softSurface, color: C.primary }}
-        >
-          <ClipboardCheck size={30} strokeWidth={2.2} />
-        </div>
+        {/* A diving board over a pool: ready to jump in. */}
+        <MomentArt art={TEST_READY_ART} width={150} float className="mb-3" />
 
         {/* Visual only: Modal's `title` is the dialog's accessible
             name, so announcing this too would just repeat it. */}

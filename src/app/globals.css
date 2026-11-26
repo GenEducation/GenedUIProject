@@ -305,6 +305,19 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
 .island-shadow { animation: island-shadow 5.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .island-float, .island-shadow { animation: none; } }
 
+/* Progress cards: hovering a card plays one short move (< 1s) on just the lime part of its illustration.
+   The accent is its own layer (StreakStats stacks it on the white paper); origins sit on each lime part. */
+.stat-accent { transform-origin: 50% 50%; }
+.group:hover .stat-accent--currentStreak     { animation: stat-link-swing .7s cubic-bezier(.3,1.4,.5,1); transform-origin: 66% 42%; }
+.group:hover .stat-accent--chaptersCompleted { animation: stat-cells-pop .6s cubic-bezier(.3,1.5,.5,1); transform-origin: 56% 46%; }
+.group:hover .stat-accent--longestStreak     { animation: stat-ribbon-flutter .7s ease-in-out; transform-origin: 62% 36%; }
+.group:hover .stat-accent--timeSpent         { animation: stat-page-lift .8s cubic-bezier(.3,1.3,.5,1); transform-origin: 30% 46%; }
+@keyframes stat-link-swing { 0%, 100% { transform: none; } 35% { transform: rotate(-14deg); } 70% { transform: rotate(6deg); } }
+@keyframes stat-cells-pop { 0%, 100% { transform: none; } 40% { transform: translateY(-5%) scale(1.07); } 70% { transform: translateY(1%) scale(.99); } }
+@keyframes stat-ribbon-flutter { 0%, 100% { transform: none; } 25% { transform: rotate(-4deg) skewX(4deg); } 55% { transform: rotate(3deg) skewX(-3deg); } 80% { transform: rotate(-1deg); } }
+@keyframes stat-page-lift { 0%, 100% { transform: none; } 45% { transform: translateY(-6%) rotate(-7deg); } 75% { transform: translateY(1%) rotate(1deg); } }
+@media (prefers-reduced-motion: reduce) { .group:hover .stat-accent { animation: none; } }
+
 /* A live dot's pulse (partner ingestion): an SVG circle grows and fades. Transforms on SVG shapes are redrawn as
    vectors each frame, so the halo stays crisp where Tailwind's animate-ping on a tiny HTML dot turned pixelated. */
 .live-pulse { transform-box: fill-box; transform-origin: center; animation: live-pulse 1.4s cubic-bezier(0, 0, 0.2, 1) infinite; }
