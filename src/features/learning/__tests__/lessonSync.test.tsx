@@ -1,8 +1,8 @@
 /**
  * Lesson-sync reproducers (Phase 0): the screen, the voice and the lesson's step must agree.
  *
- * Each `it.fails` states the behaviour the lesson should have and reproduces a known bug: it is expected to fail until the
- * fix lands, and the fix turns it into a plain `it` in the same change. SYNTHETIC data only.
+ * Each test states the behaviour the lesson should have. An `it.fails` reproduces a known bug still open: it is expected to fail
+ * until the fix lands, and the fix turns it into a plain `it` in the same change. SYNTHETIC data only.
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
@@ -55,7 +55,7 @@ beforeEach(async () => {
 });
 
 describe("lesson sync: the popup belongs to its step (phase 1)", () => {
-  it.fails("applies a step change even when a spoken reply cuts in before it arrives", async () => {
+  it("applies a step change even when a spoken reply cuts in before it arrives", async () => {
     // The child types the answer; the server moves the lesson on and says so first in that reply. A spoken reply starts before
     // the step change reaches the screen: the change is dropped, the old step's popup stays on screen.
     lessonFixture.setScript(() => [
@@ -72,16 +72,21 @@ describe("lesson sync: the popup belongs to its step (phase 1)", () => {
     await waitFor(() => expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2));
   });
 
-  it.fails("asks for the reaction on the step the answer was given on, even if the lesson moved meanwhile", async () => {
-    // The popup is answered (slow network); meanwhile a chat reply moves the lesson on. The reaction must name the answer's step
-    // (the server refuses an attempt named on another step), not whichever step is current when the answer returns.
-    const release = holdAnswers(movedOn);
-    const answering = store().answer(CHECK_ITEM, { kind: "choice", option_ids: [OPTION_A] });
+  it("asks for the reaction on the step the answer was given on, even if the lesson moved meanwhile", async () => {
+    // A chat reply is still streaming when the card is answered (slow network). That reply moves the lesson on before the answer
+    // returns. The reaction must name the answer's step (the server refuses an attempt named on another step), not whichever
+    // step is current when the answer returns.
     lessonFixture.setScript(() => [
       { type: "state_changed", instance: movedOn() },
       { type: "turn_completed", status: "completed", finish_reason: "stop" },
     ]);
-    await store().send("SYNTHETIC next please");
+    lessonFixture.holdStream(1); // the chat reply has started; its step change has not arrived
+    const sending = store().send("SYNTHETIC next please");
+    await waitFor(() => expect(lastTurn().status).toBe("streaming"));
+    const release = holdAnswers(movedOn);
+    const answering = store().answer(CHECK_ITEM, { kind: "choice", option_ids: [OPTION_A] });
+    lessonFixture.releaseStream();
+    await sending;
     expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2);
     release();
     await answering;
@@ -89,7 +94,7 @@ describe("lesson sync: the popup belongs to its step (phase 1)", () => {
     expect(turnRequests.find((r) => r.kind === "result_reaction")).toMatchObject({ instance_node_id: NODE_1, attempt_id: ATTEMPT });
   });
 
-  it.fails("holds a typed message while a popup answer is on its way, so both never land on the same step", async () => {
+  it("holds a typed message while a popup answer is on its way, so both never land on the same step", async () => {
     const release = holdAnswers(() => makeLessonInstance({ revision: 5 }));
     const answering = store().answer(CHECK_ITEM, { kind: "choice", option_ids: [OPTION_A] });
     const sending = store().send("SYNTHETIC 12");

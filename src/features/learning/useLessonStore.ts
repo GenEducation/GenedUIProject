@@ -210,6 +210,20 @@ const initial = {
 /** The open stream's abort handle, and the turn it streams; not state, so they never re-render anything. */
 let streamAbort: AbortController | null = null;
 let streamTurnId: string | null = null;
+/**
+ * Superseded turns whose streams are still read, for their facts only, until they close: a step change a reply committed
+ * before a newer reply cut it off must still reach the screen, or the old step's check stays up on a lesson that moved on.
+ */
+const draining = new Map<string, AbortController>();
+/** How long a superseded stream is read at most (the server closes it within a lease interval). */
+const DRAIN_MS = 10_000;
+/** How long a typed message waits at most for an answer on the card still on its way. */
+const ANSWER_HOLD_MS = 8_000;
+const TERMINAL_EVENTS = new Set(["turn_completed", "turn_failed", "turn_interrupted"]);
+const stopDraining = () => {
+  for (const abort of draining.values()) abort.abort();
+  draining.clear();
+};
 /** Bumped by every load and reset: a load that is no longer the latest stops (React dev mounts twice). */
 let loadGeneration = 0;
 /** When the last tutor reply finished, for a learner message's `latency_ms`. */
@@ -511,6 +525,29 @@ export const useLessonStore = create<LessonState>((set, get) => {
     return next !== undefined && loaded?.id === node.node_id && !loaded.check_items.some((c) => c.id === next);
   };
 
+  /** Apply a lesson state that arrived late (from a superseded reply) only if it is newer than the one on screen. */
+  const applyIfNewer = (instance: InstanceState, cause: string) => {
+    if ((instance.revision ?? 0) > (get().instance?.revision ?? -1)) applyInstance(instance, cause);
+  };
+
+  /**
+   * A newer reply takes the stream. The one it supersedes is not cut off: its stream is read on for its facts until the server
+   * closes it (at most DRAIN_MS), so a step change it committed still reaches the screen.
+   */
+  const detachStream = () => {
+    const abort = streamAbort;
+    const turnId = streamTurnId;
+    streamAbort = null;
+    streamTurnId = null;
+    if (!abort || !turnId || abort.signal.aborted) return;
+    draining.set(turnId, abort);
+    setTimeout(() => {
+      if (draining.get(turnId) !== abort) return;
+      draining.delete(turnId);
+      abort.abort();
+    }, DRAIN_MS);
+  };
+
   const applyInstance = (instance: InstanceState, cause: string | null = null) => {
     const previous = get().instance;
     const beforeNode = previous?.active_node;
@@ -592,8 +629,12 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
   const onEvent = (turnId: string, event: SequencedTurnEvent) => {
     const before = currentTurn(turnId);
-    // A turn already closed on this screen takes nothing more: the learner stopped it, or the lesson left its step.
-    if (!before || before.status !== "streaming") return;
+    // A turn already closed on this screen takes nothing more: the learner stopped it, or the lesson left its step. A reply
+    // superseded by a newer one still moves the lesson: the step change it committed is a fact, applied unless already newer.
+    if (!before || before.status !== "streaming") {
+      if (before && draining.has(turnId) && event.type === "state_changed") applyIfNewer(event.instance, turnId);
+      return;
+    }
     const after = applyEvent(before, event);
     if (after === before) return; // a replayed event
     updateTurn(turnId, () => after);
@@ -636,6 +677,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
         attached.id = turnId = real;
       }
       onEvent(turnId, event);
+      if (draining.has(turnId)) {
+        if (TERMINAL_EVENTS.has(event.type)) return true;
+        continue;
+      }
       const turn = currentTurn(turnId);
       if (turn && isTerminal(turn.status)) return true;
     }
@@ -647,11 +692,11 @@ export const useLessonStore = create<LessonState>((set, get) => {
    * MAX_RESUMES times; a turn that never closes ends as a dropped stream. Replayed events are dropped by `applyEvent`.
    */
   const follow = async (instanceId: string, turnId: string, abort: AbortController, closed: boolean) => {
-    for (let attempt = 0; !closed && attempt < MAX_RESUMES && !abort.signal.aborted; attempt += 1) {
+    for (let attempt = 0; !closed && attempt < MAX_RESUMES && !abort.signal.aborted && !draining.has(turnId); attempt += 1) {
       const cursor = currentTurn(turnId)?.lastSeq ?? 0;
       closed = await consume(turnId, await lessonService.resumeTurn(instanceId, turnId, cursor, abort.signal), abort.signal);
     }
-    if (!closed && !abort.signal.aborted) {
+    if (!closed && !abort.signal.aborted && !draining.has(turnId)) {
       updateTurn(turnId, (t) => ({ ...t, status: "failed", failure: { reason: "stream_interrupted", retryable: false } }));
     }
   };
@@ -796,7 +841,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       unsessioned.language ??
       (unsessioned.modality === "voice" ? undefined : resolveSessionLanguage(get().sessionLanguage, profile?.user_id, profile?.preferred_language));
     const request: TurnRequest = { ...unsessioned, session_id: sessionId(), ...(language ? { language } : {}) };
-    streamAbort?.abort();
+    detachStream();
     const abort = new AbortController();
     streamAbort = abort;
     streamTurnId = request.turn_id;
@@ -812,9 +857,10 @@ export const useLessonStore = create<LessonState>((set, get) => {
       const attached = { id: request.turn_id };
       const closed = await consume(request.turn_id, await lessonService.startTurn(instanceId, request, abort.signal), abort.signal, attached);
       await follow(instanceId, attached.id, abort, closed);
+      if (draining.delete(attached.id) || draining.delete(request.turn_id)) return; // superseded: only its facts were wanted
       await rereadAfterReply(attached.id);
     } catch (error) {
-      if (abort.signal.aborted) return;
+      if (abort.signal.aborted || draining.delete(request.turn_id)) return;
       // An HTTP refusal (the turn never started) carries the backend's reason; anything else is a dropped stream.
       const { status, message, request_id } = asError(error);
       const refused = typeof status === "number" && Boolean(message);
@@ -863,12 +909,114 @@ export const useLessonStore = create<LessonState>((set, get) => {
     }
   };
 
+  /** An answer on the check card. The node is the one on screen when it was answered: its reaction is asked for there. */
+  const answerOn: LessonState["answer"] = async (itemId, response, options = {}) => {
+    const channel = options.channel ?? (response.kind === "choice" ? "choice" : "typed");
+    const { instanceId, instance } = get();
+    if (!instanceId || instance?.revision === undefined) return null;
+    const node = activeNodeId();
+    const startedAt = lastReplyAt || Date.now();
+    // A confirmation still on its way is waited for (briefly), not raced: the answer is bound to the same session.
+    const binding = bindingFor(itemId);
+    const waiting = binding ? ledger.inflight(binding, "screen") : null;
+    if (waiting) await Promise.race([waiting, new Promise((resolve) => setTimeout(resolve, 2500))]);
+    const requestId = uuid();
+    try {
+      let result: AnswerResult | null = null;
+      // A refusal as not delivered leaves nothing recorded: confirm again, same ids, and send once more.
+      for (let attempt = 0; attempt < 2 && !result; attempt += 1) {
+        try {
+          result = await lessonService.answer(instanceId, {
+            request_id: requestId,
+            item_id: itemId,
+            expected_revision: get().instance?.revision ?? instance.revision,
+            channel,
+            latency_ms: Math.min(Math.max(Date.now() - startedAt, 0), 3_600_000),
+            response,
+            confirmed_reading: options.confirmedReading || undefined,
+            session_id: sessionId(),
+          });
+        } catch (error) {
+          if (!isNotDelivered(error)) throw error;
+          const again = bindingFor(itemId);
+          if (again) {
+            ledger.forget(again, "screen");
+            if (attempt === 0 && visibleChecks.has(itemId)) await ledger.confirm(again, "screen");
+          }
+          if (attempt === 1 || !again || !visibleChecks.has(itemId)) {
+            set({ notDeliveredItemId: itemId });
+            return null;
+          }
+        }
+      }
+      if (!result) return null;
+      set({ notDeliveredItemId: null });
+      // The reaction belongs to the node the answer was given on (backend admission: attempt-bound): the one on screen when
+      // the card was answered, not whichever is current when the answer returns (the answer itself, or a chat reply meanwhile,
+      // may have moved the lesson on). The next node's opening follows once the reaction ends.
+      applyInstance(result.instance);
+      if (result.attempt_id && result.outcome !== "needs_confirmation" && node) {
+        void runTurn(
+          { turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id },
+          null,
+        );
+      }
+      return result;
+    } catch (error) {
+      await rereadIfStale(error);
+      throw error;
+    }
+  };
+
+  /** A written answer; like `answerOn`, its reaction is asked for on the node it was answered on. */
+  const answerWrittenOn: LessonState["answerWritten"] = async (itemId, text, options = {}) => {
+    const { instanceId, instance } = get();
+    if (!instanceId || instance?.revision === undefined) return null;
+    const node = activeNodeId();
+    const startedAt = lastReplyAt || Date.now();
+    const requestId = options.requestId ?? uuid();
+    try {
+      const result = await lessonService.writtenAnswer(instanceId, {
+        request_id: requestId,
+        item_id: itemId,
+        expected_revision: get().instance?.revision ?? instance.revision,
+        text,
+        latency_ms: Math.min(Math.max(Date.now() - startedAt, 0), 3_600_000),
+        session_id: sessionId(),
+        clarification: options.clarification || undefined,
+      });
+      applyInstance(result.instance);
+      if (result.status === "committed" && result.attempt_id) {
+        if (node) void runTurn({ turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id }, null);
+      }
+      return result;
+    } catch (error) {
+      await rereadIfStale(error);
+      throw error;
+    }
+  };
+
+  /**
+   * While an answer on the card is on its way, a typed message waits for it: both never land on the same step, and a message
+   * sent meanwhile is read against the step as the answer left it.
+   */
+  let answering: Promise<unknown> | null = null;
+  const holdChat = <T,>(pending: Promise<T>): Promise<T> => {
+    const settled = pending.catch(() => undefined);
+    answering = settled;
+    void settled.then(() => {
+      if (answering === settled) answering = null;
+    });
+    return pending;
+  };
+
   return {
     ...initial,
 
     load: async (instanceId) => {
       const generation = ++loadGeneration;
       streamAbort?.abort();
+      stopDraining();
       visibleChecks.clear();
       roundsSeen.clear();
       ledger.clear();
@@ -933,7 +1081,9 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
     send: async (text) => {
       // Sent while the lesson moves to its next step, a message waits for that step (and its opening to start), so it is
-      // never sent on the step being left (the server would refuse it as a stale node, or answer it there).
+      // never sent on the step being left (the server would refuse it as a stale node, or answer it there). It also waits
+      // for an answer on the card still on its way (never longer than ANSWER_HOLD_MS).
+      if (answering) await Promise.race([answering, new Promise((resolve) => setTimeout(resolve, ANSWER_HOLD_MS))]);
       if (gap) await gap.closed;
       const node = activeNodeId();
       const trimmed = text.trim();
@@ -1014,89 +1164,9 @@ export const useLessonStore = create<LessonState>((set, get) => {
       await runTurn({ turn_id: uuid(), kind: "regenerate", instance_node_id: node, regenerates: turnId }, failed.learnerText);
     },
 
-    answer: async (itemId, response, options = {}) => {
-      const channel = options.channel ?? (response.kind === "choice" ? "choice" : "typed");
-      const { instanceId, instance } = get();
-      if (!instanceId || instance?.revision === undefined) return null;
-      const startedAt = lastReplyAt || Date.now();
-      // A confirmation still on its way is waited for (briefly), not raced: the answer is bound to the same session.
-      const binding = bindingFor(itemId);
-      const waiting = binding ? ledger.inflight(binding, "screen") : null;
-      if (waiting) await Promise.race([waiting, new Promise((resolve) => setTimeout(resolve, 2500))]);
-      const requestId = uuid();
-      try {
-        let result: AnswerResult | null = null;
-        // A refusal as not delivered leaves nothing recorded: confirm again, same ids, and send once more.
-        for (let attempt = 0; attempt < 2 && !result; attempt += 1) {
-          try {
-            result = await lessonService.answer(instanceId, {
-              request_id: requestId,
-              item_id: itemId,
-              expected_revision: get().instance?.revision ?? instance.revision,
-              channel,
-              latency_ms: Math.min(Math.max(Date.now() - startedAt, 0), 3_600_000),
-              response,
-              confirmed_reading: options.confirmedReading || undefined,
-              session_id: sessionId(),
-            });
-          } catch (error) {
-            if (!isNotDelivered(error)) throw error;
-            const again = bindingFor(itemId);
-            if (again) {
-              ledger.forget(again, "screen");
-              if (attempt === 0 && visibleChecks.has(itemId)) await ledger.confirm(again, "screen");
-            }
-            if (attempt === 1 || !again || !visibleChecks.has(itemId)) {
-              set({ notDeliveredItemId: itemId });
-              return null;
-            }
-          }
-        }
-        if (!result) return null;
-        set({ notDeliveredItemId: null });
-        // The reaction belongs to the node the answer was given on (backend admission: attempt-bound), which the answer itself
-        // may have finished; the next node's opening follows once the reaction ends.
-        const node = activeNodeId();
-        applyInstance(result.instance);
-        if (result.attempt_id && result.outcome !== "needs_confirmation" && node) {
-          void runTurn(
-            { turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id },
-            null,
-          );
-        }
-        return result;
-      } catch (error) {
-        await rereadIfStale(error);
-        throw error;
-      }
-    },
+    answer: (itemId, response, options = {}) => holdChat(answerOn(itemId, response, options)),
 
-    answerWritten: async (itemId, text, options = {}) => {
-      const { instanceId, instance } = get();
-      if (!instanceId || instance?.revision === undefined) return null;
-      const startedAt = lastReplyAt || Date.now();
-      const requestId = options.requestId ?? uuid();
-      try {
-        const result = await lessonService.writtenAnswer(instanceId, {
-          request_id: requestId,
-          item_id: itemId,
-          expected_revision: get().instance?.revision ?? instance.revision,
-          text,
-          latency_ms: Math.min(Math.max(Date.now() - startedAt, 0), 3_600_000),
-          session_id: sessionId(),
-          clarification: options.clarification || undefined,
-        });
-        applyInstance(result.instance);
-        if (result.status === "committed" && result.attempt_id) {
-          const node = activeNodeId();
-          if (node) void runTurn({ turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: result.attempt_id }, null);
-        }
-        return result;
-      } catch (error) {
-        await rereadIfStale(error);
-        throw error;
-      }
-    },
+    answerWritten: (itemId, text, options = {}) => holdChat(answerWrittenOn(itemId, text, options)),
 
     submitActivity: async (nodeId, itemId, text, requestId) => {
       const { instanceId, instance } = get();
@@ -1135,8 +1205,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
     afterOral: async (attemptId) => {
       const { instanceId } = get();
       if (!instanceId) return;
+      const node = activeNodeId(); // the node it was answered on, before the reread may move past it
       applyInstance(await lessonService.instance(instanceId));
-      const node = activeNodeId();
       if (attemptId && node) void runTurn({ turn_id: uuid(), kind: "result_reaction", instance_node_id: node, attempt_id: attemptId }, null);
     },
 
@@ -1305,8 +1375,8 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
     voiceTurnStarted: (turnId, learnerText) => {
       if (currentTurn(turnId)) return;
-      // A spoken reply supersedes any typed one still streaming.
-      streamAbort?.abort();
+      // A spoken reply supersedes any typed one still streaming (read on for its facts only).
+      detachStream();
       voiceTurns.add(turnId);
       set((state) => ({
         turns: [
@@ -1337,6 +1407,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       loadGeneration += 1;
       streamAbort?.abort();
       streamAbort = null;
+      stopDraining();
       lastReplyAt = 0;
       openingDue = null;
       closeGap();
