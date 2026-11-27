@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
-import { LESSON_ID, NODE_1, NODE_2, lessonFixture, makeLessonInstance } from "@/test/msw/handlers/lesson";
+import { FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, lessonFixture, makeLessonInstance } from "@/test/msw/handlers/lesson";
 import { makeCapabilities, voiceFixture, voiceCapabilityRequests } from "@/test/msw/handlers/voice";
 import { useStudentStore } from "@/features/student/store/useStudentStore";
 import { readFileSync } from "node:fs";
@@ -172,6 +172,30 @@ describe("voice mode", () => {
     await emit({ t: "ui", ev: "drained", responseNo: 9 });
     await waitFor(() => expect(fake.closed).toBe(1));
     await waitFor(() => expect(fake.options!.init.instance_node_id).toBe(NODE_2));
+  });
+
+  it("the board follows the voice: a reply's figure shows as its audio starts, its step change once it is heard", async () => {
+    await openVoice();
+    await server({ type: "ready", session_id: "s-1", degraded: [] });
+    const turn_id = "aaaaaaaa-0000-4000-8000-00000000000b";
+    const event = (seq: number, rest: object) => server({ type: "teacher_event", response_no: 11, event: { v: 3, turn_id, seq, ...rest } });
+    await server({ type: "response_started", response_no: 11, turn_id });
+    await event(1, { type: "turn_started", kind: "learner_message", instance_node_id: NODE_1, instance_revision: 4, protocol: "teacher_turn_stream_v3" });
+    await event(2, {
+      type: "state_changed",
+      instance: makeLessonInstance({ revision: 5, nodes_done: 2, active_node: { ...makeLessonInstance().active_node!, instance_node_id: NODE_2 } }),
+    });
+    await event(3, { type: "figure_presented", figure_group_id: FIGURE_GROUP });
+    await event(4, { type: "text_delta", text: "SYNTHETIC well done." });
+    await server({ type: "response_ended", response_no: 11, reason: "completed" });
+    // Everything has arrived; nothing has been heard yet (the previous reply may still be speaking).
+    expect(store().focusedFigureId).toBeNull();
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1);
+    await emit({ t: "ui", ev: "first_sample", responseNo: 11 });
+    expect(store().focusedFigureId).toBe(FIGURE_GROUP);
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1);
+    await emit({ t: "ui", ev: "drained", responseNo: 11 });
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2);
   });
 
   it("a cancelled reply that never closed is settled as interrupted", async () => {

@@ -9,7 +9,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import {
-  CHECK_ITEM, LESSON_ID, NODE_1, NODE_2, OPTION_A, lessonFixture, makeLessonInstance, syntheticPayload, turnRequests,
+  CHECK_ITEM, FIGURE_GROUP, LESSON_ID, NODE_1, NODE_2, OPTION_A, lessonFixture, makeLessonInstance, syntheticPayload, turnRequests,
 } from "@/test/msw/handlers/lesson";
 import { useLessonStore } from "../useLessonStore";
 import { StepCard } from "../components/StepCard";
@@ -128,5 +128,51 @@ describe("lesson sync: no popup over an unfinished explanation (phase 2)", () =>
     lessonFixture.releaseStream();
     await sending;
     await waitFor(() => expect(screen.getByRole("button", { name: /check answer/i })).toBeInTheDocument());
+  });
+});
+
+describe("lesson sync: in voice, the board follows the audio (phase 3)", () => {
+  const VOICE_TURN = "voice-synthetic-2";
+  const started = (seq = 1) =>
+    store().voiceTurnEvent({ v: 3, turn_id: VOICE_TURN, seq, type: "turn_started", kind: "learner_message", instance_node_id: NODE_1, instance_revision: 4, protocol: "teacher_turn_stream_v3" });
+  const spokenReply = () => {
+    store().setVoiceSession("synthetic-voice-session");
+    act(() => store().voiceTurnStarted(VOICE_TURN, "SYNTHETIC twelve"));
+    started();
+    store().voiceTurnEvent({ v: 3, turn_id: VOICE_TURN, seq: 2, type: "state_changed", instance: movedOn() });
+    store().voiceTurnEvent({ v: 3, turn_id: VOICE_TURN, seq: 3, type: "figure_presented", figure_group_id: FIGURE_GROUP });
+    store().voiceTurnEvent({ v: 3, turn_id: VOICE_TURN, seq: 4, type: "text_delta", text: "SYNTHETIC well done." });
+  };
+
+  it("shows a spoken reply's figure when its audio starts, and moves the step when its audio ends", () => {
+    // The server sends the facts long before the audio plays (the previous reply may still be speaking).
+    spokenReply();
+    act(() => store().voiceTurnEnded(VOICE_TURN, "completed")); // the server is done; the audio is still queued
+    expect(store().focusedFigureId).toBeNull();
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1);
+    act(() => store().voiceAudioBegan(VOICE_TURN));
+    expect(store().focusedFigureId).toBe(FIGURE_GROUP);
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_1); // the feedback is still being said
+    act(() => store().voiceAudioEnded(VOICE_TURN));
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2);
+  });
+
+  it("a barge-in releases what the reply committed: the lesson still moves on", () => {
+    spokenReply();
+    act(() => store().voiceAudioBegan(VOICE_TURN));
+    act(() => store().voiceAudioEnded(VOICE_TURN)); // stopped: the learner spoke over it
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2);
+  });
+
+  it("a reply that failed before any audio releases its facts at once", () => {
+    spokenReply();
+    act(() => store().voiceTurnEnded(VOICE_TURN, "failed"));
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2);
+  });
+
+  it("a reconnect releases every held fact", () => {
+    spokenReply();
+    act(() => store().setVoiceSession("synthetic-voice-session-2"));
+    expect(store().instance?.active_node?.instance_node_id).toBe(NODE_2);
   });
 });

@@ -171,10 +171,17 @@ export function useVoiceSession(active: boolean, language: string | null): Voice
           break;
         case "ui":
           if ((e.ev === "speaking" && e.on) || e.ev === "first_sample") {
-            const reply = replies.get(e.responseNo ?? currentReply ?? -1);
+            const no = e.responseNo ?? currentReply ?? -1;
+            const reply = replies.get(no);
             if (reply) reply.began = true;
+            // The board follows the voice: the reply's figures show as it starts being heard.
+            const turnId = turnByResponse.get(no);
+            if (turnId) store.voiceAudioBegan(turnId);
           } else if (e.ev === "drained" || e.ev === "stopped") {
             const no = e.responseNo ?? currentReply ?? -1;
+            // Heard to its end, or cut off: the step change the reply committed applies now.
+            const ended = turnByResponse.get(no);
+            if (ended) store.voiceAudioEnded(ended);
             const reply = replies.get(no);
             if (reply) {
               reply.drained = e.ev === "drained" && reply.began && !reply.cut;

@@ -178,6 +178,10 @@ interface LessonState {
   voiceTurnStarted: (turnId: string, learnerText: string | null) => void;
   voiceTurnEvent: (event: SequencedTurnEvent) => void;
   voiceTurnEnded: (turnId: string, reason: "completed" | "failed" | "interrupted" | "cancelled") => void;
+  /** A spoken reply's audio began playing: its figures go on the board now. */
+  voiceAudioBegan: (turnId: string) => void;
+  /** A spoken reply's audio ended (played out, or cut off by a barge-in or mute): the step change it committed applies now. */
+  voiceAudioEnded: (turnId: string) => void;
   reset: () => void;
 }
 
@@ -238,6 +242,18 @@ const uuid = () => crypto.randomUUID();
 const visibleChecks = new Set<string>();
 /** Replies of the live voice session (they arrive over its socket, not a turn stream). */
 const voiceTurns = new Set<string>();
+/**
+ * A spoken reply's facts arrive before its audio plays (the server sends them as soon as they are committed, and the reply
+ * before it may still be speaking). They wait for the audio: a figure until the reply starts being heard, a lesson state until
+ * it has been heard (or cut off), so the board never runs ahead of the voice. Per voice turn.
+ */
+const audioGates = new Map<string, { began: boolean; held: SequencedTurnEvent[]; timer?: ReturnType<typeof setTimeout> }>();
+/** A completed reply whose audio end never arrives (no playback at all) releases its facts after this long. */
+const AUDIO_WAIT_MS = 60_000;
+const clearAudioGates = () => {
+  for (const gate of audioGates.values()) clearTimeout(gate.timer);
+  audioGates.clear();
+};
 const roundsSeen = new Map<string, number>();
 
 /**
@@ -649,16 +665,48 @@ export const useLessonStore = create<LessonState>((set, get) => {
     if (event.type === "turn_started" && get().instance?.content_lesson && !contentBindings.has(turnId)) {
       contentBindings.set(turnId, { revision: event.instance_revision, requestId: uuid() });
     }
-    if (event.type === "state_changed") applyInstance(event.instance, turnId);
+    if (event.type === "state_changed" && !heldForAudio(turnId, event)) applyInstance(event.instance, turnId);
     if (event.type === "figure_presented") {
       // Pending first, so the board never draws it (or the chat shows its words) before its picture is ready.
       void ensureFigure(event.figure_group_id);
-      set((state) => ({
-        presentedFigureIds: withFigures(state.presentedFigureIds, [event.figure_group_id]),
-        focusedFigureId: event.figure_group_id,
-      }));
+      if (!heldForAudio(turnId, event)) showFigure(event.figure_group_id);
     }
   };
+
+  const showFigure = (figureGroupId: string) =>
+    set((state) => ({
+      presentedFigureIds: withFigures(state.presentedFigureIds, [figureGroupId]),
+      focusedFigureId: figureGroupId,
+    }));
+
+  /** Hold a spoken reply's fact until its audio reaches it (see `audioGates`); false when it applies now. */
+  const heldForAudio = (turnId: string, event: SequencedTurnEvent) => {
+    const gate = audioGates.get(turnId);
+    if (!gate || (event.type === "figure_presented" && gate.began)) return false;
+    gate.held.push(event);
+    return true;
+  };
+
+  /** The reply's audio began (`ended` false: its figures show) or ended (`ended` true: everything it committed applies). */
+  const releaseAudio = (turnId: string, ended: boolean) => {
+    const gate = audioGates.get(turnId);
+    if (!gate) return;
+    gate.began = true;
+    const kept: SequencedTurnEvent[] = [];
+    for (const event of gate.held) {
+      if (event.type === "figure_presented") {
+        // A figure of a step the lesson has since left is never drawn over the new step.
+        if (currentTurn(turnId)?.nodeId === activeNodeId()) showFigure(event.figure_group_id);
+      } else if (event.type === "state_changed" && ended) applyIfNewer(event.instance, turnId);
+      else kept.push(event);
+    }
+    gate.held = kept;
+    if (ended) {
+      clearTimeout(gate.timer);
+      audioGates.delete(turnId);
+    }
+  };
+  const releaseAllAudio = () => [...audioGates.keys()].forEach((turnId) => releaseAudio(turnId, true));
 
   /** Read frames until the turn closes; false if the stream ended first (a drop). */
   const consume = async (turnId: string, response: Response, signal: AbortSignal, attached?: { id: string }): Promise<boolean> => {
@@ -1025,6 +1073,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       const generation = ++loadGeneration;
       streamAbort?.abort();
       stopDraining();
+      clearAudioGates();
       visibleChecks.clear();
       roundsSeen.clear();
       ledger.clear();
@@ -1325,6 +1374,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
     setVoiceSession: (id) => {
       if (get().voiceSessionId === id) return;
+      releaseAllAudio(); // the replaced session plays nothing more: what its replies committed applies now
       // A reconnect is a fresh session (backend ADR 0025, no resume): a reply of the session it replaces is over, whether
       // or not its end reached us. Left streaming, it would look like a tutor still talking on the step.
       set((state) => ({
@@ -1383,9 +1433,12 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
     voiceTurnStarted: (turnId, learnerText) => {
       if (currentTurn(turnId)) return;
-      // A spoken reply supersedes any typed one still streaming (read on for its facts only).
+      // A spoken reply supersedes any typed one still streaming (read on for its facts only), and the spoken one before it:
+      // whatever that one committed applies now.
       detachStream();
+      releaseAllAudio();
       voiceTurns.add(turnId);
+      audioGates.set(turnId, { began: false, held: [] });
       set((state) => ({
         turns: [
           ...state.turns.map((t) => (t.status === "streaming" ? { ...t, status: "interrupted" as const } : t)),
@@ -1396,12 +1449,21 @@ export const useLessonStore = create<LessonState>((set, get) => {
 
     voiceTurnEvent: (event) => onEvent(event.turn_id, event),
 
+    voiceAudioBegan: (turnId) => releaseAudio(turnId, false),
+
+    voiceAudioEnded: (turnId) => releaseAudio(turnId, true),
+
     voiceTurnEnded: (turnId, reason) => {
       // The terminal event normally closed it already; this settles one that ended without it (a cancel).
       updateTurn(turnId, (t) =>
         t.status !== "streaming" ? t : { ...t, status: reason === "completed" ? "completed" : reason === "failed" ? "failed" : "interrupted" },
       );
       lastReplyAt = Date.now();
+      // A reply that did not complete plays no more audio: what it committed applies now. A completed one waits for its audio
+      // to end, at most AUDIO_WAIT_MS.
+      const gate = audioGates.get(turnId);
+      if (reason !== "completed") releaseAudio(turnId, true);
+      else if (gate) gate.timer = setTimeout(() => releaseAudio(turnId, true), AUDIO_WAIT_MS);
       if (reason === "interrupted" && get().instance?.content_lesson?.phase === "feedback") void acknowledgeContent(turnId, "voice");
       void rereadAfterReply(turnId);
     },
@@ -1416,6 +1478,7 @@ export const useLessonStore = create<LessonState>((set, get) => {
       streamAbort?.abort();
       streamAbort = null;
       stopDraining();
+      clearAudioGates();
       lastReplyAt = 0;
       openingDue = null;
       closeGap();
