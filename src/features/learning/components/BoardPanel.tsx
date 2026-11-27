@@ -8,7 +8,7 @@ import type { Insets } from "../board/geometry";
 import { Filmstrip } from "./Filmstrip";
 import { ActivityCard, CompletedActivities, placeActivities } from "./ActivityCard";
 import { StepCard } from "./StepCard";
-import { LessonSummary } from "./LessonSummary";
+import { ChapterComplete } from "./ChapterComplete";
 import { QuickActions } from "./QuickActions";
 import { BookPanel } from "./BookPanel";
 import { ChapterPosition, PortionAudio } from "./PortionStatus";
@@ -221,10 +221,10 @@ export function BoardPanel({ subject = null }: { subject?: string | null }) {
         </div>
 
         {finished && (
-          <div data-no-pan className="absolute inset-0 z-20 overflow-y-auto bg-[var(--ls-card-warm)]/85 p-5 backdrop-blur-[2px] sm:p-8">
-            <div className="mx-auto max-w-[680px]">
-              <LessonSummary />
-              <CompletedActivities />
+          <div data-no-pan className="absolute inset-0 z-20 flex overflow-y-auto bg-[var(--ls-card-warm)]/85 p-5 backdrop-blur-[2px] sm:p-8">
+            {/* Celebrate first; the details (what you learned, practise, your answers, go over it again) on demand. */}
+            <div className="m-auto w-full">
+              <ChapterComplete />
             </div>
           </div>
         )}

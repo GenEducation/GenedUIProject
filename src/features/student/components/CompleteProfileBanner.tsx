@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { UserRoundPen } from "lucide-react";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { PROFILE_START_ART } from "../theme/momentArt";
 import { Button } from "@/components/ui/Button";
 import { updateProfile } from "@/features/auth/authService";
 import { useStudentStore, StudentProfile } from "../store/useStudentStore";
@@ -88,10 +89,9 @@ export function CompleteProfileBanner({ studentProfile }: CompleteProfileBannerP
         onSubmit={(e) => { e.preventDefault(); void handleSave(); }}
         className="relative w-full max-w-[460px] rounded-[28px] bg-white px-6 pb-7 pt-8 shadow-[0_30px_70px_-24px_rgb(18_45_48/0.45)] sm:px-9 sm:pb-9 sm:pt-9"
       >
-        <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--soft-surface)]/70 text-[var(--primary)]">
-          <UserRoundPen size={26} strokeWidth={1.9} />
-        </span>
-        <h2 id="complete-profile-title" className="mt-5 text-[24px] font-extrabold leading-tight text-[var(--ink)]">
+        {/* A blank luggage tag, the lime eyelet: your tag for the journey. */}
+        <MomentArt art={PROFILE_START_ART} width={128} float shadow={false} className="-ml-3 -mt-4" />
+        <h2 id="complete-profile-title" className="mt-1 text-[24px] font-extrabold leading-tight text-[var(--ink)]">
           Tell us a bit about yourself
         </h2>
         <p id="complete-profile-lead" className="mt-2 text-[14.5px] leading-relaxed text-[var(--text-mid)]">

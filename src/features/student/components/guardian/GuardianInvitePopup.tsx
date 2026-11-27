@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
-import { Check, Users, X } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { INVITE_PARENT_ART } from "../../theme/momentArt";
 import { Button } from "@/components/ui/Button";
 import { useStudentStore } from "../../store/useStudentStore";
 import { useGuardianStatus } from "../../hooks/useGuardianStatus";
@@ -137,10 +139,9 @@ export function GuardianInvitePopup() {
           <X size={20} />
         </button>
 
-        <span aria-hidden className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--soft-surface)]/70 text-[var(--primary)]">
-          <Users size={26} strokeWidth={1.9} />
-        </span>
-        <h2 id={titleId} className="mt-5 pr-10 text-[24px] font-extrabold leading-tight text-[var(--ink)]">
+        {/* An open envelope, a lime card sliding out: an invitation. */}
+        <MomentArt art={INVITE_PARENT_ART} width={128} float shadow={false} className="-ml-3 -mt-4" />
+        <h2 id={titleId} className="mt-1 pr-10 text-[24px] font-extrabold leading-tight text-[var(--ink)]">
           Invite your parent to Zoovi
         </h2>
         <p className="mt-2 text-[14.5px] leading-relaxed text-[var(--text-mid)]">

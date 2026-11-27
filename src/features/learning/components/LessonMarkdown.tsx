@@ -22,7 +22,7 @@ const components: Components = {
       {children}
     </a>
   ),
-  code: ({ children }) => <code className="rounded bg-white/70 px-1 py-0.5 font-mono text-[0.9em]">{children}</code>,
+  code: ({ children }) => <code className="rounded bg-white/70 px-1 py-0.5 font-mono text-[0.9em] [overflow-wrap:anywhere]">{children}</code>,
   blockquote: ({ children }) => (
     <blockquote className="my-2 rounded-xl border border-[var(--ls-border)] bg-white/70 px-3 py-2">{children}</blockquote>
   ),
@@ -37,8 +37,11 @@ const components: Components = {
 
 export function LessonMarkdown({ text }: { text: string }) {
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={components}>
-      {text}
-    </ReactMarkdown>
+    // Display math can't wrap, so a wide formula scrolls inside its own line instead of widening the bubble.
+    <div className="min-w-0 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:py-1">
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]} components={components}>
+        {text}
+      </ReactMarkdown>
+    </div>
   );
 }

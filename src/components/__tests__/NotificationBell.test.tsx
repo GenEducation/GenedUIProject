@@ -74,7 +74,7 @@ describe("NotificationBell", () => {
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("All quiet on the runway");
-    expect(dialog.querySelector('img[src="/student/moments/empty-notifications.webp"]')).not.toBeNull();
+    expect(dialog.querySelector('img[src^="/student/moments/empty-notifications.webp"]')).not.toBeNull();
   });
 
   it("marks everything read at once and filters to unread", async () => {

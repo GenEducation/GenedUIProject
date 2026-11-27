@@ -1,96 +1,80 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, CheckCircle2, XCircle, X } from "lucide-react";
+import { useEffect } from "react";
+import { Loader2 } from "lucide-react";
 import { useStudentStore } from "../store/useStudentStore";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { STUDENT_COLORS as C } from "../theme/colors";
+import { GUARDIAN_LINKED_ART, LINK_FAILED_ART, SCHOOL_SENT_ART } from "../theme/momentArt";
 
+/**
+ * The answer to "join this school" (SchoolCard) and "link my parent" (GuardianCard): one store-driven modal, mounted
+ * in the student layout.
+ *
+ * - sending:   a spinner
+ * - sent:      a mailbox takes in a letter and raises its lime flag: the school, or a parent still to confirm, has to
+ *              accept it
+ * - connected: a cup telephone, its string pulled tight: the parent link is live
+ * - failed:    the same, its string slack: try again
+ */
 export function PartnerRequestModal() {
-  const { isPartnerModalOpen, setPartnerModalOpen, partnerRequestStatus, partnerRequestMessage } = useStudentStore();
+  const { isPartnerModalOpen, setPartnerModalOpen, partnerRequestStatus, partnerRequestMessage, partnerRequestOutcome } =
+    useStudentStore();
+  const loading = partnerRequestStatus === "loading";
+
+  // Fetch the mailbox's frames while the request is still sending, so its move is ready when the answer lands.
+  useEffect(() => {
+    if (isPartnerModalOpen && SCHOOL_SENT_ART.sprite) new Image().src = SCHOOL_SENT_ART.sprite.src;
+  }, [isPartnerModalOpen]);
+  const close = () => setPartnerModalOpen(false);
+
+  const view =
+    partnerRequestStatus === "error"
+      ? { art: LINK_FAILED_ART, title: "That didn't go through", body: partnerRequestMessage }
+      : partnerRequestOutcome === "connected"
+        ? { art: GUARDIAN_LINKED_ART, title: "You're connected", body: partnerRequestMessage }
+        : { art: SCHOOL_SENT_ART, title: "Request sent", body: partnerRequestMessage };
 
   return (
-    <AnimatePresence>
-      {isPartnerModalOpen && (
+    <Modal
+      open={isPartnerModalOpen}
+      // While sending there's nothing to dismiss to: the result is on its way.
+      onClose={loading ? undefined : close}
+      size="sm"
+      title={loading ? "Sending request" : view.title}
+      panelStyle={{ background: C.card, border: `1px solid ${C.border}` }}
+    >
+      {loading ? (
+        <div className="flex flex-col items-center text-center" style={{ padding: "40px 28px 36px" }}>
+          <Loader2 size={34} className="animate-spin" style={{ color: C.primary }} aria-hidden />
+          <p aria-hidden="true" className="m-0 mt-4 font-extrabold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: 20 }}>
+            Sending request
+          </p>
+          <p className="m-0 mt-1.5" style={{ color: C.textMid, fontSize: 14 }}>
+            Just a moment while we connect your profile.
+          </p>
+        </div>
+      ) : (
         <>
-          {/* Backdrop */}
-          <motion.div
-            key="backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[19999]"
-          />
-
-          {/* Panel */}
-          <motion.div
-            key="panel"
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:inset-x-auto md:left-1/2 md:-translate-x-1/2 w-full max-w-md bg-white rounded-3xl shadow-2xl shadow-black/20 z-[20000] overflow-hidden"
-          >
-            {/* Header (Optional, but good for closing) */}
-            {partnerRequestStatus !== "loading" && (
-              <div className="absolute top-4 right-4 z-10">
-                <Button iconOnly size="sm" variant="tertiary" aria-label="Close" onClick={() => setPartnerModalOpen(false)}>
-                  <X size={16} />
-                </Button>
-              </div>
-            )}
-
-            <div className="p-4 sm:p-8 text-center space-y-5">
-              {partnerRequestStatus === "loading" && (
-                <div className="flex flex-col items-center justify-center space-y-4 py-6">
-                  <div className="relative">
-                    <div className="w-16 h-16 rounded-full border-4 border-[#bce4cc]/30" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Loader2 className="w-8 h-8 text-[#2d6a4a] animate-spin" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-[#1D6315]">Sending Request</h3>
-                  <p className="text-sm text-[#1D6315]/60">Please wait while we connect your profile...</p>
-                </div>
-              )}
-
-              {partnerRequestStatus === "success" && (
-                <div className="flex flex-col items-center justify-center space-y-4 py-4">
-                  <div className="w-16 h-16 bg-[#bce4cc]/40 rounded-full flex items-center justify-center mb-2">
-                    <CheckCircle2 className="w-8 h-8 text-[#2d6a4a]" />
-                  </div>
-                  <h3 className="text-xl font-bold text-[#1D6315]">Success!</h3>
-                  <p className="text-[#1D6315]/60 text-sm max-w-[280px] mx-auto leading-relaxed">
-                    {partnerRequestMessage}
-                  </p>
-                  <button 
-                    onClick={() => setPartnerModalOpen(false)}
-                    className="w-full mt-6 bg-[#2d6a4a] hover:bg-[#287624] text-white rounded-2xl py-3 font-bold text-[14px] transition-colors shadow-lg shadow-[#2d6a4a]/20"
-                  >
-                    Done
-                  </button>
-                </div>
-              )}
-
-              {partnerRequestStatus === "error" && (
-                <div className="flex flex-col items-center justify-center space-y-4 py-4">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-2">
-                    <XCircle className="w-8 h-8 text-red-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-[#1D6315] max-w-[280px] mx-auto leading-tight">
-                    {partnerRequestMessage}
-                  </h3>
-                  <button 
-                    onClick={() => setPartnerModalOpen(false)}
-                    className="w-full mt-6 bg-[#F7F4EA] hover:bg-[#e4e3de] text-[#1D6315] rounded-2xl py-3 font-bold text-[14px] transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
+          <div className="flex flex-col items-center text-center" style={{ padding: "28px 28px 20px" }}>
+            <MomentArt art={view.art} width={partnerRequestStatus === "error" || partnerRequestOutcome === "connected" ? 200 : 160} float shadow={false} className="mb-2" />
+            {/* Visual only: Modal's `title` is the dialog's accessible name. */}
+            <p aria-hidden="true" className="m-0 font-extrabold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: 22 }}>
+              {view.title}
+            </p>
+            <p className="mt-2 mb-0 max-w-[300px]" style={{ color: C.textMid, fontSize: 14, lineHeight: 1.55 }}>
+              {view.body}
+            </p>
+          </div>
+          <div style={{ padding: "0 28px 28px" }}>
+            <Button variant={partnerRequestStatus === "error" ? "secondary" : "primary"} fullWidth onClick={close}>
+              {partnerRequestStatus === "error" ? "Close" : "Done"}
+            </Button>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </Modal>
   );
 }

@@ -38,7 +38,9 @@ describe("a finished lesson", () => {
     await store().load(LESSON_ID);
     expect(store().status).toBe("ready");
     render(<><LessonProgressRail /><BoardPanel /></>);
-    expect(screen.getByRole("heading", { name: "You did it!" })).toBeInTheDocument();
+    // The headline praises however it went; the celebration leads to the review, and back out.
+    expect(screen.getByText("Chapter complete")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /See how you did/ })).toBeInTheDocument();
     expect(screen.getByText("5/5")).toBeInTheDocument();
     expect(screen.getByText("1/1")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to chapters" })).toHaveAttribute("href", "/student");

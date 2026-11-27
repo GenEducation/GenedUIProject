@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
-import { chapterListReads, lastOpenedChapter, learnerFixture } from "@/test/msw/handlers/learner";
+import { chapterListReads, lastOpenedChapter, lastRecentLimit, learnerFixture, makeRecentChapter } from "@/test/msw/handlers/learner";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 
 const push = vi.fn();
@@ -40,8 +40,9 @@ describe("ChapterSelection", () => {
     expect(within(withoutCard).getByText("SYNTHETIC chapter 2")).toBeInTheDocument();
     expect(within(withoutCard).queryByTestId("chapter-card-image")).toBeNull();
 
-    expect(screen.getByText("Grade 6")).toBeInTheDocument();
-    expect(screen.getByText("3 chapters ready")).toBeInTheDocument();
+    // the header: the subject's name (the word-mark is a picture, so it's named for screen readers) and the grade
+    expect(screen.getByRole("heading", { level: 1, name: "Mathematics" })).toBeInTheDocument();
+    expect(screen.getByText("Grade 6 · 3 chapters")).toBeInTheDocument();
   });
 
   it("groups the chapters by book when there is more than one", async () => {
@@ -103,5 +104,54 @@ describe("ChapterSelection", () => {
     expect(within(again).getByTestId("chapter-card-fallback")).toBeInTheDocument();
     await new Promise((r) => setTimeout(r, 50));
     expect(chapterListReads).toBe(reads + 1);
+  });
+});
+
+describe("ChapterSelection status", () => {
+  const statusOf = async (n: number, title: string) => {
+    const t = await tile(n, title);
+    await waitFor(() => expect(within(t).getByTestId("chapter-status")).toBeInTheDocument());
+    return t;
+  };
+
+  it("shows each chapter's status under its cover and spotlights the one to pick up", async () => {
+    learnerFixture.setRecent([
+      // newest first: chapter 2 is the one to continue; chapter 1 was finished
+      makeRecentChapter(2, { nodes_done: 3, nodes_total: 9 }),
+      makeRecentChapter(1, { state: "completed", nodes_done: 9, nodes_total: 9, completed_once: true }),
+    ]);
+    render(<ChapterSelection subject="Mathematics" />);
+
+    const two = await statusOf(2, "SYNTHETIC chapter 2");
+    expect(two.dataset.current).toBe("true");
+    expect(within(two).getAllByText(/^Continue/).length).toBeGreaterThan(0);
+    expect(within(two).getByText("Pick up here · 3 of 9 steps")).toBeInTheDocument();
+    expect(two).toHaveAccessibleDescription("Pick up here · 3 of 9 steps");
+
+    const one = await statusOf(1, "SYNTHETIC chapter 1");
+    expect(one.dataset.current).toBeUndefined();
+    expect(within(one).getByText("Finished · review anytime")).toBeInTheDocument();
+    expect(within(one).getByTestId("chapter-medal")).toBeInTheDocument();
+
+    // the other book's chapter was never opened
+    const other = screen.getByRole("region", { name: "SYNTHETIC Second Book" });
+    expect(within(other).getByText("Not started")).toBeInTheDocument();
+    // no empty ring on a chapter not started; a ring where there's progress to show
+    expect(within(other).queryByTestId("chapter-ring")).toBeNull();
+    expect(within(two).getByTestId("chapter-ring")).toBeInTheDocument();
+    // the header's Continue opens the chapter to pick up
+    fireEvent.click(screen.getByRole("button", { name: /Continue Ch 2 · SYNTHETIC chapter 2/ }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/student/lesson/11111111-0000-4000-8000-${"2".padStart(12, "0")}`));
+    expect(screen.getByText("1 of 3 finished · 1 under way")).toBeInTheDocument();
+    expect(lastRecentLimit).toBe(50);
+  });
+
+  it("still opens the chapters, with no status, when the recent list fails", async () => {
+    server.use(http.get(`${BASE}/v1/learner/recent-chapters`, () => HttpResponse.json({ message: "nope" }, { status: 500 })));
+    render(<ChapterSelection subject="Mathematics" />);
+    const two = await tile(2, "SYNTHETIC chapter 2");
+    await waitFor(() => expect(within(two).getByText(/Open chapter/)).toBeInTheDocument());
+    expect(within(two).queryByTestId("chapter-status")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

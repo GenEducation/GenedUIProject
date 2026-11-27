@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/Button";
 import { usePrintPdf } from "./usePrintPdf";
 import { loadV1Report, type ReportSummaryFacts, type ReportWho, type V1Dataset } from "./v1Report";
 import { ReportExtrasProvider } from "./sections/ReportExtras";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { ERROR_ART } from "@/features/student/theme/momentArt";
 import {
   loadSubjectCatalog,
   requireExactSubject,
@@ -269,8 +271,13 @@ export function StudentReportCard({
   if (error) {
     return (
       <div className="min-h-screen bg-[var(--canvas)] flex items-center justify-center">
-        <div className="text-center max-w-sm">
-          <p className="text-sm text-[var(--danger-ink)] font-medium mb-3">{error}</p>
+        <div className="text-center max-w-sm px-4">
+          {/* A house of cards, one card slipped out. */}
+          <MomentArt art={ERROR_ART} width={210} float className="mx-auto mb-3" />
+          <p className="m-0 text-[19px] font-bold text-[var(--ink)]" style={{ fontFamily: "var(--font-display)" }}>
+            We couldn&apos;t load this report card
+          </p>
+          <p className="text-sm text-[var(--text-muted)] font-medium mt-1.5 mb-4">{error}</p>
           <Button
             variant="outline"
             onClick={() => void load()}

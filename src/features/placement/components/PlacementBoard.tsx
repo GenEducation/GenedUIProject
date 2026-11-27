@@ -12,6 +12,8 @@ import { PlacementIntro } from "./PlacementIntro";
 import { PlacementCompleteView } from "./PlacementCompleteView";
 import { PlacementProgressRail } from "./PlacementProgressRail";
 import type { PlacementItem } from "../types/placement";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { ERROR_ART } from "@/features/student/theme/momentArt";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -333,6 +335,8 @@ export function PlacementBoard({ studentId, subjects }: { studentId: string; sub
 
                 {phase === "error" && (
                   <div className="flex-1 flex flex-col items-center justify-center px-6 sm:px-10 py-14 text-center">
+                    {/* A house of cards, one card slipped out. */}
+                    <MomentArt art={ERROR_ART} width={210} float className="mb-4" />
                     <h2 className="m-0 font-extrabold text-[22px]" style={{ color: "var(--pl-primary)" }}>
                       We couldn&apos;t load your test
                     </h2>

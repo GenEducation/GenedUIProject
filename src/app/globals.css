@@ -280,7 +280,7 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
    light background. Structural chrome (section labels, scrollbars, icon
    wells) stays teal / soft surface so the citron moments keep their pull. */
 
-/* Section eyebrow ("Your progress", "My subjects"): a quiet teal tick —
+/* Section eyebrow ("Your subjects"): a quiet teal tick —
    structure, not emphasis. (Class name kept for existing call sites.) */
 .citron-eyebrow { display: flex; align-items: center; gap: 10px; }
 .citron-eyebrow::before {
@@ -317,6 +317,23 @@ label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabl
 @keyframes stat-ribbon-flutter { 0%, 100% { transform: none; } 25% { transform: rotate(-4deg) skewX(4deg); } 55% { transform: rotate(3deg) skewX(-3deg); } 80% { transform: rotate(-1deg); } }
 @keyframes stat-page-lift { 0%, 100% { transform: none; } 45% { transform: translateY(-6%) rotate(-7deg); } 75% { transform: translateY(1%) rotate(1deg); } }
 @media (prefers-reduced-motion: reduce) { .group:hover .stat-accent { animation: none; } }
+
+/* Pop-up moments (MomentArt, layered art): each moving part plays one move, once, as the pop-up opens. A short
+   delay lets the dialog land first; `both` holds the opening pose until then and the last one after. */
+.moment-layer { animation-duration: .9s; animation-delay: .18s; animation-fill-mode: both; animation-timing-function: cubic-bezier(.3, 1.2, .5, 1); }
+.moment-layer--profile-start-tag      { animation-name: mo-tag-swing; animation-timing-function: ease-in-out; }
+.moment-layer--invite-parent-card     { animation-name: mo-card-up; }
+.moment-layer--times-up-accent        { animation-name: mo-flicker; animation-timing-function: ease-in-out; }
+.moment-layer--unanswered-accent      { animation-name: mo-seals-stamp; }
+.moment-layer--no-subjects-accent     { animation-name: mo-arm-swing; }
+@keyframes mo-tag-swing { 0% { transform: rotate(-10deg); } 40% { transform: rotate(6deg); } 70% { transform: rotate(-2deg); } 100% { transform: none; } }
+@keyframes mo-card-up { 0% { transform: translateY(6.5%); } 65% { transform: translateY(-1.8%); } 85% { transform: translateY(.4%); } 100% { transform: none; } }
+@keyframes mo-flicker { 0% { transform: scale(.85, .5); } 30% { transform: scale(1.05, 1.18) rotate(-4deg); } 55% { transform: scale(.97, .94) rotate(3deg); } 80% { transform: scale(1.01, 1.04) rotate(-1deg); } 100% { transform: none; } }
+@keyframes mo-seals-stamp { 0% { transform: translateY(-9%); opacity: 0; } 55% { transform: translateY(1%); opacity: 1; } 75% { transform: translateY(-.5%); } 100% { transform: none; opacity: 1; } }
+@keyframes mo-arm-swing { 0% { transform: rotate(-22deg); } 55% { transform: rotate(7deg); } 80% { transform: rotate(-2deg); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .moment-layer { animation: none; }
+}
 
 /* A live dot's pulse (partner ingestion): an SVG circle grows and fades. Transforms on SVG shapes are redrawn as
    vectors each frame, so the halo stays crisp where Tailwind's animate-ping on a tiny HTML dot turned pixelated. */

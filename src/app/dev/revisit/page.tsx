@@ -2,14 +2,14 @@
 
 /**
  * Dev-only harness for the "welcome back" revisit choice: seeds the lesson store with synthetic revisit options and
- * shows the in-progress popup (`RevisitPrompt`) and the finished chapter's summary (`LessonSummary`) inside the lesson
- * theme, with no auth or backend. `?view=summary` shows the summary; `?many=1` lists a 16-step chapter. Not linked
+ * shows the in-progress popup (`RevisitPrompt`) and the finished chapter's end (`ChapterComplete`) inside the lesson
+ * theme, with no auth or backend. `?view=summary` (or `complete`) shows the chapter end; `?many=1` lists a 16-step chapter. Not linked
  * from the app.
  */
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { RevisitPrompt } from "@/features/learning/components/RevisitPrompt";
-import { LessonSummary } from "@/features/learning/components/LessonSummary";
+import { ChapterComplete } from "@/features/learning/components/ChapterComplete";
 import { useLessonStore } from "@/features/learning/useLessonStore";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { LessonScreen } from "@/features/learning/components/LessonScreen";
@@ -41,7 +41,7 @@ const section = (step: number, over: Partial<RevisitSection> = {}): RevisitSecti
 
 function RevisitHarness() {
   const params = useSearchParams();
-  const summary = params.get("view") === "summary";
+  const summary = params.get("view") === "summary" || params.get("view") === "complete";
   const many = params.get("many") === "1";
   const [ready, setReady] = useState(false);
 
@@ -75,6 +75,23 @@ function RevisitHarness() {
         nodes_done: summary ? total : 5,
         nodes_total: total,
         active_node: null,
+        completed_nodes: summary
+          ? [
+              {
+                instance_node_id: "n1",
+                title: TITLES[0],
+                activities: [
+                  { item_id: "a1", prompt: "Shade one half of the circle and say what fraction is left.", mode: "write", passage: null, attempted: true },
+                  { item_id: "a2", prompt: "Tell me in your own words what a quarter means.", mode: "speak", passage: null, attempted: true },
+                ],
+              },
+              {
+                instance_node_id: "n3",
+                title: TITLES[2],
+                activities: [{ item_id: "a3", prompt: "Which is bigger, 3/8 or 5/8? Explain how you know.", mode: "write", passage: null, attempted: false }],
+              },
+            ]
+          : undefined,
       } as never,
       revisitOptions: {
         instance_id: ID,
@@ -109,7 +126,16 @@ function RevisitHarness() {
   if (!ready) return null;
   return (
     <div className="lesson-theme min-h-dvh p-6">
-      <div className="mx-auto max-w-xl">{summary ? <LessonSummary /> : <RevisitPrompt />}</div>
+      {summary ? (
+        // The chapter end, inside a board-sized frame like the one it sits on.
+        <div className="mx-auto flex min-h-[640px] max-w-[1040px] items-center justify-center rounded-[28px] bg-[var(--ls-card-warm)] p-6">
+          <ChapterComplete />
+        </div>
+      ) : (
+        <div className="mx-auto max-w-xl">
+          <RevisitPrompt />
+        </div>
+      )}
     </div>
   );
 }

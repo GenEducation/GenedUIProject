@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { MomentArtSrc } from "@/features/student/theme/momentArt";
+import { MomentSprite } from "./MomentSprite";
 
 interface MomentArtProps {
   art: MomentArtSrc;
@@ -15,7 +16,8 @@ interface MomentArtProps {
 
 /**
  * A decorative moment illustration from `momentArt.ts`. Plain <img>: the files
- * are small fixed-size WebPs, so they're served as is.
+ * are small fixed-size WebPs, so they're served as is. Layered art stacks its
+ * parts over the base, each playing a one-off move as it mounts.
  */
 export function MomentArt({ art, width, float = false, shadow = true, className = "", style }: MomentArtProps) {
   const height = Math.round((width * art.height) / art.width);
@@ -39,15 +41,28 @@ export function MomentArt({ art, width, float = false, shadow = true, className 
           }}
         />
       )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={art.src}
-        alt=""
-        width={art.width}
-        height={art.height}
-        draggable={false}
-        className={`relative h-full w-full object-contain ${float ? "island-float" : ""}`}
-      />
+      <div className={`relative h-full w-full ${float ? "island-float" : ""}`}>
+        {art.sprite ? (
+          <MomentSprite art={art} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={art.src} alt="" width={art.width} height={art.height} draggable={false} className="h-full w-full object-contain" />
+        )}
+        {/* Layered art: each part plays its one move as it mounts (.moment-layer--* in globals.css). */}
+        {art.layers?.map((l) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={l.key}
+            src={l.src}
+            alt=""
+            width={art.width}
+            height={art.height}
+            draggable={false}
+            className={`moment-layer moment-layer--${l.key} absolute inset-0 h-full w-full object-contain`}
+            style={l.origin ? { transformOrigin: l.origin } : undefined}
+          />
+        ))}
+      </div>
     </div>
   );
 }

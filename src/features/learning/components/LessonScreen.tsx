@@ -32,6 +32,8 @@ const SIDE_PADDING = 32;
  * Full-focus: no app sidebar, the header leads back out.
  */
 import { useContentPortion } from "../reading/useContentPortion";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { ERROR_ART } from "@/features/student/theme/momentArt";
 
 export function LessonScreen({ instanceId }: { instanceId: string }) {
   const load = useLessonStore((s) => s.load);
@@ -131,6 +133,8 @@ export function LessonScreen({ instanceId }: { instanceId: string }) {
 
       {status === "error" ? (
         <div role="alert" className="m-4 lesson-panel mx-auto mt-16 max-w-md p-8 text-center">
+          {/* A house of cards, one card slipped out. */}
+          <MomentArt art={ERROR_ART} width={200} float className="mx-auto mb-3" />
           <p className="text-[17px] font-bold">This lesson couldn&apos;t be opened.</p>
           <p className="mt-2 text-[14px] text-[var(--ls-ink-mid)]">{error}</p>
           <div className="mt-5 flex justify-center gap-3">

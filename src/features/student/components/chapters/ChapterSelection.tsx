@@ -1,30 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, RotateCw, GraduationCap } from "lucide-react";
+import { BookOpen, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { PageHeader } from "@/components/student/PageHeader";
 import { SidebarToggle } from "@/components/student/SidebarToggle";
-import { SubjectIcon } from "@/features/subjects/subjectPresentation";
 import { asError } from "@/utils/errors";
 import { StudentHomeSidebar } from "../StudentHomeSidebar";
 import { useSidebarStore } from "../../store/useSidebarStore";
 import { learnerService } from "../../learner/learnerService";
 import { useLearnerChapters } from "../../learner/useLearnerChapters";
 import { useLessonLaunch } from "../../learner/useLessonLaunch";
+import { useRecentChapters } from "../../learner/useRecentChapters";
+import { chapterStatuses } from "../../learner/recentChapters";
 import type { LearnerChapter } from "../../learner/types";
 import { ChapterTile } from "./ChapterTile";
+import { SubjectHeader } from "./SubjectHeader";
 import { MomentArt } from "@/components/shared/MomentArt";
-import { EMPTY_CHAPTERS_ART } from "../../theme/momentArt";
+import { EMPTY_CHAPTERS_ART, ERROR_ART } from "../../theme/momentArt";
 
-const GRID = "grid gap-[clamp(12px,1.6vw,20px)] grid-cols-1 sm:grid-cols-2 xl:grid-cols-3";
+// Columns by the grid's own width (a container query), so the tiles keep a readable size with the sidebar open or
+// closed: a fourth column only once there's room for ~300px tiles.
+const GRID = "grid gap-[clamp(12px,1.6vw,20px)] grid-cols-1 @min-[560px]:grid-cols-2 @min-[860px]:grid-cols-3 @min-[1240px]:grid-cols-4";
 
 /** The chapters a student can open for one subject, as cover-card tiles. */
 export function ChapterSelection({ subject }: { subject: string }) {
   const router = useRouter();
   const { sidebarOpen, setSidebarOpen, applyResponsive } = useSidebarStore();
   const { data, loading, error, refresh } = useLearnerChapters(subject);
+  // Each tile's status comes from the student's recent chapters (the API's most, so a whole subject fits).
+  const recent = useRecentChapters(true, 50);
   const launch = useLessonLaunch((s) => s.launch);
   const offerRevisit = useLessonLaunch((s) => s.offerRevisit);
   const [openingId, setOpeningId] = useState<string | null>(null);
@@ -59,6 +64,17 @@ export function ChapterSelection({ subject }: { subject: string }) {
   const chapters = data?.chapters ?? [];
   const books = [...new Set(chapters.map((c) => c.book_title))];
   const firstLoad = loading && !data;
+  const chapterList = data?.chapters;
+  const statuses = useMemo(
+    () => chapterStatuses((chapterList ?? []).map((c) => c.chapter_id), recent.chapters),
+    [chapterList, recent.chapters],
+  );
+  // While the recent list loads the tiles hold a placeholder; if it fails they just open, with no status.
+  const statusReady = !recent.loading && !recent.error;
+  const finished = [...statuses.values()].filter((s) => s.kind === "done" || s.kind === "revisit").length;
+  const underWay = [...statuses.values()].filter((s) => s.kind === "progress" || s.kind === "revisit").length;
+  const currentChapter = statusReady ? (chapterList ?? []).find((c) => statuses.get(c.chapter_id)?.current) ?? null : null;
+
 
   return (
     <div className="flex h-screen overflow-hidden relative">
@@ -66,34 +82,18 @@ export function ChapterSelection({ subject }: { subject: string }) {
       <SidebarToggle />
 
       <div className="flex-1 min-w-0 flex flex-col h-full bg-[var(--surface-page)] overflow-hidden">
-        <PageHeader
-          icon={<SubjectIcon subject={subject} size={14} />}
-          title={subject}
-          onBack={() => router.push("/student")}
-          sidebarOpen={sidebarOpen}
-        />
-
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-[1200px] px-4 sm:px-8 py-6 sm:py-8">
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className={`m-0 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)] ${data ? "citron-eyebrow" : ""}`}>
-                  {data && <GraduationCap size={14} strokeWidth={2.2} aria-hidden />}
-                  {data ? `Grade ${data.grade}` : " "}
-                </p>
-                <h2
-                  className="m-0 mt-1 text-[clamp(22px,2.6vw,30px)] font-extrabold tracking-tight text-[var(--primary-ink)]"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
-                  Pick a <span className="citron-mark">chapter</span>
-                </h2>
-              </div>
-              {data && chapters.length > 0 && (
-                <p className="m-0 rounded-full bg-[var(--soft-surface)] px-3 py-1 text-[12px] font-bold text-[var(--primary)]">
-                  {chapters.length} chapter{chapters.length === 1 ? "" : "s"} ready
-                </p>
-              )}
-            </div>
+          <div className="@container mx-auto w-full max-w-[1400px] px-4 sm:px-8 py-6 sm:py-8">
+            <SubjectHeader
+              subject={subject}
+              grade={data?.grade}
+              chapterCount={chapters.length}
+              progress={statusReady && chapters.length > 0 ? { finished, underWay } : null}
+              current={currentChapter && openingId === null ? { number: currentChapter.number, title: currentChapter.title } : null}
+              onBack={() => router.push("/student")}
+              onContinue={() => currentChapter && void openChapter(currentChapter)}
+              sidebarOpen={sidebarOpen}
+            />
 
             {openError && (
               <div role="alert" className="mb-5 rounded-2xl border border-[var(--danger-border,rgba(232,99,90,0.2))] bg-[var(--danger-soft,rgba(232,99,90,0.08))] px-4 py-3 text-sm font-semibold text-[var(--danger,#E8635A)]">
@@ -103,12 +103,20 @@ export function ChapterSelection({ subject }: { subject: string }) {
 
             {firstLoad ? (
               <div className={GRID} data-testid="chapters-loading">
+                {/* Shaped like the tiles (cover, then the status line), so nothing moves when they arrive. */}
                 {[0, 1, 2, 3, 4, 5].map((n) => (
-                  <div key={n} className="aspect-[16/10] rounded-[22px] bg-[var(--soft-surface)]/60 animate-pulse" />
+                  <div key={n} className="overflow-hidden rounded-[22px] border border-[rgba(29,99,21,0.10)] bg-white">
+                    <div className="aspect-[16/10] bg-[var(--soft-surface)]/60 animate-pulse" />
+                    <div className="flex h-[44px] items-center px-3.5">
+                      <span className="h-2.5 w-28 animate-pulse rounded-full bg-[var(--soft-surface)]" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : error && !data ? (
-              <div className="rounded-[22px] border border-[var(--primary-ink)]/10 bg-white px-6 py-12 text-center">
+              <div className="rounded-[22px] border border-[var(--primary-ink)]/10 bg-white px-6 py-10 text-center">
+                {/* A house of cards, one card slipped out. */}
+                <MomentArt art={ERROR_ART} width={220} float className="mx-auto mb-3" />
                 <p role="alert" className="m-0 text-sm font-semibold text-[var(--primary-ink)]/70">{error}</p>
                 <Button variant="secondary" className="mt-4" onClick={() => void refresh()}>
                   <RotateCw size={14} /> Try again
@@ -140,6 +148,9 @@ export function ChapterSelection({ subject }: { subject: string }) {
                             key={chapter.chapter_id}
                             chapter={chapter}
                             index={i}
+                            status={statusReady ? statuses.get(chapter.chapter_id) ?? null : null}
+                            statusLoading={recent.loading}
+                            subject={subject}
                             opening={openingId === chapter.chapter_id}
                             disabled={openingId !== null}
                             onOpen={(c) => void openChapter(c)}

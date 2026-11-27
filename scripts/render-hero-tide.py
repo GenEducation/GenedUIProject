@@ -686,6 +686,51 @@ def setup():
     return sc
 
 
+INK = _arg("--ink", "on") != "off"                   # ink outlines, like the portal's paper renders
+
+
+def ink(sc, parts):
+    """Ink-green outlines on the solid things (wheel, pots, bamboo, bucket, trees, banks), drawn like the portal's
+    paper-and-ink renders so the hero reads as the same family; never on water, which would turn its ripples into
+    scribble, nor on the far hills, which stay a soft backdrop. Silhouettes and contours, plus only the sharpest creases, so low-poly canopies don't sprout facet lines."""
+    sc.render.use_freestyle = True
+    sc.render.line_thickness_mode = "ABSOLUTE"
+    vl = sc.view_layers[0]
+    vl.use_freestyle = True
+    fs = vl.freestyle_settings
+    fs.crease_angle = math.radians(105)
+    ls = fs.linesets[0] if len(fs.linesets) else fs.linesets.new("ink")
+    ls.select_by_visibility = True
+    ls.visibility = "VISIBLE"
+    ls.select_by_edge_types = True
+    ls.select_silhouette = True
+    ls.select_border = True
+    ls.select_crease = True
+    ls.select_contour = True
+    ls.select_external_contour = True
+    wet = bpy.data.collections.new("no_ink")
+    sc.collection.children.link(wet)
+    for key in ("river", "pour", "trough", "trickle", "bucket_water", "foam_head", "foam_ring"):
+        o = parts.get(key)
+        if o is not None:
+            wet.objects.link(o)
+    for o in parts.get("drops", []):
+        wet.objects.link(o)
+    # the far hills stay soft, a backdrop: outlined, their long low-poly creases broke into stray strokes
+    for o in list(sc.objects):
+        if o.type == "MESH" and any(m and m.name.startswith("hill") for m in o.data.materials) and o.name not in wet.objects:
+            wet.objects.link(o)
+    ls.select_by_collection = True
+    ls.collection = wet
+    ls.collection_negation = "EXCLUSIVE"
+    style = ls.linestyle or bpy.data.linestyles.new("ink")
+    ls.linestyle = style
+    style.color = tuple(lin("#17500F")[:3])
+    style.thickness = 1.7 * W / 1440
+    style.caps = "ROUND"
+    style.chaining = "PLAIN"
+
+
 # ---------------------------------------------------------------- animation (30 fps, 4.5 s)
 FPS, FRAMES = 30, 135
 SWELL_START_X, SWELL_SPEED = 12.5, 0.42      # world x where the swell starts (off the right edge), and m per frame
@@ -782,6 +827,8 @@ def crest_track(sc):
 def main():
     sc = setup()
     parts = build()
+    if INK and STYLE == "stylized":
+        ink(sc, parts)
     sc.render.image_settings.file_format = "PNG"
     sc.render.image_settings.color_mode = "RGBA"
     frames_dir = _arg("--frames")

@@ -6,7 +6,7 @@ import {
 import { useLessonStore } from "../../useLessonStore";
 import { useLessonLaunch } from "@/features/student/learner/useLessonLaunch";
 import { RevisitPrompt } from "../RevisitPrompt";
-import { LessonSummary } from "../LessonSummary";
+import { ChapterComplete } from "../ChapterComplete";
 
 const replace = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace }), usePathname: () => "/student/lesson/x" }));
@@ -181,10 +181,12 @@ describe("RevisitPrompt — after a review", () => {
   });
 });
 
-describe("LessonSummary — a finished chapter is not a dead end", () => {
-  it("shows the weak sections to go over again, and the way out", async () => {
+describe("ChapterComplete — a finished chapter is not a dead end", () => {
+  it("leads from the celebration to the weak sections to go over again, and the way out", async () => {
     await comeBack(WEAK_AND_PASSED, makeLessonInstance({ state: "completed", next_action: "completed", active_node: null }));
-    render(<LessonSummary />);
+    render(<ChapterComplete />);
+    fireEvent.click(await screen.findByRole("button", { name: /See how you did/ }));
+    fireEvent.click(await screen.findByRole("tab", { name: "Go over it again" }));
     await screen.findByRole("list", { name: "Sections to revisit" });
     expect(store().revisitPromptOpen).toBe(false);
     expect(screen.getByRole("link", { name: "Back to chapters" })).toBeInTheDocument();

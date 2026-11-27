@@ -361,6 +361,8 @@ export interface StudentState {
   isEnrolledPartnersLoading: boolean;
   partnerRequestStatus: "idle" | "loading" | "success" | "error";
   partnerRequestMessage: string;
+  /** On success: "sent" when the other side still has to accept (a school, or a parent yet to confirm), "connected" when it is live. Picks the modal's picture. */
+  partnerRequestOutcome: "sent" | "connected";
   isPartnerModalOpen: boolean;
   streamingMessageId: string | null;
   chatAbortController: AbortController | null;
@@ -563,6 +565,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
   isEnrolledPartnersLoading: false,
   partnerRequestStatus: "idle",
   partnerRequestMessage: "",
+  partnerRequestOutcome: "sent",
   isPartnerModalOpen: false,
   streamingMessageId: null,
   chatAbortController: null,
@@ -873,15 +876,13 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
     });
 
     try {
-      const data = await studentService.sendPartnerRequest(
-        studentProfile.user_id,
-        partnerId,
-      );
-      const message = data.message || "Successfully enrolled in partner module.";
+      await studentService.sendPartnerRequest(studentProfile.user_id, partnerId);
+      // The server answers "Partner request sent"; the student is told what happens next instead.
 
       set({
         partnerRequestStatus: "success",
-        partnerRequestMessage: String(message),
+        partnerRequestMessage: "Your school will review it. Once they approve, your subjects will show up on your home page.",
+        partnerRequestOutcome: "sent",
       });
 
       // Refresh the list so the dropdown marks the school "Request pending".
@@ -920,6 +921,7 @@ export const useStudentStore = create<StudentState>()((set, get) => ({
       // A new link is PENDING until the parent confirms it; never call that "linked".
       set({
         partnerRequestStatus: "success",
+        partnerRequestOutcome: link?.status === "APPROVED" ? "connected" : "sent",
         partnerRequestMessage:
           link?.status === "APPROVED"
             ? "You're connected to your parent or guardian."

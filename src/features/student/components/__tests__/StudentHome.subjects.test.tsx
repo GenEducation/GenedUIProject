@@ -29,7 +29,7 @@ beforeEach(() => {
   });
 });
 
-describe("StudentHome — My subjects", () => {
+describe("StudentHome — Your subjects", () => {
   it("shows the taxonomy's subjects for the student's grade, each opening its chapter page", async () => {
     render(<StudentHome />);
     const maths = await screen.findByRole("button", { name: "Mathematics: see chapters" });

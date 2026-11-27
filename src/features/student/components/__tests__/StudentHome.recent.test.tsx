@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { server } from "@/test/msw/server";
 import { learnerFixture, lastOpenedChapter, lastRecentLimit, makeRecentChapter } from "@/test/msw/handlers/learner";
@@ -37,10 +37,8 @@ beforeEach(() => {
   });
 });
 
-const recentSection = () => screen.getByRole("heading", { name: "Recent chapters" }).closest("div")!.parentElement!;
-
 describe("StudentHome — recent chapters", () => {
-  it("continues the latest chapter in progress, and lists the others without the old session list", async () => {
+  it("continues the latest chapter in progress, and puts each subject's last chapter on its card (no separate list)", async () => {
     learnerFixture.setRecent([
       makeRecentChapter(1, { chapter_title: "SYNTHETIC finished", state: "completed", nodes_done: 11, nodes_total: 11 }),
       makeRecentChapter(2, { chapter_title: "SYNTHETIC in progress", nodes_done: 3, nodes_total: 9 }),
@@ -52,16 +50,16 @@ describe("StudentHome — recent chapters", () => {
     const continueBtn = await screen.findByRole("button", { name: /Continue Learning/ });
     expect(screen.getByText("SYNTHETIC in progress")).toBeInTheDocument();
     expect(continueBtn).toBeInTheDocument();
-    // a chapter they already started: "pick up", with when they last studied it
-    expect(screen.getByText("Pick up where you left off")).toBeInTheDocument();
-    expect(screen.getByText("· 2h ago")).toBeInTheDocument();
+    // the hero says which chapter it is, and how far along, in steps
+    expect(screen.getByText("Mathematics · Chapter 2")).toBeInTheDocument();
+    expect(screen.getByText(/^3 of 9 steps/)).toBeInTheDocument();
+    expect(screen.queryByText("Revisiting")).toBeNull();
     expect(screen.queryByText(/learning goal/i)).toBeNull();
 
-    const list = recentSection();
-    expect(within(list).getByRole("button", { name: /SYNTHETIC finished, Mathematics, finished/ })).toBeInTheDocument();
-    expect(within(list).getByRole("button", { name: /SYNTHETIC older, Science, 33% done/ })).toBeInTheDocument();
-    // the chapter in the Continue card isn't listed twice
-    expect(within(list).queryByText("SYNTHETIC in progress")).toBeNull();
+    // no recent list on the dashboard any more: each subject card says where the student left off, and reopens it
+    expect(screen.queryByRole("heading", { name: "Recent chapters" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Resume SYNTHETIC finished" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume SYNTHETIC older" })).toBeInTheDocument();
 
     expect(lastRecentLimit).toBe(20);
     expect(fetchSessions).not.toHaveBeenCalled(); // the deprecated session list isn't read any more
@@ -82,12 +80,12 @@ describe("StudentHome — recent chapters", () => {
     expect(lastOpenedChapter).toBeNull(); // no new lesson opened
   });
 
-  it("reopens a finished chapter's own lesson for review", async () => {
+  it("reopens a finished chapter's own lesson for review from its subject card", async () => {
     const finished = makeRecentChapter(1, { chapter_title: "SYNTHETIC finished", state: "completed" });
     learnerFixture.setRecent([finished]);
     render(<StudentHome />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /SYNTHETIC finished/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Resume SYNTHETIC finished" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/student/lesson/${finished.instance_id}`));
     expect(lastOpenedChapter).toBeNull();
   });
@@ -97,20 +95,9 @@ describe("StudentHome — recent chapters", () => {
     learnerFixture.setRecent([abandoned]);
     render(<StudentHome />);
 
-    fireEvent.click(await screen.findByRole("button", { name: /SYNTHETIC abandoned/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Resume SYNTHETIC abandoned" }));
     await waitFor(() => expect(lastOpenedChapter).toBe(abandoned.chapter_id));
     await waitFor(() => expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/student\/lesson\/11111111-/)));
-  });
-
-  it("shows a chapter's cover card, or its palette until it has one", async () => {
-    learnerFixture.setRecent([
-      makeRecentChapter(1, { state: "completed", card: { image_url: "/v1/visual-images/card-9?exp=1&sig=synthetic", width: 1024, height: 576 } }),
-      makeRecentChapter(3, { state: "completed" }),
-    ]);
-    render(<StudentHome />);
-    const img = await screen.findByTestId("recent-chapter-card");
-    expect(img.getAttribute("src")).toMatch(/\/v1\/visual-images\/card-9\?exp=1&sig=synthetic$/);
-    expect(screen.getAllByTestId("recent-chapter-fallback")).toHaveLength(1);
   });
 
   it("invites a new student to start, and offers a retry when the list can't load", async () => {
@@ -121,9 +108,9 @@ describe("StudentHome — recent chapters", () => {
 
     server.use(http.get(`${BASE}/v1/learner/recent-chapters`, () => HttpResponse.json({ message: "SYNTHETIC down" }, { status: 500 }), { once: true }));
     render(<StudentHome />);
-    expect(await screen.findByText("Your recent chapters couldn't load.")).toBeInTheDocument();
+    expect(await screen.findByText("We couldn't load your chapter")).toBeInTheDocument();
     learnerFixture.setRecent([makeRecentChapter(1, { state: "completed", chapter_title: "SYNTHETIC back" })]);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("SYNTHETIC back")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Resume SYNTHETIC back" })).toBeInTheDocument();
   });
 });

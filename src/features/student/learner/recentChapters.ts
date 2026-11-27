@@ -45,3 +45,51 @@ export function asLearnerChapter(chapter: RecentChapter): LearnerChapter {
     card: chapter.card,
   };
 }
+
+/**
+ * Where the student stands on one chapter, for its tile on the chapter page:
+ * - `done`: finished at least once (a finished chapter stays finished);
+ * - `revisit`: finished once and open again to review;
+ * - `progress`: under way;
+ * - `restart`: started once but left (opening it starts it afresh);
+ * - `new`: never opened (not in the recent list).
+ * `current` marks the one chapter to pick up: the subject's most recently active one.
+ */
+export type ChapterStatusKind = "done" | "revisit" | "progress" | "restart" | "new";
+
+export interface ChapterStatus {
+  kind: ChapterStatusKind;
+  done: number;
+  total: number;
+  /** 0–100; 100 for a finished chapter. */
+  percent: number;
+  current: boolean;
+}
+
+/** Each chapter's status, by chapter id, from the recent list (newest first); chapters it doesn't name are `new`. */
+export function chapterStatuses(chapterIds: string[], recent: RecentChapter[]): Map<string, ChapterStatus> {
+  const ids = new Set(chapterIds);
+  const newest = new Map<string, RecentChapter>();
+  for (const row of recent) if (ids.has(row.chapter_id) && !newest.has(row.chapter_id)) newest.set(row.chapter_id, row);
+  const current = continueChapter([...newest.values()]); // still newest first
+
+  const out = new Map<string, ChapterStatus>();
+  for (const id of chapterIds) {
+    const row = newest.get(id);
+    if (!row) {
+      out.set(id, { kind: "new", done: 0, total: 0, percent: 0, current: false });
+      continue;
+    }
+    const finished = row.state === "completed" || !!row.completed_once;
+    const kind: ChapterStatusKind =
+      row.state === "active" ? (finished || row.revisiting ? "revisit" : "progress") : finished ? "done" : "restart";
+    out.set(id, {
+      kind,
+      done: row.nodes_done,
+      total: row.nodes_total,
+      percent: kind === "done" ? 100 : chapterPercent(row),
+      current: row === current,
+    });
+  }
+  return out;
+}

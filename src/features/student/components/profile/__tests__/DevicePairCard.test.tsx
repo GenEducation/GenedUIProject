@@ -20,7 +20,7 @@ async function pair(code = "BCDFGH") {
     fireEvent.change(screen.getByLabelText(`Character ${i + 1} of ${code.length}`), { target: { value: char } });
   });
   fireEvent.click(screen.getByRole("button", { name: "Pair device" }));
-  return screen.findByRole("status");
+  return screen.findByRole("dialog");
 }
 
 beforeEach(() => {
@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 describe("Device pairing", () => {
-  it("says the device is paired when the token was pushed to it", async () => {
+  it("pops up that the device is paired when the token was pushed to it", async () => {
     confirmAnswers({ status: "approved", pushed: true, student_id: "u-synthetic" });
     const status = await pair();
     expect(status).toHaveTextContent("Device paired!");
@@ -39,10 +39,20 @@ describe("Device pairing", () => {
   it("treats an approval the device will collect itself as success, not a failure to redo", async () => {
     confirmAnswers({ status: "approved", pushed: false, student_id: "u-synthetic" });
     const status = await pair();
-    expect(status).toHaveTextContent("Approved: your device will finish pairing in a few seconds.");
+    expect(status).toHaveTextContent("Approved");
+    expect(status).toHaveTextContent("Your device will finish pairing in a few seconds.");
     expect(status).toHaveTextContent("If it still shows a code after a minute, restart it and pair again.");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText(/couldn.t wake/)).toBeNull();
+  });
+
+  it("shows a bad code in a pop-up too, and lets the student try again", async () => {
+    server.use(http.post(`${BASE}/auth/device/pairing/confirm`, () => HttpResponse.json({ error_code: "AUTH_1213", message: "x" }, { status: 400 })));
+    const dialog = await pair();
+    expect(dialog).toHaveTextContent("Couldn't pair");
+    expect(dialog).toHaveTextContent(/invalid or expired/);
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("button", { name: "Pair device" })).toBeInTheDocument();
   });
 
   it("explains where the code appears and how long it lasts", () => {

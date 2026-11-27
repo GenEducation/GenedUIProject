@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Clock } from "lucide-react";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { TIMES_UP_ART } from "../../theme/momentArt";
 
 interface TestTimerProps {
   totalSeconds: number;
@@ -97,9 +99,8 @@ export function TestTimer({ totalSeconds, onExpired }: TestTimerProps) {
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white rounded-3xl p-5 sm:p-8 max-w-md w-[calc(100%-2rem)] sm:w-full mx-4 text-center shadow-2xl space-y-5"
             >
-              <div className="w-16 h-16 rounded-full bg-[var(--danger-bg)] flex items-center justify-center mx-auto">
-                <Clock size={28} className="text-[var(--danger)]" />
-              </div>
+              {/* A candle burned low, its lime flame still lit: time's up, calmly. */}
+              <MomentArt art={TIMES_UP_ART} width={170} float shadow={false} className="mx-auto -my-3" />
               <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--primary-ink)]">Time&apos;s Up!</h2>
               <p className="text-[var(--primary-ink)]/60 text-[15px]">
                 Your test will be submitted automatically in{" "}

@@ -38,35 +38,51 @@ export function SubjectIcon({
 }
 
 /**
- * 3D island artwork per subject (Blender renders, 600px transparent WebP).
+ * Subject artwork: a small paper diorama per subject (Blender renders, scripts/render-student-moments.py), in the
+ * dashboard's paper-and-ink style with the logo's colours.
  *
- * Each island is built from its subject: English is a stack of books under a
- * pop-up castle, Maths is squared paper on stepped cubes, Science a lab-tile
- * floor over crystal rock, and so on. Presentation only, like SUBJECT_ICONS
- * above: a subject absent from the map gets the neutral library island. The two
- * Social subjects share the map-and-town island.
+ * The core subjects carry a rendered hover move: `still` is its first frame (the card at rest) and `sprite` the
+ * whole move, frames laid out in a grid the card steps through on hover. English: the lighthouse of books sweeps its
+ * beam. Mathematics: the abacus bridge runs its lime bead along the rod over the pond of maths, a set square and maths signs bobbing in its sky. Science: the
+ * observatory looks at the moon, then the planet, and holds there (`hold`). Other subjects show a still diorama;
+ * a subject absent from the map gets the bookshelf. Presentation only, like SUBJECT_ICONS above.
  */
-const SUBJECT_ISLANDS: Readonly<Record<string, string>> = {
-  English: "/student/islands/english.webp",
-  Mathematics: "/student/islands/maths.webp",
-  Science: "/student/islands/science.webp",
-  "Social Science": "/student/islands/social-science.webp",
-  "Social & Political Science": "/student/islands/social-science.webp",
-  History: "/student/islands/history.webp",
-  Geography: "/student/islands/geography.webp",
-};
+const ART = "/student/subjects";
+/** Bumped on every re-render: the files keep their names, so this is what makes browsers fetch the new ones. */
+const V = "?v=subj5";
 
-const FALLBACK_ISLAND = "/student/islands/reading.webp";
-
-/** Island artwork URL for a subject, falling back to the library island. */
-export function subjectIsland(subject: string): string {
-  return SUBJECT_ISLANDS[subject] ?? FALLBACK_ISLAND;
+export interface SubjectArt {
+  /** The resting picture (also the first frame of the hover move). */
+  still: string;
+  /** Where the plinth's bottom sits, as % down the picture: the card puts its ground shadow there. */
+  ground: number;
+  /** Layered stills (base + lime accent) for subjects without a move: drawn over `still`. */
+  accent?: string;
+  sprite?: { src: string; frames: number; cols: number; fps: number; hold: boolean };
 }
 
-/**
- * The same island rendered without its contact shadow, for places where it
- * floats (the continue card draws a breathing shadow of its own under it).
- */
-export function subjectIslandFloating(subject: string): string {
-  return subjectIsland(subject).replace(/\.webp$/, "-float.webp");
+const moving = (name: string, ground: number, frames: number, cols: number, hold = false): SubjectArt => ({
+  still: `${ART}/${name}.webp${V}`,
+  ground,
+  // every other frame of the render ships, so the moves play at 15fps (half the download and memory)
+  sprite: { src: `${ART}/${name}-sprite.webp${V}`, frames, cols, fps: 15, hold },
+});
+const resting = (name: string, ground: number): SubjectArt => ({ still: `${ART}/${name}-base.webp${V}`, accent: `${ART}/${name}-accent.webp${V}`, ground });
+
+const SUBJECT_ART: Readonly<Record<string, SubjectArt>> = {
+  // ground: measured from each render's pixels
+  // the three share one frame, scale and ground line (scripts/crop-subject-moves.py)
+  English: moving("english-move", 87.5, 16, 6),
+  Mathematics: moving("maths-move", 87.3, 19, 6),
+  Science: moving("science-move", 88.0, 25, 8, true),
+  "Social Science": resting("social", 66.8),
+  "Social & Political Science": resting("social", 66.8),
+  History: resting("history", 78),
+  Geography: resting("geography", 77),
+  Hindi: resting("hindi", 71.2),
+};
+
+/** The subject's diorama, falling back to the bookshelf. */
+export function subjectArt(subject: string): SubjectArt {
+  return SUBJECT_ART[subject] ?? resting("fallback", 69.3);
 }

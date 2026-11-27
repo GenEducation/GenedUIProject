@@ -40,6 +40,14 @@ export const STUDENT_COLORS = {
   subjectSocial: "#B0543F",
   subjectHindi: "#7B5EA7",
 
+  // The Zoovi logo's folded-paper colours. The dashboard marks each subject with one of these (its dot on the subject
+  // card, the card's hover edge), so the page keeps to the logo's palette. logoGoldInk is the gold deepened a step so
+  // it still reads on white.
+  logoDark: "#2A6E22",
+  logoDeep: "#18540C",
+  logoGold: "#E0C21E",
+  logoGoldInk: "#C5A20E",
+
   // Text
   text: "#1D6315",
   textMid: "#3B5533",

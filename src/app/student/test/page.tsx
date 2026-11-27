@@ -2,7 +2,9 @@
 
 import { FEATURES } from "@/constants/features";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Send, Sparkles, Loader2, ArrowLeft, AlertTriangle, Menu } from "lucide-react";
+import { ChevronRight, ChevronLeft, Send, Sparkles, Loader2, ArrowLeft, Menu } from "lucide-react";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { UNANSWERED_ART } from "@/features/student/theme/momentArt";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTestStore } from "@/features/student/store/useTestStore";
@@ -381,9 +383,8 @@ function TestPageContent() {
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 text-center shadow-2xl space-y-5"
             >
-              <div className="w-16 h-16 rounded-full bg-[var(--warning-bg)] flex items-center justify-center mx-auto">
-                <AlertTriangle size={28} className="text-[var(--warning)]" />
-              </div>
+              {/* A row of envelopes sealed in lime, two still open: a few left. */}
+              <MomentArt art={UNANSWERED_ART} width={190} float shadow={false} className="mx-auto -mb-2" />
               <h2 className="text-xl font-extrabold text-[var(--ink)]">
                 {unansweredCount} unanswered {unansweredCount === 1 ? "question" : "questions"}
               </h2>

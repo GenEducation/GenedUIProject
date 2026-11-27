@@ -56,11 +56,11 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
   const canRetry = onStep && (failedOpening || Boolean(turn.failure?.retryable));
 
   return (
-    <li className="flex flex-col gap-3">
+    <li className="flex min-w-0 flex-col gap-3">
       {turn.learnerText && (
-        <div className="flex items-start justify-end gap-2">
-          <div className="flex max-w-[82%] flex-col items-end">
-            <p className="whitespace-pre-wrap break-words rounded-[20px] rounded-br-md bg-[var(--ls-primary)] px-4 py-3 text-[15px] leading-relaxed text-white">
+        <div className="flex min-w-0 items-start justify-end gap-2">
+          <div className="flex min-w-0 max-w-[82%] flex-col items-end">
+            <p className="max-w-full whitespace-pre-wrap [overflow-wrap:anywhere] rounded-[20px] rounded-br-md bg-[var(--ls-primary)] px-4 py-3 text-[15px] leading-relaxed text-white">
               <LearnerText text={turn.learnerText} />
             </p>
             {time && <span className="mt-1 text-[11px] text-[var(--ls-ink-faint)]">{time}</span>}
@@ -72,10 +72,11 @@ export const ChatTurn = memo(function ChatTurn({ turn, onShowFigure, onRetry }: 
       )}
 
       {(text || streaming || held || figures.length > 0 || unloaded.length > 0 || turn.status === "failed" || turn.status === "interrupted") && (
-      <div className="flex items-start gap-2">
+      <div className="flex min-w-0 items-start gap-2">
         <TutorMark size={36} active={streaming || held} />
         <div className="flex min-w-0 max-w-[88%] flex-col items-start">
-          <div className="min-w-0 rounded-[20px] rounded-tl-md bg-[var(--ls-tutor)] px-4 py-3 text-[15px] leading-relaxed">
+          {/* Long unbroken runs (a URL, an identifier, a formula) break anywhere rather than widen the bubble past the chat. */}
+          <div className="min-w-0 max-w-full rounded-[20px] rounded-tl-md bg-[var(--ls-tutor)] px-4 py-3 text-[15px] leading-relaxed [overflow-wrap:anywhere]">
             {text ? (
               <div className={streaming ? "lesson-caret" : undefined}>
                 <LessonMarkdown text={text} />

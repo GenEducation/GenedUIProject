@@ -1,9 +1,9 @@
 "use client";
 
 import { FEATURES } from "@/constants/features";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, PanelLeftOpen, TrendingUp, Library, type LucideIcon } from "lucide-react";
+import { PanelLeftOpen, Library, type LucideIcon } from "lucide-react";
 import Image from "next/image";
 import { useStudentStore } from "../store/useStudentStore";
 import { useSidebarStore } from "../store/useSidebarStore";
@@ -15,7 +15,6 @@ import { useLessonLaunch } from "../learner/useLessonLaunch";
 import { useRecentChapters } from "../learner/useRecentChapters";
 import { asLearnerChapter, chapterPercent, continueChapter, subjectName } from "../learner/recentChapters";
 import type { RecentChapter } from "../learner/types";
-import { RecentChapterRow } from "./chapters/RecentChapterRow";
 import { useScheduleStore } from "../store/useScheduleStore";
 import { UpcomingSessionPanel } from "./UpcomingSessionPanel";
 import { ContinueLearningCard } from "./ContinueLearningCard";
@@ -31,11 +30,13 @@ import { useDebouncedResize } from "@/hooks/useDebouncedResize";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionStartingOverlay } from "./SessionStartingOverlay";
 import { GuardianInvitePopup } from "./guardian/GuardianInvitePopup";
-import { Select } from "@/components/ui/Select";
-import { subjectIslandFloating } from "@/features/subjects/subjectPresentation";
+import { subjectArt } from "@/features/subjects/subjectPresentation";
+import { SubjectCard, SUBJECT_ART_OVERHANG } from "./SubjectCard";
 import { EMPTY_RECENT_ART } from "../theme/progressArt";
-import { WELCOME_ABOARD_ART } from "../theme/momentArt";
+import { ERROR_ART, NO_SUBJECTS_ART, WELCOME_ABOARD_ART } from "../theme/momentArt";
 import { MomentArt } from "@/components/shared/MomentArt";
+import { Button } from "@/components/ui/Button";
+import { StreakCelebration } from "./StreakCelebration";
 import { subjectsForGrade, useSubjectCatalog, useTaxonomySubjects } from "@/features/subjects/subjectCatalog";
 import { ZooviLogo } from "@/components/shared/ZooviLogo";
 
@@ -75,45 +76,21 @@ function SectionHeading({ icon: Icon, className = "", children }: { icon: Lucide
 // Raw hex, not var() — these get alpha-suffix concatenated below
 // (`${vis.color}cc`, `vis.color + "14"`), which CSS custom properties can't
 // support.
-// Colour/label only — the subject cards show the subject's 3D island
-// (subjectIslandFloating), not a glyph.
-const SUBJECTS_VISUAL: Record<string, { color: string; bg: string; label: string }> = {
-  English:        { color: STUDENT_COLORS.subjectEnglish, bg: "#EBF3FB", label: "English" },
-  Mathematics:    { color: "#2D6A4F", bg: "#E8F5EF", label: "Mathematics" },
-  Science:        { color: "#D4820A", bg: "#FEF5E7", label: "Science" },
-  "Social Science": { color: "#B0543F", bg: "#FBEFEB", label: "Social Science" },
-  History:        { color: "#A6762D", bg: "#F6EFE4", label: "History" },
-  Geography:      { color: "#1E8FA6", bg: "#E7F5F7", label: "Geography" },
-  "Social & Political Science": { color: "#8C4A6B", bg: "#F7EBF1", label: "Social & Political Science" },
+// Colour/label only — the subject cards show the subject's paper diorama
+// (subjectArt, SubjectCard), not a glyph.
+/** Each subject's mark on the dashboard, in the logo's own colours (theme/colors.ts). */
+const SUBJECTS_VISUAL: Record<string, { color: string; label: string }> = {
+  English:        { color: STUDENT_COLORS.logoDark, label: "English" },
+  Mathematics:    { color: STUDENT_COLORS.accentDeep, label: "Mathematics" },
+  Science:        { color: STUDENT_COLORS.logoGoldInk, label: "Science" },
+  "Social Science": { color: STUDENT_COLORS.growth, label: "Social Science" },
+  History:        { color: STUDENT_COLORS.logoDeep, label: "History" },
+  Geography:      { color: STUDENT_COLORS.tutorSoft, label: "Geography" },
+  "Social & Political Science": { color: STUDENT_COLORS.tutorLight, label: "Social & Political Science" },
 };
 
 function subjectVisual(subject: string) {
-  return SUBJECTS_VISUAL[subject] ?? {
-    color: STUDENT_COLORS.tutor,
-    bg: "#F1EEF8",
-    label: subject,
-  };
-}
-
-/* ═══ RELATIVE TIME ═══ */
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return "Recently";
-  // Try to parse — handle plain date strings like "5/20/2026" and ISO
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return dateStr; // fallback: return as-is if unparseable
-  const now = Date.now();
-  const diff = now - date.getTime();
-  const mins  = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days  = Math.floor(diff / 86_400_000);
-  if (mins  <  1)  return "Just now";
-  if (mins  <  60) return `${mins}m ago`;
-  if (hours <  24) return `${hours}h ago`;
-  if (days  ===  1) return "Yesterday";
-  if (days  <  30) return `${days} days ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return months === 1 ? "1 month ago" : `${months} months ago`;
-  return `${Math.floor(months / 12)}y ago`;
+  return SUBJECTS_VISUAL[subject] ?? { color: STUDENT_COLORS.tutor, label: subject };
 }
 
 /* ═══ APRIL AVATAR ═══ */
@@ -194,36 +171,6 @@ function WelcomeAboard({ onDone }: { onDone: () => void }) {
 }
 
 /* ═══ FILTER DROPDOWN ═══ */
-/**
- * Thin adapter over the shared <Select>. This used to be a bespoke
- * button+panel implementation with its own radius, shadow and hover colors —
- * one of several such copies across the app. The call-site API (plain string
- * options, active/default color) is kept so the three usages below read the
- * same as before.
- */
-function FilterDropdown({ value, options, onChange, activeColor, defaultColor }: { value: string, options: string[], onChange: (v: string) => void, activeColor: string, defaultColor: string }) {
-  const isActive = value !== options[0];
-  return (
-    <Select
-      variant="filter"
-      size="sm"
-      aria-label={options[0]}
-      value={value}
-      onChange={onChange}
-      options={options.map((o) => ({ value: o, label: o }))}
-      accentColor={activeColor}
-      panelWidth={180}
-      className="w-auto"
-      buttonClassName="!w-auto"
-      buttonStyle={{
-        color: isActive ? activeColor : defaultColor,
-        padding: "6px 16px",
-        fontSize: 14,
-      }}
-    />
-  );
-}
-
 /* ═══════════════ MAIN ═══════════════ */
 export function StudentHome() {
   const router = useRouter();
@@ -247,34 +194,13 @@ export function StudentHome() {
   const chapters = useChaptersCompleted(studentProfile?.user_id) ?? null;
   const [showConfetti,   setShowConfetti]   = useState(false);
   const [aprilState,     setAprilState]     = useState<AprilState>("idle");
-  const [hoveredAgent,   setHoveredAgent]   = useState<string | null>(null);
   // Starts true (not false→effect→true) — content used to render at
   // opacity:0 until a mount effect fired, so any hydration stall extended
   // the blank screen indefinitely. The stagger transition above still plays
   // on genuine visibility changes; it just no longer gates first paint.
   const [mounted,        setMounted]        = useState(true);
-  const [showAllRecent,  setShowAllRecent]  = useState(false);
-  const subjectsScrollRef = useRef<HTMLDivElement>(null);
-  const scrollSubjects = (dir: "left" | "right") => {
-    const el = subjectsScrollRef.current;
-    if (!el) return;
-    const cards = Array.from(el.children) as HTMLElement[];
-    if (!cards.length) return;
-    // Align to the next/previous card edge so a full subject card lands in view.
-    const current = el.scrollLeft;
-    const tolerance = 2;
-    const target = dir === "right"
-      ? cards.find((c) => c.offsetLeft > current + tolerance)
-      : [...cards].reverse().find((c) => c.offsetLeft < current - tolerance);
-    const left = target
-      ? target.offsetLeft
-      : dir === "right" ? el.scrollWidth : 0;
-    el.scrollTo({ left, behavior: "smooth" });
-  };
 
   // Filters
-  const [filterDate, setFilterDate] = useState<string>("All Time");
-  const [filterSubject, setFilterSubject] = useState<string>("All");
 
   /* responsive sidebar */
   useDebouncedResize(() => applyResponsive(window.innerWidth >= 1024));
@@ -331,21 +257,6 @@ export function StudentHome() {
   const continueTarget = continueChapter(recent.chapters);
   const continueRow = continueTarget ? recentRows.find((row) => row.chapter === continueTarget) ?? null : null;
 
-  const filteredRecent = recentRows.filter((row) => {
-    if (filterSubject !== "All" && row.subject !== filterSubject) return false;
-    if (filterDate !== "All Time") {
-      const now = new Date();
-      const d = new Date(row.chapter.last_active_at);
-      if (!isNaN(d.getTime())) {
-        const diffDays = (now.getTime() - d.getTime()) / 86400000;
-        if (filterDate === "Today" && d.toDateString() !== now.toDateString()) return false;
-        if (filterDate === "This Week" && diffDays > 7) return false;
-        if (filterDate === "This Month" && diffDays > 30) return false;
-      }
-    }
-    return true;
-  });
-
   // `useNow` (5s) is enough to decide *whether* a countdown belongs in the hero
   // slot; the clock inside the panel runs its own 1s tick. Before mount it
   // returns 0, so the server renders Continue Learning and the panel swaps in
@@ -354,11 +265,6 @@ export function StudentHome() {
   const imminentSession = now === 0 || !FEATURES.schedule
     ? null
     : selectImminentSession(scheduledSessions, now);
-
-  /* The recent list keeps finished chapters and leaves out only the one in the Continue card above. */
-  const recentList = filteredRecent.filter((row) => row.chapter.instance_id !== continueRow?.chapter.instance_id);
-  const displayedRecent = showAllRecent ? recentList : recentList.slice(0, 3);
-  const hasMoreRecent = recentList.length > 3;
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -421,6 +327,7 @@ export function StudentHome() {
       {/* ── MAIN ── */}
       <main className="flex-1 overflow-hidden flex flex-col relative min-w-0">
         {showConfetti && <WelcomeAboard onDone={hideCelebration} />}
+        <StreakCelebration userId={studentProfile?.user_id} stats={studentStats} held={showConfetti} />
 
         {/* Mobile / collapsed topbar */}
         {!sidebarOpen && (
@@ -462,27 +369,17 @@ export function StudentHome() {
           {/* Content container — wider on large screens, proper padding */}
           <div className="w-full mx-auto" style={{ maxWidth: 1360, padding: sidebarOpen ? "32px clamp(20px, 3vw, 40px) 48px" : "24px clamp(16px, 3vw, 40px) 40px" }}>
 
-            {/* ── GREETING HEADER ── */}
-            <div className="flex items-start justify-between mb-8 relative z-20" style={fade(0.06)}>
-              <div className="flex items-center gap-4">
-                {/* Hidden on small screens: the greeting already clamps down to
-                    22px there and an avatar beside it crowds the line. Sized to
-                    the greeting block beside it (heading + subtitle, both of
-                    which scale with the viewport), so the two read as one unit
-                    rather than a small circle next to a taller block of text. */}
+            {/* ── GREETING ── one quiet line: the avatar and the student's name (the hero below says what to do) */}
+            <div className="flex items-center justify-between mb-6 relative z-20" style={fade(0.06)}>
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="hidden md:flex flex-shrink-0 rounded-full overflow-hidden"
-                  style={{ width: "clamp(52px, calc(6vw + 8px), 72px)", aspectRatio: "1", border: "2px solid white", boxShadow: `0 0 0 3px ${STUDENT_COLORS.softSurface}, 0 6px 16px rgb(7 94 99 / 0.18)` }}>
-                  <StudentAvatar id={avatarId} size={72} />
+                  style={{ width: 44, aspectRatio: "1", border: "2px solid white", boxShadow: `0 0 0 2px ${STUDENT_COLORS.softSurface}, 0 4px 10px rgb(7 94 99 / 0.14)` }}>
+                  <StudentAvatar id={avatarId} size={44} />
                 </div>
-                <div>
-                  <h1 className="font-extrabold leading-tight m-0"
-                    style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(22px, 3vw, 34px)" }}>
-                    {getGreeting()}, <span className="citron-mark">{username}</span>!
-                  </h1>
-                  <p className="mt-2 font-medium leading-relaxed" style={{ color: C.textMid, fontSize: "clamp(13px, 1.4vw, 15px)" }}>
-                    What would you like to learn today?
-                  </p>
-                </div>
+                <h1 className="font-extrabold leading-tight m-0 truncate"
+                  style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(20px, 2vw, 24px)" }}>
+                  {getGreeting()}, <span className="citron-mark">{username}</span>!
+                </h1>
               </div>
               <div className={`flex-shrink-0 items-center gap-3 ml-4 ${sidebarOpen ? "flex" : "hidden md:flex"}`}>
                 {studentProfile?.user_id && (
@@ -511,28 +408,70 @@ export function StudentHome() {
             {!imminentSession && continueRow && (
               <ContinueLearningCard
                 session={{ title: continueRow.chapter.chapter_title, mastery: continueRow.percent, vis: continueRow.vis }}
-                gradeLabel={
-                  studentProfile?.grade
-                    ? `Grade ${studentProfile.grade}${studentProfile.school_board ? ` ${studentProfile.school_board}` : ""}`
-                    : undefined
-                }
-                lastStudied={timeAgo(continueRow.chapter.last_active_at)}
+                chapterNumber={continueRow.chapter.chapter_number}
+                steps={{ done: continueRow.chapter.nodes_done, total: continueRow.chapter.nodes_total }}
                 revisiting={continueRow.chapter.revisiting === true}
+                subject={continueRow.subject}
                 onStart={() => void openRecent(continueRow.chapter, continueRow.subject)}
                 style={fade(0.14)}
               />
             )}
+            {!imminentSession && !continueRow && !recent.loading && (
+              recent.error && recent.chapters.length === 0 ? (
+                // Couldn't load the chapter to continue: the house of cards (the same as the subjects' error), in
+                // the hero's own place and size, with a retry.
+                <div
+                  className="rounded-[26px] mb-8 flex flex-col sm:flex-row items-center text-center sm:text-left"
+                  style={{ background: C.card, border: `1px solid ${C.border}`, minHeight: "clamp(220px, 20vw, 300px)", padding: "18px clamp(18px, 3vw, 44px)", gap: "clamp(10px, 2.4vw, 36px)", ...fade(0.14) }}
+                >
+                  <MomentArt art={ERROR_ART} width={220} float className="shrink-0" />
+                  <div>
+                    <p className="m-0 font-bold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(19px, 1.9vw, 24px)" }}>
+                      We couldn&apos;t load your chapter
+                    </p>
+                    <p className="m-0 mt-1.5 max-w-[380px]" style={{ color: C.textMid, fontSize: 14, lineHeight: 1.55 }}>
+                      Your recent chapters couldn&apos;t load. Something went wrong on our side; try again in a moment.
+                    </p>
+                    <Button variant="secondary" size="md" className="mt-4" onClick={() => void recent.refresh()}>
+                      Try again
+                    </Button>
+                  </div>
+                </div>
+              ) : recentRows.length === 0 ? (
+                // Nothing opened yet: a garden gate swung open, stepping stones leading through.
+                <div
+                  className="rounded-[22px] mb-8 flex flex-col sm:flex-row items-center text-center sm:text-left"
+                  style={{ border: `1.5px dashed ${C.border}`, padding: "10px clamp(16px, 2vw, 24px) 16px 10px", gap: "clamp(8px, 1.6vw, 18px)", ...fade(0.14) }}
+                >
+                  <div aria-hidden="true" className="relative shrink-0" style={{ width: 210, height: 140 }}>
+                    <Image src={EMPTY_RECENT_ART.base} alt="" width={900} height={600} unoptimized className="absolute inset-0 h-full w-full object-contain" />
+                    <Image src={EMPTY_RECENT_ART.accent} alt="" width={900} height={600} unoptimized className="absolute inset-0 h-full w-full object-contain" />
+                  </div>
+                  <div>
+                    <p className="m-0 font-bold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(17px, 1.6vw, 20px)" }}>
+                      Your desk is ready
+                    </p>
+                    <p className="m-0 mt-1" style={{ color: C.textMuted, fontSize: 14 }}>
+                      No chapters yet. Pick a subject below to start your first one!
+                    </p>
+                  </div>
+                </div>
+              ) : null
+            )}
+            {openError && (
+              <p role="alert" className="-mt-4 mb-6 text-[13px]" style={{ color: C.coral }}>{openError}</p>
+            )}
 
-            {/* ── STAT STRIP ── */}
+            {/* ── PROGRESS ── under the hero, where it stays however many subjects there are. No heading: the camp
+                cards name themselves (streak, chapters, time), and with the hero they read as one "where you are". */}
             <div className="mb-8" style={{ ...fade(0.22) }}>
-              <SectionHeading icon={TrendingUp} className="mb-4">Your progress</SectionHeading>
-              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="card" totalMinutes={totalMinutes} chapters={chapters} />
+              <StreakStats data={studentStats} isLoading={isStatsLoading} variant="camp" totalMinutes={totalMinutes} chapters={chapters} />
             </div>
 
-            {/* ── MY SUBJECTS ── */}
+            {/* ── YOUR SUBJECTS ── */}
             <div className="mb-8" style={fade(0.30)}>
               <div className="flex items-center justify-between mb-4">
-                <SectionHeading icon={Library}>My subjects</SectionHeading>
+                <SectionHeading icon={Library}>Your subjects</SectionHeading>
               </div>
 
               {isSubjectsLoading ? (
@@ -560,252 +499,50 @@ export function StudentHome() {
                 </div>
               ) : subjectGroups.length > 0 ? (
                 <div className="relative">
-                  {subjectGroups.length > 4 && (
-                    <>
-                      <button
-                        onClick={() => scrollSubjects("left")}
-                        aria-label="Scroll subjects left"
-                        className="hidden md:flex items-center justify-center absolute z-10 rounded-full cursor-pointer"
-                        style={{
-                          left: -16, top: "50%", transform: "translateY(-50%)",
-                          width: 34, height: 34, background: C.card, border: `1px solid ${C.border}`,
-                          color: C.textMid, boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                        }}
-                      >
-                        <ChevronLeft size={18} />
-                      </button>
-                      <button
-                        onClick={() => scrollSubjects("right")}
-                        aria-label="Scroll subjects right"
-                        className="hidden md:flex items-center justify-center absolute z-10 rounded-full cursor-pointer"
-                        style={{
-                          right: -16, top: "50%", transform: "translateY(-50%)",
-                          width: 34, height: 34, background: C.card, border: `1px solid ${C.border}`,
-                          color: C.textMid, boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-                        }}
-                      >
-                        <ChevronRight size={18} />
-                      </button>
-                    </>
-                  )}
-                  <div ref={subjectsScrollRef} className="citron-scroll flex flex-row overflow-x-auto" style={{ gap: "clamp(10px, 1.5vw, 16px)", scrollSnapType: "x mandatory", paddingBottom: 6 }}>
+                  {/* Every subject on the page, in rows of three (no slider): room above each row for the dioramas
+                      rising out of their cards. */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" style={{ columnGap: "clamp(10px, 1.5vw, 16px)", rowGap: SUBJECT_ART_OVERHANG + 18, paddingTop: SUBJECT_ART_OVERHANG + 6, paddingBottom: 8 }}>
                     {subjectGroups.map((group) => {
-                    const vis = group.vis;
-                    const hov = hoveredAgent === group.key;
-                    return (
-                      // A card-sized hit target, not a CTA: the shared <Button> would impose its sizing.
-                      // eslint-disable-next-line no-restricted-syntax
-                      <button key={group.key}
-                        type="button"
-                        onClick={() => openSubject(group.subject)}
-                        onMouseEnter={() => setHoveredAgent(group.key)}
-                        onMouseLeave={() => setHoveredAgent(null)}
-                        onFocus={() => setHoveredAgent(group.key)}
-                        onBlur={() => setHoveredAgent(null)}
-                        aria-label={`${vis.label}: see chapters`}
-                        className="rounded-[24px] cursor-pointer flex-shrink-0 relative text-left outline-none focus-visible:ring-2 overflow-hidden flex flex-col"
-                        style={{
-                          background: C.card,
-                          border: `1px solid ${hov ? vis.color + "60" : C.border}`,
-                          padding: 0,
-                          width: "clamp(220px, calc(25% - 12px), 280px)",
-                          transform: hov ? "translateY(-4px)" : "none",
-                          boxShadow: hov ? `0 18px 36px -18px ${vis.color}55` : "0 1px 5px rgba(0,0,0,0.04)",
-                          transition: "all 0.25s ease",
-                          scrollSnapAlign: "start",
-                        }}>
-                        {/* The subject's island owns the top of the card, on the subject's own tint. */}
-                        <div
-                          aria-hidden="true"
-                          className="relative w-full"
-                          style={{
-                            aspectRatio: "5 / 4",
-                            background: `radial-gradient(70% 55% at 50% 45%, rgba(255,255,255,0.75), transparent 70%), ${vis.bg}`,
-                          }}
-                        >
-                          {/* A soft shadow under the island, drawn here so it never stops at the image edge. */}
-                          <div
-                            className="absolute rounded-[50%]"
-                            style={{
-                              left: "26%", right: "26%", bottom: "7%", height: 14,
-                              background: `${vis.color}33`, filter: "blur(6px)",
-                              transform: hov ? "scaleX(0.85)" : "none", transition: "transform 0.3s ease",
-                            }}
-                          />
-                          <Image
-                            src={subjectIslandFloating(group.subject)}
-                            alt=""
-                            width={600}
-                            height={600}
-                            // A fixed-size 600px WebP; serve it as is.
-                            unoptimized
-                            className="absolute pointer-events-none select-none"
-                            style={{
-                              inset: "6% 8% 2%",
-                              width: "84%",
-                              height: "92%",
-                              objectFit: "contain",
-                              transform: hov ? "translateY(-6px) rotate(-2deg)" : "none",
-                              transition: "transform 0.3s ease",
-                            }}
-                          />
-                        </div>
-                        {/* Name and grade only: the whole card opens the subject's chapters. */}
-                        <div className="min-w-0" style={{ padding: "clamp(12px, 1.4vw, 16px) clamp(14px, 1.6vw, 18px) clamp(14px, 1.6vw, 18px)" }}>
-                          <div className="font-bold truncate" title={vis.label} style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(16px, 1.6vw, 19px)" }}>
-                            {vis.label}
-                          </div>
-                          <div className="font-medium mt-0.5 truncate" style={{ color: C.textMuted, fontSize: "clamp(11px, 1vw, 13px)" }}>
-                            Grade {group.grade}
-                          </div>
-                        </div>
-                      </button>
-                    );
+                      const last = recentRows.find((r) => r.subject === group.subject);
+                      return (
+                        <SubjectCard
+                          key={group.key}
+                          label={group.vis.label}
+                          color={group.vis.color}
+                          line={last ? `Last: ${last.chapter.chapter_title}` : "Start exploring"}
+                          art={subjectArt(group.subject)}
+                          onOpen={() => openSubject(group.subject)}
+                          resume={last ? {
+                            chapter: last.chapter.chapter_title,
+                            onResume: () => void openRecent(last.chapter, last.subject),
+                            busy: openingId === last.chapter.instance_id,
+                          } : undefined}
+                        />
+                      );
                     })}
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border-2 border-dashed p-10 text-center" style={{ borderColor: C.border }}>
-                  <p className="text-sm font-semibold" style={{ color: C.textMid }}>
+                <div className="rounded-3xl px-6 py-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
+                  {/* No subjects: a signpost, one lime arm pointing ahead. Couldn't load: the house of cards. */}
+                  <MomentArt art={catalogError ? ERROR_ART : NO_SUBJECTS_ART} width={catalogError ? 190 : 150} float className="mx-auto mb-2" />
+                  <p className="m-0 text-[19px] font-bold" style={{ color: C.text, fontFamily: "var(--font-display)" }}>
                     {catalogError ? "We couldn't load your subjects" : "No subjects available yet"}
                   </p>
-                  <p className="text-xs mt-1" style={{ color: C.textMuted }}>
-                    Connect to a school from your{" "}
-                    <button onClick={() => router.push("/student/profile")} className="underline bg-transparent border-none cursor-pointer" style={{ color: C.genPurple }}>
-                      Profile
-                    </button>{" "}
-                    to see subjects.
+                  <p className="mx-auto mt-1.5 mb-4 max-w-[340px] text-[13.5px] leading-relaxed" style={{ color: C.textMid }}>
+                    {catalogError
+                      ? "Something went wrong on our side. Try again in a moment."
+                      : "Connect to a school from your Profile to see your subjects here."}
                   </p>
-                </div>
-              )}
-            </div>
-
-            {/* ── RECENT CHAPTERS ── */}
-            <div style={fade(0.38)}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="citron-eyebrow font-bold uppercase m-0" style={{ color: C.textMuted, letterSpacing: "1.5px", fontSize: "clamp(10px, 1vw, 12px)" }}>
-                  Recent chapters
-                </h2>
-              </div>
-
-              {/* Filters UI */}
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <FilterDropdown
-                    value={filterDate}
-                    options={["All Time", "Today", "This Week", "This Month"]}
-                    onChange={setFilterDate}
-                    activeColor={C.genPurple}
-                    defaultColor={C.textMid}
-                  />
-                  <FilterDropdown
-                    value={filterSubject === "All" ? "All Subjects" : filterSubject}
-                    options={["All Subjects", ...subjectNames]}
-                    onChange={(v) => setFilterSubject(v === "All Subjects" ? "All" : v)}
-                    activeColor={C.genPurple}
-                    defaultColor={C.textMid}
-                  />
-                  {(filterDate !== "All Time" || filterSubject !== "All") && (
-                    <button
-                      onClick={() => {
-                        setFilterDate("All Time");
-                        setFilterSubject("All");
-                      }}
-                      className="text-xs font-semibold text-gray-400 hover:text-red-500 bg-transparent border-none cursor-pointer transition-colors"
-                    >
-                      Clear filters
-                    </button>
+                  {!catalogError && (
+                    <Button variant="secondary" size="md" onClick={() => router.push("/student/profile")}>
+                      Go to Profile
+                    </Button>
                   )}
                 </div>
-
-                {hasMoreRecent && (
-                  <button
-                    onClick={() => setShowAllRecent((v) => !v)}
-                    className="font-semibold cursor-pointer bg-transparent border-none flex-shrink-0"
-                    style={{ color: C.genPurple, fontSize: "clamp(11px, 1vw, 13px)" }}>
-                    {showAllRecent ? "Show less ↑" : "See all →"}
-                  </button>
-                )}
-              </div>
-
-              {openError && (
-                <p role="alert" className="mb-3 text-[13px]" style={{ color: C.coral }}>{openError}</p>
-              )}
-
-              {recent.loading && recent.chapters.length === 0 ? (
-                <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }} aria-busy="true">
-                  {[1, 2, 3].map((n) => (
-                    <div key={n} className="rounded-[14px] flex items-center animate-pulse"
-                      style={{
-                        background: C.card, border: `1px solid ${C.border}`,
-                        padding: "clamp(10px, 1.2vw, 14px) clamp(12px, 1.6vw, 18px)",
-                        gap: "clamp(10px, 1.4vw, 16px)",
-                      }}>
-                      <div className="rounded-[10px] flex-shrink-0" style={{ width: 72, aspectRatio: "16 / 10", background: C.border + "50" }} />
-                      <div className="flex-1 flex flex-col gap-2">
-                        <div className="rounded" style={{ height: 13, width: "60%", background: C.border + "60" }} />
-                        <div className="rounded" style={{ height: 10, width: "35%", background: C.border + "35" }} />
-                      </div>
-                      <div className="rounded-full" style={{ height: 38, width: 38, background: C.border + "30" }} />
-                    </div>
-                  ))}
-                </div>
-              ) : recent.error && recent.chapters.length === 0 ? (
-                <div className="rounded-2xl p-6 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-                  <p style={{ color: C.textMuted, fontSize: 14 }}>Your recent chapters couldn&apos;t load.</p>
-                  <button
-                    onClick={() => void recent.refresh()}
-                    className="mt-2 font-semibold bg-transparent border-none cursor-pointer"
-                    style={{ color: C.genPurple, fontSize: 13 }}
-                  >
-                    Try again
-                  </button>
-                </div>
-              ) : displayedRecent.length > 0 ? (
-                <div className="flex flex-col" style={{ gap: "clamp(6px, 0.8vw, 10px)" }}>
-                  {displayedRecent.map((row) => (
-                    <RecentChapterRow
-                      key={row.chapter.instance_id}
-                      chapter={row.chapter}
-                      subjectLabel={row.vis.label}
-                      color={row.vis.color}
-                      when={timeAgo(row.chapter.last_active_at)}
-                      opening={openingId === row.chapter.instance_id}
-                      disabled={!!openingId}
-                      onOpen={(chapter) => void openRecent(chapter, row.subject)}
-                      onCardExpired={() => void recent.refresh()}
-                    />
-                  ))}
-                </div>
-              ) : recentRows.length === 0 ? (
-                // Nothing opened yet: a garden gate swung open, stepping stones leading through.
-                <div
-                  className="rounded-[22px] flex flex-col sm:flex-row items-center text-center sm:text-left"
-                  style={{ border: `1.5px dashed ${C.border}`, padding: "10px clamp(16px, 2vw, 24px) 16px 10px", gap: "clamp(8px, 1.6vw, 18px)" }}
-                >
-                  <div aria-hidden="true" className="relative shrink-0" style={{ width: 210, height: 140 }}>
-                    <Image src={EMPTY_RECENT_ART.base} alt="" width={900} height={600} unoptimized className="absolute inset-0 h-full w-full object-contain" />
-                    <Image src={EMPTY_RECENT_ART.accent} alt="" width={900} height={600} unoptimized className="absolute inset-0 h-full w-full object-contain" />
-                  </div>
-                  <div>
-                    <p className="m-0 font-bold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: "clamp(17px, 1.6vw, 20px)" }}>
-                      Your desk is ready
-                    </p>
-                    <p className="m-0 mt-1" style={{ color: C.textMuted, fontSize: 14 }}>
-                      No chapters yet. Pick a subject above to start your first one!
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-2xl p-8 text-center" style={{ background: C.card, border: `1px solid ${C.border}` }}>
-                  <p style={{ color: C.textMuted, fontSize: 14 }}>
-                    {recentList.length === 0 && filteredRecent.length > 0
-                      ? "No other chapters yet. Keep learning!"
-                      : "No chapters match these filters."}
-                  </p>
-                </div>
               )}
             </div>
+
 
           </div>
         </div>

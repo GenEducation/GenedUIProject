@@ -10,6 +10,11 @@ written out through Blender's sequencer, with no view transform, so colours pass
 
     /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P scripts/encode-hero-tide.py -- \\
         --frames /path/to/frames
+
+The subject heroes (render-hero-subject.py --mode frames) go through it too, into their own folder under another
+name, desktop size only (phones show their own poster):
+
+        --frames DIR --out public/student/hero/english --name scene --no-small
 """
 
 import json
@@ -29,7 +34,9 @@ def _arg(name, default=None):
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 FRAMES = os.path.abspath(_arg("--frames"))
-OUT = os.path.join(ROOT, "public", "student", "hero")
+OUT = os.path.abspath(_arg("--out", os.path.join(ROOT, "public", "student", "hero")))
+NAME = _arg("--name", "tide")
+SMALL = "--no-small" not in argv
 TOP, BOTTOM = (0xF4, 0xF8, 0xE6), (0xE3, 0xEE, 0xC4)   # the card's gradient (ContinueLearningCard's SKY)
 
 
@@ -125,14 +132,17 @@ def main():
     work = os.path.join(bpy.app.tempdir, "tide_comp")
     os.makedirs(work, exist_ok=True)
     names, (last, w, h) = composite_frames(work)
-    save_raw(last, w, h, os.path.join(OUT, "tide-1440.webp"), "WEBP", 86)
-    save_raw(resize(last, w, h, 960, 268), 960, 268, os.path.join(OUT, "tide-960.webp"), "WEBP", 84)
-    for size in ((1440, 400), (960, 268)):
-        encode(work, names, size, "MPEG4", "H264", os.path.join(OUT, f"tide-{size[0]}.mp4"))
-        encode(work, names, size, "WEBM", "WEBM", os.path.join(OUT, f"tide-{size[0]}.webm"))
-    crest = os.path.join(FRAMES, "crest.json")
-    if os.path.exists(crest):
-        shutil.copy(crest, os.path.join(OUT, "tide.json"))
+    save_raw(last, w, h, os.path.join(OUT, f"{NAME}-1440.webp"), "WEBP", 86)
+    sizes = [(1440, 400)]
+    if SMALL:
+        save_raw(resize(last, w, h, 960, 268), 960, 268, os.path.join(OUT, f"{NAME}-960.webp"), "WEBP", 84)
+        sizes.append((960, 268))
+    for size in sizes:
+        encode(work, names, size, "MPEG4", "H264", os.path.join(OUT, f"{NAME}-{size[0]}.mp4"))
+        encode(work, names, size, "WEBM", "WEBM", os.path.join(OUT, f"{NAME}-{size[0]}.webm"))
+    for track in ("crest.json", "track.json"):                            # the reveal front, per frame
+        if os.path.exists(os.path.join(FRAMES, track)):
+            shutil.copy(os.path.join(FRAMES, track), os.path.join(OUT, f"{NAME}.json"))
     shutil.rmtree(work, ignore_errors=True)
 
 

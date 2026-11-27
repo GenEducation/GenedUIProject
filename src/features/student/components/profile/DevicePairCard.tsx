@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Info, KeyRound, Loader2, MonitorSmartphone, TriangleAlert } from "lucide-react";
+import { Info, KeyRound, Loader2, MonitorSmartphone } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { STUDENT_COLORS as C } from "../../theme/colors";
+import { MomentArt } from "@/components/shared/MomentArt";
+import { DEVICE_EMPTY_ART, DEVICE_PAIRED_ART, LINK_FAILED_ART } from "../../theme/momentArt";
 import { Button } from "@/components/ui/Button";
 import { SegmentedInput } from "@/components/shared/SegmentedInput";
 import { confirmDevicePairing } from "@/features/auth/authService";
@@ -102,7 +106,17 @@ export function DevicePairCard({ index }: { index: number }) {
       />
 
       <div className="mt-5 sm:pl-[68px]">
-        {bots !== null && (
+        {bots !== null && bots.length === 0 && !result && (
+          // Nothing paired: the socket waiting, its plug in front, a small lime light on.
+          <div className="mb-4 flex items-center gap-4 rounded-2xl bg-[var(--soft-surface)]/35 px-4 py-3">
+            <MomentArt art={DEVICE_EMPTY_ART} width={92} shadow={false} />
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold text-[var(--text-primary)]">No bot paired yet.</p>
+              <p className="mt-0.5 text-[13px] leading-snug text-[var(--text-muted)]">Switch your bot on, then enter the code it shows.</p>
+            </div>
+          </div>
+        )}
+        {bots !== null && bots.length > 0 && (
           <div className="mb-4">
             <BotList
               bots={bots}
@@ -117,32 +131,6 @@ export function DevicePairCard({ index }: { index: number }) {
         )}
         {botsFailed && bots === null && (
           <p className="mb-4 text-[13px] text-[var(--text-muted)]">Your paired bots couldn&apos;t be loaded right now.</p>
-        )}
-
-        {/* Result messages stay visible after the entry row collapses. */}
-        {result?.kind === "error" && (
-          <p role="alert" className="mb-4 flex items-start gap-2 rounded-xl bg-[var(--danger-bg)] px-3.5 py-2.5 text-[13px] font-semibold leading-snug text-[var(--danger-ink)]">
-            <TriangleAlert size={16} className="mt-px flex-none" aria-hidden />
-            {result.message}
-          </p>
-        )}
-        {result?.kind === "paired" && (
-          <p role="status" className="mb-4 flex items-center gap-2 rounded-xl bg-[var(--accent)]/70 px-3.5 py-2.5 text-[13px] font-bold text-[var(--accent-ink)]">
-            <CheckCircle2 size={16} className="flex-none" aria-hidden />
-            Device paired! It&apos;ll be ready in a few seconds.
-          </p>
-        )}
-        {result?.kind === "approved" && (
-          <div role="status" className="mb-4 flex items-start gap-2 rounded-xl bg-[var(--accent)]/70 px-3.5 py-2.5 text-[var(--accent-ink)]">
-            <CheckCircle2 size={16} className="mt-px flex-none" aria-hidden />
-            <div className="leading-snug">
-              <p className="text-[13px] font-bold">Approved: your device will finish pairing in a few seconds.</p>
-              {/* Only older devices, which listen over MQTT alone, can miss it. */}
-              <p className="mt-0.5 text-[12px] font-medium opacity-80">
-                If it still shows a code after a minute, restart it and pair again.
-              </p>
-            </div>
-          </div>
         )}
 
         {!entering ? (
@@ -190,6 +178,45 @@ export function DevicePairCard({ index }: { index: number }) {
           </>
         )}
       </div>
+
+      {/* The answer, as a pop-up: paired (the plug pushes home, a lime glow) or not (the plug falls short). */}
+      <Modal
+        open={result !== null}
+        onClose={() => setResult(null)}
+        size="sm"
+        title={result?.kind === "error" ? "Couldn't pair" : result?.kind === "approved" ? "Approved" : "Device paired!"}
+        panelStyle={{ background: C.card, border: `1px solid ${C.border}` }}
+      >
+        {result && (
+          <>
+            <div className="flex flex-col items-center text-center" style={{ padding: "26px 28px 18px" }}>
+              <MomentArt art={result.kind === "error" ? LINK_FAILED_ART : DEVICE_PAIRED_ART} width={result.kind === "error" ? 200 : 170} float shadow={false} className="mb-2" />
+              {/* Visual only: Modal's `title` is the dialog's accessible name. */}
+              <p aria-hidden="true" className="m-0 font-extrabold" style={{ color: C.text, fontFamily: "var(--font-display)", fontSize: 22 }}>
+                {result.kind === "error" ? "Couldn't pair" : result.kind === "approved" ? "Approved" : "Device paired!"}
+              </p>
+              <p className="mt-2 mb-0 max-w-[300px]" style={{ color: C.textMid, fontSize: 14, lineHeight: 1.55 }}>
+                {result.kind === "error"
+                  ? result.message
+                  : result.kind === "approved"
+                    ? "Your device will finish pairing in a few seconds."
+                    : "It'll be ready in a few seconds."}
+              </p>
+              {/* Only older devices, which listen over MQTT alone, can miss it. */}
+              {result.kind === "approved" && (
+                <p className="mt-1.5 mb-0 max-w-[300px]" style={{ color: C.textMuted, fontSize: 12.5, lineHeight: 1.5 }}>
+                  If it still shows a code after a minute, restart it and pair again.
+                </p>
+              )}
+            </div>
+            <div style={{ padding: "0 28px 26px" }}>
+              <Button variant={result.kind === "error" ? "secondary" : "primary"} fullWidth onClick={() => setResult(null)}>
+                {result.kind === "error" ? "Try again" : "Done"}
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
     </ProfileCard>
   );
 }
