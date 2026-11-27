@@ -107,6 +107,8 @@ interface LessonState {
   stepPending: boolean;
   /** The step (instance node) whose payload could not be read when the lesson moved to it: said in the chat, with a retry. */
   stepLoadError: string | null;
+  /** The reply that put the step's check on screen (`check_presented` turned true in it): the card waits until it has finished. */
+  presentingTurnId: string | null;
 
   /** A quote the learner chose in the book to ask about: the chat box takes it (a new `nonce` is a new quote). */
   chatDraft: { text: string; nonce: number } | null;
@@ -205,6 +207,7 @@ const initial = {
   figureStatus: {},
   stepPending: false,
   stepLoadError: null,
+  presentingTurnId: null,
 };
 
 /** The open stream's abort handle, and the turn it streams; not state, so they never re-render anything. */
@@ -551,6 +554,11 @@ export const useLessonStore = create<LessonState>((set, get) => {
   const applyInstance = (instance: InstanceState, cause: string | null = null) => {
     const previous = get().instance;
     const beforeNode = previous?.active_node;
+    // A reply presented the step's check: its words introduce the question, so the card follows them, never pops up over them.
+    if (
+      cause && beforeNode?.check_presented === false && instance.active_node?.check_presented === true
+      && beforeNode.instance_node_id === instance.active_node.instance_node_id && currentTurn(cause)?.status === "streaming"
+    ) set({ presentingTurnId: cause });
     const ordinal = instance.active_node?.round_ordinal;
     if (instance.active_node && typeof ordinal === "number") {
       const id = instance.active_node.instance_node_id;

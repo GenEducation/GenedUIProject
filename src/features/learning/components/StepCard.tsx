@@ -341,6 +341,8 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
   const t = useUiText();
   const instance = useLessonStore((s) => s.instance);
   const payload = useLessonStore((s) => s.payload);
+  // The reply presenting the check is still being said: the card appears once its words are out.
+  const introducing = useLessonStore((s) => s.presentingTurnId !== null && s.turns.some((t) => t.turnId === s.presentingTurnId && t.status === "streaming"));
   const done = useLessonStore((s) => s.done);
   const choose = useLessonStore((s) => s.choose);
   const [lastResult, setLastResult] = useState<AnswerResult | null>(null);
@@ -448,7 +450,7 @@ export function StepCard({ subject = null }: { subject?: string | null }) {
     );
   } else if (reading && checks.get(reading.item_id)) {
     body = <ConfirmReading check={checks.get(reading.item_id)!} original={reading.original} suggestion={reading.suggestion} />;
-  } else if (node.check_presented !== false && unanswered.some((id) => checks.has(id))) {
+  } else if (node.check_presented !== false && !introducing && unanswered.some((id) => checks.has(id))) {
     // On a W2 (content-led) lesson the question is on screen only while it is open: `check_item_ids` then names exactly that question,
     // and the payload carries it (reloaded by `missingCheck` when it does not).
     const current = checks.get(unanswered.find((id) => checks.has(id))!)!;

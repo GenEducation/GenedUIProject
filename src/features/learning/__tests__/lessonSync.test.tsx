@@ -107,7 +107,7 @@ describe("lesson sync: the popup belongs to its step (phase 1)", () => {
 });
 
 describe("lesson sync: no popup over an unfinished explanation (phase 2)", () => {
-  it.fails("shows the presented check only once the reply that presents it has finished", async () => {
+  it("shows the presented check only once the reply that presents it has finished", async () => {
     // The reply that introduces the question says check_presented first, before its words. The card must not pop up over the
     // explanation: answering it then cuts the explanation off and the concept is half taught.
     const base = store().instance!;
